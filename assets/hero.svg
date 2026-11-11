@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 360" role="img" aria-label="A single beam enters a prism and leaves as several branches">
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="72" y1="180" x2="320" y2="180" stroke="#3B6FD4" stroke-width="6" opacity="0.95" />
+    <polygon points="412,52 326,244 500,244" fill="#3B6FD4" fill-opacity="0.07" stroke="#3B6FD4" stroke-width="3" />
+    <path d="M478 196 L858 78" stroke="#3B6FD4" stroke-width="6" opacity="0.9" />
+    <path d="M492 205 L902 180" stroke="#3B6FD4" stroke-width="6" opacity="0.75" />
+    <path d="M478 214 L858 286" stroke="#3B6FD4" stroke-width="6" opacity="0.6" />
+  </g>
+  <g fill="#3B6FD4">
+    <circle cx="868" cy="72" r="9" opacity="0.9" />
+    <circle cx="912" cy="180" r="9" opacity="0.75" />
+    <circle cx="868" cy="292" r="9" opacity="0.6" />
+  </g>
+</svg>
