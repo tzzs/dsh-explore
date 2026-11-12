@@ -49,6 +49,19 @@ git clone https://github.com/tzzs/dsh-explore.git
 
 > 包名是 `@local/dsh-explore`。它是安装标识，不是展示名：展示名来自 `locale/`，中文「DSH 探索」、英文「DSH Explore」。
 
+## 命名
+
+四层名字各管一件事，刻意不互相套用：
+
+| 层 | 名字 | 出现在哪 | 为什么是这个 |
+|---|---|---|---|
+| 仓库 | `dsh-explore` | GitHub URL、`git clone` | 公开地址，一旦发布就不改；短、全小写、无空格 |
+| 包 | `@local/dsh-explore` | `package.json`、profile 的 `link:` 依赖 | 与仓库同名，安装时一眼对得上；改它要卸载重装 |
+| 插件（展示名） | 「DSH 探索」/ `DSH Explore` | 插件列表、设置页 | 人读的产品名；前缀 `DSH` 说明它属于哪个宿主 |
+| 视图（页签） | 「无限探索」/ `Infinite Exploration` | 会话里的第三个页签 | 描述这个视图在做什么，不是产品名；跟随界面语言切换 |
+
+「无限探索」是**视图名**而不是插件名，所以没有把它并进展示名（「DSH 无限探索」会让产品名和页签名撞在一起，英文也会变成冗长的 `DSH Infinite Exploration`）。同理没有把页签改成 `Explore`——那会丢掉「无限」这层意思，而画布确实是无限延展的。
+
 ## 目录结构
 
 ```
@@ -96,7 +109,7 @@ node test/render-smoke.cjs    # 渲染冒烟：把整个视图真渲染一遍，
 
 ## English
 
-**DSH Explore**（DSH 探索）adds an **Infinite exploration** tab to every DeepSeek Harness conversation: it lays the turns out on an infinite canvas where **any answer can become a fork point**. Ask a follow-up there and a new branch grows, carrying the full prefix context of the path that led to it, without contaminating its siblings.
+**DSH Explore**（DSH 探索）adds an **Infinite Exploration** tab to every DeepSeek Harness conversation: it lays the turns out on an infinite canvas where **any answer can become a fork point**. Ask a follow-up there and a new branch grows, carrying the full prefix context of the path that led to it, without contaminating its siblings.
 
 - Infinite pan/zoom canvas with a clickable minimap that also shows the current viewport.
 - `+` on any finished answer opens an inline composer; the new node appears immediately.
