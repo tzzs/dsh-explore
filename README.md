@@ -47,14 +47,14 @@ git clone https://github.com/tzzs/dsh-explore.git
 2. `target` 填克隆出来的目录，例如 `E:\workspaces\dsh-explore`；
 3. 安装完成后，会话页签里会多出「无限探索」。
 
-> 包名仍是 `@local/tree-conversations`。它是安装标识，不是展示名——改它会让已有安装失联，所以保留。展示名来自 `locale/`：中文「DSH 探索」、英文「DSH Explore」。
+> 包名是 `@local/dsh-explore`。它是安装标识，不是展示名：展示名来自 `locale/`，中文「DSH 探索」、英文「DSH Explore」。
 
 ## 目录结构
 
 ```
 client.js                客户端视图：事件投影、布局、画布、卡片、阅读层
 index.js                 宿主侧空实现（这个插件只在客户端做事）
-cordis.patch.yml         向 profile 插入一行 tree-conversations
+cordis.patch.yml         向 profile 插入一行 dsh-explore
 locale/zh.json           中文展示名与描述
 locale/en.json           英文展示名与描述
 icon.svg                 插件图标

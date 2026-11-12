@@ -1,6 +1,6 @@
 # DSH 探索 / DSH Explore — 分支对话画布设计
 
-插件名：中文「DSH 探索」，英文「DSH Explore」；页签与画布标题仍叫「无限探索」。包名（技术标识）保持 `@local/tree-conversations`，仓库名 `dsh-explore`。
+插件名：中文「DSH 探索」，英文「DSH Explore」；页签与画布标题仍叫「无限探索」。包名（技术标识）为 `@local/dsh-explore`，仓库名 `dsh-explore`。
 
 2026-11-10 起草 · 2026-11-11 按已落地的插件回写 · 状态：部分实现，见 §8
 
@@ -87,7 +87,7 @@ prompt(子 sessionId, 新问题)                     → 流式回答
 
 ## 5. 怎么接进 DSH
 
-已经有一个手写插件：同仓库的 `plugins/tree-conversations/`，以 `link:` 依赖（符号链接）装进桌面 profile，宿主把它当 lazy-CJS 的 `client.js` 直接供给页面，没有打包器；文件一改，宿主按 mtime/size 热替换，连页面都不用刷。它只注册一个 `conversation.view`：id `tree`、order 5、label 树。
+已经有一个手写插件：仓库根目录本身（`@local/dsh-explore`），以 `link:` 依赖（符号链接）装进桌面 profile，宿主把它当 lazy-CJS 的 `client.js` 直接供给页面，没有打包器；文件一改，宿主按 mtime/size 热替换，连页面都不用刷。它只注册一个 `conversation.view`：id `tree`、order 5、label 无限探索。
 
 - **客户端不能直接调模型，只能通过会话**。可用的动作是 `prompt(content, mode)` 与 `cancel()`；token 以暂态事件 `assistant/live-chunk`（`data.chunk.type === 'text-delta'`）到客户端，落定后是持久的 `assistant/message`，收尾是 `turn/end`。宿主侧的 `agent/assistant-stream` 客户端插件看不到，别指望它。
 - `ctx.sessions.fork({ sessionId, atSeq })` 从精确前缀分叉：`atSeq` 是**包含该 seq** 的事件边界，子会话复制整段事件前缀（不只是消息），随后补 `session/end-seed`；允许在一轮尚未结束时 fork，父会话本身不受影响。血统问题见 §4。

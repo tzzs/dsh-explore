@@ -1,5 +1,5 @@
 window.__ModuleLoader__.load({
-  id: '@local/tree-conversations',
+  id: '@local/dsh-explore',
   factory(require) {
     const React = require('react');
     const h = React.createElement;
