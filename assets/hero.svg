@@ -1,14 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 360" role="img" aria-label="A single beam enters a prism and leaves as several branches">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 360" role="img" aria-label="One line of conversation opens into several branching paths">
   <g fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <line x1="72" y1="180" x2="320" y2="180" stroke="#3B6FD4" stroke-width="6" opacity="0.95" />
-    <polygon points="412,52 326,244 500,244" fill="#3B6FD4" fill-opacity="0.07" stroke="#3B6FD4" stroke-width="3" />
-    <path d="M478 196 L858 78" stroke="#3B6FD4" stroke-width="6" opacity="0.9" />
-    <path d="M492 205 L902 180" stroke="#3B6FD4" stroke-width="6" opacity="0.75" />
-    <path d="M478 214 L858 286" stroke="#3B6FD4" stroke-width="6" opacity="0.6" />
+    <path d="M96 180 H430" stroke="#3B6FD4" stroke-width="6" opacity="0.95" />
+    <path d="M430 180 C520 180 540 74 640 74" stroke="#3B6FD4" stroke-width="6" opacity="0.9" />
+    <path d="M430 180 C520 180 540 180 648 180" stroke="#3B6FD4" stroke-width="6" opacity="0.75" />
+    <path d="M430 180 C520 180 540 286 640 286" stroke="#3B6FD4" stroke-width="6" opacity="0.6" />
+    <path d="M640 74 C716 74 730 40 806 40" stroke="#3B6FD4" stroke-width="5" opacity="0.75" />
+    <path d="M640 74 C716 74 730 108 806 108" stroke="#3B6FD4" stroke-width="5" opacity="0.6" />
+    <path d="M648 180 H1004" stroke="#3B6FD4" stroke-width="5" opacity="0.55" />
   </g>
   <g fill="#3B6FD4">
-    <circle cx="868" cy="72" r="9" opacity="0.9" />
-    <circle cx="912" cy="180" r="9" opacity="0.75" />
-    <circle cx="868" cy="292" r="9" opacity="0.6" />
+    <circle cx="96" cy="180" r="10" opacity="0.95" />
+    <circle cx="430" cy="180" r="12" opacity="0.95" />
+    <circle cx="644" cy="74" r="9" opacity="0.9" />
+    <circle cx="652" cy="180" r="9" opacity="0.75" />
+    <circle cx="644" cy="286" r="9" opacity="0.6" />
+    <circle cx="812" cy="40" r="8" opacity="0.75" />
+    <circle cx="812" cy="108" r="8" opacity="0.6" />
+    <circle cx="1010" cy="180" r="8" opacity="0.55" />
   </g>
 </svg>

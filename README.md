@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="assets/hero.svg" width="760" alt="A single question enters a prism and leaves as several branches" />
+  <img src="assets/hero.svg" width="760" alt="A single line of conversation opens into several branching paths" />
 </p>
 
-<h1 align="center">棱镜 · Prism</h1>
+<h1 align="center">DSH 探索 · DSH Explore</h1>
 
 <p align="center">
   把一条对话摊成一张能自己长枝的画布。
@@ -21,9 +21,7 @@
 
 DSH 里的对话是一条线：A → B → C。但真实的思考不长这样——同一个回答上，人往往同时想问好几件互不相干的事，问完之后又都压在历史里，没法并排看。
 
-棱镜在你的会话里加一个 **「无限探索」** 页签：把这一轮轮问答铺到一张无限画布上，**任意一个回答都可以成为新的分岔口**。从某个节点再问一句，就长出一根新枝，它带着从根到这里的完整上下文继续往下走，枝条之间互不污染。
-
-名字取自分光：一束白光穿过棱镜，散成一片光谱。
+DSH 探索在你的会话里加一个 **「无限探索」** 页签：把这一轮轮问答铺到一张无限画布上，**任意一个回答都可以成为新的分岔口**。从某个节点再问一句，就长出一根新枝，它带着从根到这里的完整上下文继续往下走，枝条之间互不污染。
 
 ## 功能
 
@@ -49,7 +47,7 @@ git clone https://github.com/tzzs/dsh-explore.git
 2. `target` 填克隆出来的目录，例如 `E:\workspaces\dsh-explore`；
 3. 安装完成后，会话页签里会多出「无限探索」。
 
-> 包名仍是 `@local/tree-conversations`。它是安装标识，不是展示名——改它会让已有安装失联，所以保留。展示名来自 `locale/`：中文「棱镜」、英文「Prism」。
+> 包名仍是 `@local/tree-conversations`。它是安装标识，不是展示名——改它会让已有安装失联，所以保留。展示名来自 `locale/`：中文「DSH 探索」、英文「DSH Explore」。
 
 ## 目录结构
 
@@ -60,7 +58,7 @@ cordis.patch.yml         向 profile 插入一行 tree-conversations
 locale/zh.json           中文展示名与描述
 locale/en.json           英文展示名与描述
 icon.svg                 插件图标
-assets/hero.svg          README 头图（棱镜分光）
+assets/hero.svg          README 头图（一条线分出多条路径）
 test/render-smoke.cjs    渲染冒烟测试（假 React + 假 DOM，无需浏览器）
 docs/design.md           设计文档：数据模型、取舍、已知缺口
 ```
@@ -97,7 +95,7 @@ node test/render-smoke.cjs    # 渲染冒烟：把整个视图真渲染一遍并
 
 ## English
 
-**Prism** (棱镜) adds an **Infinite exploration** tab to every DeepSeek Harness conversation: it lays the turns out on an infinite canvas where **any answer can become a fork point**. Ask a follow-up there and a new branch grows, carrying the full prefix context of the path that led to it, without contaminating its siblings.
+**DSH Explore**（DSH 探索）adds an **Infinite exploration** tab to every DeepSeek Harness conversation: it lays the turns out on an infinite canvas where **any answer can become a fork point**. Ask a follow-up there and a new branch grows, carrying the full prefix context of the path that led to it, without contaminating its siblings.
 
 - Infinite pan/zoom canvas with a clickable minimap that also shows the current viewport.
 - `+` on any finished answer opens an inline composer; the new node appears immediately.

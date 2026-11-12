@@ -1,6 +1,6 @@
-# 棱镜 / Prism — 分支对话画布设计
+# DSH 探索 / DSH Explore — 分支对话画布设计
 
-插件名：中文「棱镜」，英文「Prism」；页签与画布标题仍叫「无限探索」。包名（技术标识）保持 `@local/tree-conversations`。
+插件名：中文「DSH 探索」，英文「DSH Explore」；页签与画布标题仍叫「无限探索」。包名（技术标识）保持 `@local/tree-conversations`，仓库名 `dsh-explore`。
 
 2026-11-10 起草 · 2026-11-11 按已落地的插件回写 · 状态：部分实现，见 §8
 
