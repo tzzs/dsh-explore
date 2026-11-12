@@ -25,6 +25,227 @@ window.__ModuleLoader__.load({
     const GAP_Y = 76;
     const FONT = 'system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif';
 
+    // ------------------------------------------------------------------ locale
+    // Visible text must follow the shell language, so every string is a key
+    // looked up through the Client locale service. The zh set is the source of
+    // truth; en mirrors it key for key. Other registered languages fall back to
+    // English through the service's own fallback chain.
+    const NS = 'dsh-explore';
+
+    const DICT = {
+      zh: {
+        'view.tab': '无限探索',
+        'view.heading': '无限探索',
+        'view.nodes': '{count} 个节点',
+        'view.running': '{count} 条分支在跑',
+        'view.loadOlder': '加载更早',
+        'view.restoreHidden': '已隐藏 {count} 个 · 恢复',
+        'view.restoreHiddenTitle': '恢复被删除的节点和分支',
+        'view.searchPlaceholder': '搜索节点',
+        'view.searchLabel': '搜索节点',
+        'view.zoomGroup': '画布缩放',
+        'view.zoomOut': '缩小画布',
+        'view.zoomIn': '放大画布',
+        'view.zoomLevel': '当前缩放比例',
+        'view.fit': '适应画布',
+        'view.fitTitle': '缩放到能看见整棵树',
+        'view.latest': '定位最新',
+        'view.latestTitle': '展开路径并定位到最新创建的节点',
+        'view.latestTitleEmpty': '还没有节点',
+        'view.empty.title': '这棵树还是空的',
+        'view.empty.hint': '回到 Chat 问一句，这里就会长出第一个节点。',
+        'view.empty.report': '若已经问过却有这句提示，把上面的「事件」数告我。',
+
+        'card.noQuestion': '（无问题）',
+        'card.latestBadge': '最新',
+        'card.latestTitle': '这是最新创建的节点',
+        'card.status.thinking': '思考中',
+        'card.status.streaming': '回答中',
+        'card.status.error': '出错',
+        'card.status.stopped': '已中止',
+        'card.status.done': '已完成',
+        'card.stop': '停止',
+        'card.stopTitle': '停止这条分支',
+        'card.ask': '在这条分支上继续追问',
+        'card.more': '更多操作',
+        'card.delete': '删除这个节点',
+        'card.deleteTitle': '隐藏这个节点和它下面的所有分支',
+        'card.deleteConfirm': '删除这个节点和它下面的所有分支？（随时可恢复）',
+        'card.readTitle': '点击全屏阅读',
+        'card.expandTitle': '展开整段回答',
+        'card.collapseTitle': '收起这段回答',
+        'card.expand': '展开回答',
+        'card.collapse': '收起回答',
+        'card.fullscreen': '全屏阅读',
+        'card.fullscreenTitle': '全屏阅读完整回答',
+        'card.unfoldBranch': '展开这一枝',
+        'card.foldBranch': '收起这一枝',
+        'card.unfoldDescendants': '展开 {count} 个后代',
+        'card.foldDescendants': '收起 {count} 个后代',
+        'card.descendants': '{count} 个后代',
+        'card.truncated': '\n\n…（点开全屏看完整回答）',
+        'card.cost.elapsed': '耗时 {value}',
+        'card.cost.context': '上下文 {value}',
+        'card.cost.cached': '缓存 {value}',
+
+        'live.calling': '正在调用 {tool}',
+        'live.outputting': '正在输出…',
+        'live.thinking': '正在思考…',
+        'live.starting': '正在开始…',
+        'live.step': '第 {step} 步',
+
+        'composer.placeholder': '在这条分支上继续问…（Enter 发送，Shift+Enter 换行）',
+        'composer.label': '追问内容',
+        'composer.from': '从「{question}…」出发',
+        'composer.cancel': '取消',
+        'composer.send': '发送',
+
+        'reader.close': '关闭（Esc）',
+        'reader.closeLabel': '关闭阅读视图',
+        'reader.noAnswer': '（还没有回答）',
+        'reader.hint': 'Esc 关闭 · 点背景关闭',
+        'reader.branch': '分支',
+        'reader.mainline': '主线',
+
+        'error.title': '树视图出错了',
+        'error.reload': '重新载入视图',
+        'error.hint': '画布数据没有丢，只是这一次渲染炸了。',
+
+        'error.sessionNotOpen': '会话还没打开，无法投影。',
+        'error.noBinding': '会话没有返回绑定',
+        'error.openFailed': '打不开会话：{reason}',
+        'error.forkFailed': '分叉失败：{reason}',
+        'error.branchUnopenable': '无法打开分支会话：{reason}',
+        'error.branchNoBinding': '打不开分支会话：{reason}',
+        'error.branchNoUsableBinding': '分支会话没有返回可用的绑定。',
+        'error.submitFailed': '提交失败：{reason}',
+        'error.loadOlderFailed': '加载更早历史失败：{reason}',
+      },
+
+      en: {
+        'view.tab': 'Infinite Exploration',
+        'view.heading': 'Infinite Exploration',
+        'view.nodes': '{count} nodes',
+        'view.running': '{count} branches running',
+        'view.loadOlder': 'Load earlier',
+        'view.restoreHidden': '{count} hidden · Restore',
+        'view.restoreHiddenTitle': 'Restore deleted nodes and branches',
+        'view.searchPlaceholder': 'Search nodes',
+        'view.searchLabel': 'Search nodes',
+        'view.zoomGroup': 'Canvas zoom',
+        'view.zoomOut': 'Zoom out',
+        'view.zoomIn': 'Zoom in',
+        'view.zoomLevel': 'Current zoom level',
+        'view.fit': 'Fit canvas',
+        'view.fitTitle': 'Zoom out to show the whole tree',
+        'view.latest': 'Jump to latest',
+        'view.latestTitle': 'Expand the path and jump to the newest node',
+        'view.latestTitleEmpty': 'No nodes yet',
+        'view.empty.title': 'This tree is still empty',
+        'view.empty.hint': 'Ask something in Chat and the first node will grow here.',
+        'view.empty.report': 'If you already asked and still see this, tell me the "events" count above.',
+
+        'card.noQuestion': '(no question)',
+        'card.latestBadge': 'Latest',
+        'card.latestTitle': 'The newest node in this tree',
+        'card.status.thinking': 'Thinking',
+        'card.status.streaming': 'Answering',
+        'card.status.error': 'Error',
+        'card.status.stopped': 'Stopped',
+        'card.status.done': 'Done',
+        'card.stop': 'Stop',
+        'card.stopTitle': 'Stop this branch',
+        'card.ask': 'Follow up on this branch',
+        'card.more': 'More actions',
+        'card.delete': 'Delete this node',
+        'card.deleteTitle': 'Hide this node and every branch under it',
+        'card.deleteConfirm': 'Delete this node and all branches under it? (reversible)',
+        'card.readTitle': 'Click to read in full screen',
+        'card.expandTitle': 'Expand this answer',
+        'card.collapseTitle': 'Collapse this answer',
+        'card.expand': 'Expand answer',
+        'card.collapse': 'Collapse answer',
+        'card.fullscreen': 'Read full screen',
+        'card.fullscreenTitle': 'Read the complete answer in full screen',
+        'card.unfoldBranch': 'Expand this branch',
+        'card.foldBranch': 'Collapse this branch',
+        'card.unfoldDescendants': 'Expand {count} descendants',
+        'card.foldDescendants': 'Collapse {count} descendants',
+        'card.descendants': '{count} descendants',
+        'card.truncated': '\n\n… (open full screen for the complete answer)',
+        'card.cost.elapsed': 'took {value}',
+        'card.cost.context': 'context {value}',
+        'card.cost.cached': 'cached {value}',
+
+        'live.calling': 'Calling {tool}',
+        'live.outputting': 'Writing…',
+        'live.thinking': 'Thinking…',
+        'live.starting': 'Starting…',
+        'live.step': 'step {step}',
+
+        'composer.placeholder': 'Ask a follow-up on this branch… (Enter to send, Shift+Enter for a new line)',
+        'composer.label': 'Follow-up text',
+        'composer.from': 'Starting from "{question}…"',
+        'composer.cancel': 'Cancel',
+        'composer.send': 'Send',
+
+        'reader.close': 'Close (Esc)',
+        'reader.closeLabel': 'Close the reader',
+        'reader.noAnswer': '(no answer yet)',
+        'reader.hint': 'Esc or click the backdrop to close',
+        'reader.branch': 'Branch',
+        'reader.mainline': 'Main line',
+
+        'error.title': 'The tree view crashed',
+        'error.reload': 'Reload the view',
+        'error.hint': 'The canvas data is safe; only this render failed.',
+
+        'error.sessionNotOpen': 'The session is not open yet, so it cannot be projected.',
+        'error.noBinding': 'The session returned no binding.',
+        'error.openFailed': 'Could not open the session: {reason}',
+        'error.forkFailed': 'Fork failed: {reason}',
+        'error.branchUnopenable': 'Could not open the branch session: {reason}',
+        'error.branchNoBinding': 'Could not open the branch session: {reason}',
+        'error.branchNoUsableBinding': 'The branch session returned no usable binding.',
+        'error.submitFailed': 'Submit failed: {reason}',
+        'error.loadOlderFailed': 'Could not load earlier history: {reason}',
+      },
+    };
+
+    const localeListeners = new Set();
+
+    /** Look a key up in the built-in table when the locale service is absent. */
+    function fallbackTranslate(key, params) {
+      const lang = typeof document !== 'undefined' && document.documentElement.lang
+        ? String(document.documentElement.lang).slice(0, 2).toLowerCase()
+        : 'zh';
+      const table = DICT[lang] || DICT.zh;
+      const template = table[key] ?? DICT.zh[key] ?? key;
+      if (!params) return template;
+      return template.replace(/\{(\w+)\}/g, (match, name) => (name in params ? String(params[name]) : match));
+    }
+
+    /** The live translator; `apply` upgrades it to the locale service. */
+    const localeBridge = {
+      translate: fallbackTranslate,
+    };
+
+    /** Translate a key; call inside components so a locale switch re-renders. */
+    function T(key, params) {
+      return localeBridge.translate(key, params);
+    }
+
+    /** Re-render the caller whenever the active language changes. */
+    function useLocale() {
+      const [, force] = useState(0);
+      useEffect(() => {
+        const listener = () => force((n) => n + 1);
+        localeListeners.add(listener);
+        return () => localeListeners.delete(listener);
+      }, []);
+    }
+
+
     // ------------------------------------------------------------- utilities
     function textOf(content) {
       if (typeof content === 'string') return content;
@@ -907,7 +1128,7 @@ window.__ModuleLoader__.load({
       function ensureProjection(rootId, store) {
         const binding = ctx.sessions.binding(rootId);
         if (!binding) {
-          store.setError('会话还没打开，无法投影。');
+          store.setError(T('error.sessionNotOpen'));
           store.setMeta({ binding: false, events: 0 });
           return;
         }
@@ -943,12 +1164,12 @@ window.__ModuleLoader__.load({
         try {
           const reference = ctx.sessions.retain(rootId, { source: 'gateway' });
           const binding = await reference.ready;
-          if (!binding) throw new Error('会话没有返回绑定');
+          if (!binding) throw new Error(T('error.noBinding'));
           ensureProjection(rootId, store);
           projectBranches(rootId, store);
           return true;
         } catch (error) {
-          store.setError('打不开会话：' + String((error && error.message) || error));
+          store.setError(T('error.openFailed', { reason: String((error && error.message) || error) }));
           return false;
         }
       }
@@ -1058,7 +1279,7 @@ window.__ModuleLoader__.load({
             atSeq: parentNode.answerSeq || undefined,
           });
         } catch (error) {
-          store.setError('分叉失败：' + String((error && error.message) || error));
+          store.setError(T('error.forkFailed', { reason: String((error && error.message) || error) }));
           return;
         }
         remember(childId, rootId, nodeId);
@@ -1080,7 +1301,7 @@ window.__ModuleLoader__.load({
         try {
           reference = ctx.sessions.retain(childId, { source: 'gateway' });
         } catch (error) {
-          store.patch(nodeId, { status: 'error', answer: '无法打开分支会话：' + String((error && error.message) || error) });
+          store.patch(nodeId, { status: 'error', answer: T('error.branchUnopenable', { reason: String((error && error.message) || error) }) });
           return;
         }
 
@@ -1090,19 +1311,19 @@ window.__ModuleLoader__.load({
         } catch (error) {
           store.patch(nodeId, {
             status: 'error',
-            answer: '打不开分支会话：' + String((error && error.message) || error),
+            answer: T('error.branchNoBinding', { reason: String((error && error.message) || error) }),
           });
           return;
         }
         if (!binding) {
-          store.patch(nodeId, { status: 'error', answer: '分支会话没有返回可用的绑定。' });
+          store.patch(nodeId, { status: 'error', answer: T('error.branchNoUsableBinding') });
           return;
         }
         const baseline = maxDurableSeq(binding.eventSource.getSnapshot().entries);
         let busy = false;
 
         // Name the fork after its branch so the session list stays readable.
-        const branchTitle = '⟂ ' + (parentNode.question || '分支').replace(/\s+/g, ' ').slice(0, 26)
+        const branchTitle = '⟂ ' + (parentNode.question || T('reader.branch')).replace(/\s+/g, ' ').slice(0, 26)
           + ' · ' + question.replace(/\s+/g, ' ').slice(0, 22);
         try {
           await binding.session.rename(branchTitle);
@@ -1153,10 +1374,10 @@ window.__ModuleLoader__.load({
         try {
           const result = await binding.session.prompt([{ type: 'text', text: question }], 'queue');
           if (result && result.ok === false) {
-            store.patch(nodeId, { status: 'error', answer: '提交失败：' + JSON.stringify(result.error) });
+            store.patch(nodeId, { status: 'error', answer: T('error.submitFailed', { reason: JSON.stringify(result.error) }) });
           }
         } catch (error) {
-          store.patch(nodeId, { status: 'error', answer: '提交失败：' + String((error && error.message) || error) });
+          store.patch(nodeId, { status: 'error', answer: T('error.submitFailed', { reason: String((error && error.message) || error) }) });
         }
       }
         async function loadOlder(rootId) {
@@ -1165,7 +1386,7 @@ window.__ModuleLoader__.load({
         try {
           await binding.session.loadOlder();
         } catch (error) {
-          storeFor(rootId).setError('加载更早历史失败：' + String((error && error.message) || error));
+          storeFor(rootId).setError(T('error.loadOlderFailed', { reason: String((error && error.message) || error) }));
         }
       }
 
@@ -1361,6 +1582,7 @@ window.__ModuleLoader__.load({
 
     /** What the model is doing right now: thinking, calling a tool, or writing. */
     function LiveProgress({ node }) {
+      useLocale();
       const running = node.status === 'thinking' || node.status === 'streaming' || node.status === 'running';
       const [, tick] = useState(0);
       useEffect(() => {
@@ -1373,10 +1595,10 @@ window.__ModuleLoader__.load({
       const step = node.step || 0;
       const elapsed = node.startedAt ? Math.max(0, Math.round((Date.now() - node.startedAt) / 1000)) : 0;
       const label = tool
-        ? '正在调用 ' + tool
+        ? T('live.calling', { tool })
         : node.answer
-          ? '正在输出…'
-          : step > 0 ? '正在思考…' : '正在开始…';
+          ? T('live.outputting')
+          : step > 0 ? T('live.thinking') : T('live.starting');
       return h('div', {
         style: {
           marginTop: 7, padding: '6px 8px', borderRadius: 7,
@@ -1402,11 +1624,12 @@ window.__ModuleLoader__.load({
             strokeLinecap: 'round',
           })),
         h('span', { style: { flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, label),
-        step > 0 ? h('span', { style: { fontVariantNumeric: 'tabular-nums', opacity: 0.75 } }, '第 ' + step + ' 步') : null,
+        step > 0 ? h('span', { style: { fontVariantNumeric: 'tabular-nums', opacity: 0.75 } }, T('live.step', { step })) : null,
         elapsed > 0 ? h('span', { style: { fontVariantNumeric: 'tabular-nums', opacity: 0.6 } }, elapsed + 's') : null);
     }
 
     function NodeCard({ node, selected, dimmed, index, store, api, rootId, match, collapsed, childCount, descendants, isLatest }) {
+      useLocale();
       const snapshot = store.getSnapshot();
       const composing = snapshot.composingId === node.id;
       const [expanded, setExpanded] = useState(false);
@@ -1414,7 +1637,7 @@ window.__ModuleLoader__.load({
       const cardRef = useRef(null);
       const isRunning = node.status === 'thinking' || node.status === 'streaming' || node.status === 'running';
       const answer = node.answer || '';
-      const answerText = answer.length > 1400 ? answer.slice(0, 1400) + '\n\n…（点开全屏看完整回答）' : answer;
+      const answerText = answer.length > 1400 ? answer.slice(0, 1400) + T('card.truncated') : answer;
 
       useEffect(() => {
         const element = cardRef.current;
@@ -1433,18 +1656,18 @@ window.__ModuleLoader__.load({
       const requestDelete = () => {
         let ok = true;
         try {
-          ok = window.confirm('删除这个节点和它下面的所有分支？（随时可恢复）');
+          ok = window.confirm(T('card.deleteConfirm'));
         } catch (error) {
           ok = true;
         }
         if (ok) api.deleteSubtree(rootId, node.id);
       };
 
-      const statusLabel = node.status === 'thinking' ? '思考中'
-        : node.status === 'streaming' || node.status === 'running' ? '回答中'
-          : node.status === 'error' ? '出错'
-            : node.status === 'stopped' ? '已中止'
-              : '已完成';
+      const statusLabel = node.status === 'thinking' ? T('card.status.thinking')
+        : node.status === 'streaming' || node.status === 'running' ? T('card.status.streaming')
+          : node.status === 'error' ? T('card.status.error')
+            : node.status === 'stopped' ? T('card.status.stopped')
+              : T('card.status.done');
 
       return h('div', {
         ref: cardRef,
@@ -1477,20 +1700,20 @@ window.__ModuleLoader__.load({
           h(Badge, { label: index, tone: C.accent }),
           isLatest
             ? h('span', {
-              title: '这是最新创建的节点',
+              title: T('card.latestTitle'),
               style: {
                 fontSize: 9.5, letterSpacing: '0.04em', color: C.accent, background: C.accentSoft,
                 borderRadius: 999, padding: '0 6px', lineHeight: '15px', whiteSpace: 'nowrap',
               },
-            }, '最新')
+            }, T('card.latestBadge'))
             : null,
           h(Badge, { label: statusLabel }),
           node.cost && (node.cost.ms || node.cost.tokens)
             ? h('span', {
               title: [
-                node.cost.ms ? '耗时 ' + formatCost({ ms: node.cost.ms, tokens: 0 }) : '',
-                node.cost.tokens ? '上下文 ' + formatCost({ ms: 0, tokens: node.cost.tokens }) : '',
-                node.cost.cached ? '缓存 ' + formatCost({ ms: 0, tokens: node.cost.cached }) : '',
+                node.cost.ms ? T('card.cost.elapsed', { value: formatCost({ ms: node.cost.ms, tokens: 0 }) }) : '',
+                node.cost.tokens ? T('card.cost.context', { value: formatCost({ ms: 0, tokens: node.cost.tokens }) }) : '',
+                node.cost.cached ? T('card.cost.cached', { value: formatCost({ ms: 0, tokens: node.cost.cached }) }) : '',
               ].filter(Boolean).join(' · '),
               style: {
                 fontSize: 10.5, color: C.ink3, fontVariantNumeric: 'tabular-nums',
@@ -1505,9 +1728,9 @@ window.__ModuleLoader__.load({
                 event.stopPropagation();
                 store.stop(node.id);
               },
-              title: '停止这条分支',
+              title: T('card.stopTitle'),
               className: BTN + ' dsh-tree-btn--sm dsh-tree-btn--danger',
-            }, '停止')
+            }, T('card.stop'))
             : null,
           node.status === 'done' && node.answerSeq
             ? h('button', {
@@ -1515,8 +1738,8 @@ window.__ModuleLoader__.load({
                 event.stopPropagation();
                 store.compose(node.id);
               },
-              title: '在这条分支上继续追问',
-              'aria-label': '在这条分支上继续追问',
+              title: T('card.ask'),
+              'aria-label': T('card.ask'),
               className: 'dsh-tree-btn dsh-tree-btn--icon dsh-tree-btn--sm',
               style: { color: C.accent },
             }, h(Icon, { name: 'plus' }))
@@ -1528,8 +1751,8 @@ window.__ModuleLoader__.load({
                   event.stopPropagation();
                   setMenuOpen((value) => !value);
                 },
-                title: '更多操作',
-                'aria-label': '更多操作',
+                title: T('card.more'),
+                'aria-label': T('card.more'),
                 'aria-expanded': menuOpen,
                 className: 'dsh-tree-btn dsh-tree-btn--icon dsh-tree-btn--sm',
               }, h(Icon, { name: 'more' })),
@@ -1547,10 +1770,10 @@ window.__ModuleLoader__.load({
                     setMenuOpen(false);
                     requestDelete();
                   },
-                  title: '隐藏这个节点和它下面的所有分支',
+                  title: T('card.deleteTitle'),
                   className: 'dsh-tree-btn dsh-tree-btn--sm dsh-tree-btn--danger',
                   style: { border: 'none', background: 'transparent', width: '100%', justifyContent: 'flex-start' },
-                }, '删除这个节点'))
+                }, T('card.delete')))
                 : null)
             : null),
         h('div', {
@@ -1558,14 +1781,14 @@ window.__ModuleLoader__.load({
             fontSize: 12.5, fontWeight: 600, lineHeight: 1.45, color: C.ink,
             display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
           },
-        }, node.question || '（无问题）'),
+        }, node.question || T('card.noQuestion')),
         h('div', {
           onClick: (event) => {
             if (!answer) return;
             event.stopPropagation();
             store.openReader(node.id);
           },
-          title: answer ? '点击全屏阅读' : undefined,
+          title: answer ? T('card.readTitle') : undefined,
           style: {
             ...MD.body,
             marginTop: 6,
@@ -1593,11 +1816,11 @@ window.__ModuleLoader__.load({
                   event.stopPropagation();
                   setExpanded((value) => !value);
                 },
-                title: expanded ? '收起这段回答' : '展开整段回答',
+                title: expanded ? T('card.collapseTitle') : T('card.expandTitle'),
                 className: LINK,
                 style: { color: C.accent },
               },
-                expanded ? '收起回答' : '展开回答',
+                expanded ? T('card.collapse') : T('card.expand'),
                 h(Chevron, { dir: expanded ? 'up' : 'down', size: 9 }))
               : null,
             answer
@@ -1606,10 +1829,10 @@ window.__ModuleLoader__.load({
                   event.stopPropagation();
                   store.openReader(node.id);
                 },
-                title: '全屏阅读完整回答',
+                title: T('card.fullscreenTitle'),
                 className: LINK,
                 style: { cursor: 'zoom-in' },
-              }, '全屏阅读',
+              }, T('card.fullscreen'),
                 h('svg', {
                   width: 9, height: 9, viewBox: '0 0 16 16', 'aria-hidden': true,
                   style: { display: 'block', flex: '0 0 auto' },
@@ -1625,16 +1848,17 @@ window.__ModuleLoader__.load({
                   event.stopPropagation();
                   store.toggleCollapse(node.id);
                 },
-                title: collapsed ? '展开这一枝' : '收起这一枝',
+                title: collapsed ? T('card.unfoldBranch') : T('card.foldBranch'),
                 className: collapsed ? CHIP : LINK,
               },
                 h(Chevron, { dir: collapsed ? 'right' : 'down', size: 9 }),
-                (collapsed ? '展开 ' : '收起 ') + (descendants || childCount) + ' 个后代')
+                T(collapsed ? 'card.unfoldDescendants' : 'card.foldDescendants', { count: descendants || childCount }))
               : null)
           : null);
     }
 
     function Composer({ store, api, rootId, node }) {
+      useLocale();
       const snapshot = store.getSnapshot();
       const [value, setValue] = useState('');
       const ref = useRef(null);
@@ -1663,8 +1887,8 @@ window.__ModuleLoader__.load({
               store.cancelCompose();
             }
           },
-          placeholder: '在这条分支上继续问…（Enter 发送，Shift+Enter 换行）',
-          'aria-label': '追问内容',
+          placeholder: T('composer.placeholder'),
+          'aria-label': T('composer.label'),
           rows: 2,
           className: 'dsh-tree-textarea',
           style: {
@@ -1675,19 +1899,20 @@ window.__ModuleLoader__.load({
         }),
         h('div', { style: { display: 'flex', gap: 6, marginTop: 8, alignItems: 'center' } },
           h('span', { style: { fontSize: 10.5, color: C.ink3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
-            '从「' + (node.question || '').slice(0, 12) + '…」出发'),
+            T('composer.from', { question: (node.question || '').slice(0, 12) })),
           h('span', { style: { flex: 1 } }),
           h('button', {
             onClick: () => store.cancelCompose(),
             className: BTN + ' dsh-tree-btn--sm',
-          }, '取消'),
+          }, T('composer.cancel')),
           h('button', {
             onClick: send,
             className: BTN + ' dsh-tree-btn--sm dsh-tree-btn--primary',
-          }, '发送')));
+          }, T('composer.send'))));
     }
 
     function Canvas({ store, api, rootId, size }) {
+      useLocale();
       const snapshot = store.getSnapshot();
       const nodes = snapshot.nodes;
       const [view, setView] = useState({ x: 40, y: 40, z: 1 });
@@ -1964,19 +2189,19 @@ window.__ModuleLoader__.load({
             alignItems: 'center', fontSize: 12, color: C.ink3,
           },
         },
-          h('span', { style: { fontWeight: 600, color: C.ink, fontSize: 12 } }, '无限探索'),
-          h('span', null, '· ' + liveNodes.length + ' 个节点'),
-          running > 0 ? h('span', { style: { color: C.accent } }, '· ' + running + ' 条分支在跑') : null,
+          h('span', { style: { fontWeight: 600, color: C.ink, fontSize: 12 } }, T('view.heading')),
+          h('span', null, '· ' + T('view.nodes', { count: liveNodes.length })),
+          running > 0 ? h('span', { style: { color: C.accent } }, '· ' + T('view.running', { count: running })) : null,
           snapshot.error ? h('span', { style: { color: C.warn } }, '· ' + snapshot.error) : null,
           snapshot.meta.hasMore
-            ? h('button', { onClick: () => api.loadOlder(rootId), ...btnProps() }, '加载更早')
+            ? h('button', { onClick: () => api.loadOlder(rootId), ...btnProps() }, T('view.loadOlder'))
             : null,
           tombstoned > 0
             ? h('button', {
               onClick: () => api.restoreHidden(rootId),
-              title: '恢复被删除的节点和分支',
+              title: T('view.restoreHiddenTitle'),
               ...pillProps(),
-            }, '已隐藏 ' + Math.max(hiddenCount, tombstoned) + ' 个 · 恢复')
+            }, T('view.restoreHidden', { count: Math.max(hiddenCount, tombstoned) }))
             : null,
           h('span', { style: { flex: 1 } }),
           h('div', {
@@ -2000,8 +2225,8 @@ window.__ModuleLoader__.load({
                   setQuery('');
                 }
               },
-              placeholder: '搜索节点',
-              'aria-label': '搜索节点',
+              placeholder: T('view.searchPlaceholder'),
+              'aria-label': T('view.searchLabel'),
               style: {
                 border: 'none', outline: 'none', fontSize: 12, width: 92, padding: '5px 0',
                 fontFamily: FONT, color: C.ink, background: 'transparent',
@@ -2010,28 +2235,28 @@ window.__ModuleLoader__.load({
             matches && matches.size > 0
               ? h('span', { style: { fontSize: 11, color: C.accent, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' } }, String(matches.size))
               : null),
-          h('div', { role: 'group', 'aria-label': '画布缩放', style: { display: 'flex', alignItems: 'center', gap: 4 } },
+          h('div', { role: 'group', 'aria-label': T('view.zoomGroup'), style: { display: 'flex', alignItems: 'center', gap: 4 } },
             h('button', {
-              title: '缩小画布', 'aria-label': '缩小画布', disabled: view.z <= 0.21,
+              title: T('view.zoomOut'), 'aria-label': T('view.zoomOut'), disabled: view.z <= 0.21,
               onClick: () => zoomBy(1 / 1.15),
               className: BTN_ICON,
             }, h(Icon, { name: 'minus' })),
             h('span', {
-              title: '当前缩放比例',
+              title: T('view.zoomLevel'),
               style: { minWidth: 44, textAlign: 'center', fontVariantNumeric: 'tabular-nums', color: C.ink2, fontSize: 11.5 },
             }, Math.round(view.z * 100) + '%'),
             h('button', {
-              title: '放大画布', 'aria-label': '放大画布', disabled: view.z >= 1.99,
+              title: T('view.zoomIn'), 'aria-label': T('view.zoomIn'), disabled: view.z >= 1.99,
               onClick: () => zoomBy(1.15),
               className: BTN_ICON,
             }, h(Icon, { name: 'plus' }))),
-          h('button', { onClick: fit, className: BTN, title: '缩放到能看见整棵树' }, h(Icon, { name: 'fit' }), '适应画布'),
+          h('button', { onClick: fit, className: BTN, title: T('view.fitTitle') }, h(Icon, { name: 'fit' }), T('view.fit')),
           h('button', {
             disabled: !latest,
             onClick: () => { if (!latest) return; setQuery(''); focusNode(latest.id); },
-            title: latest ? '展开路径并定位到最新创建的节点' : '还没有节点',
+            title: latest ? T('view.latestTitle') : T('view.latestTitleEmpty'),
             className: BTN_PRIMARY,
-          }, h(Icon, { name: 'latest' }), '定位最新')),
+          }, h(Icon, { name: 'latest' }), T('view.latest'))),
 
         // minimap
         layout.width > 0
@@ -2106,11 +2331,11 @@ window.__ModuleLoader__.load({
               justifyContent: 'center', pointerEvents: 'none',
             },
           }, h('div', { style: { textAlign: 'center', color: C.ink3 } },
-            h('div', { style: { fontSize: 13, color: C.ink2, marginBottom: 6 } }, '这棵树还是空的'),
+            h('div', { style: { fontSize: 13, color: C.ink2, marginBottom: 6 } }, T('view.empty.title')),
             h('div', { style: { fontSize: 11.5, lineHeight: 1.7 } },
-              '回到 Chat 问一句，这里就会长出第一个节点。'),
+              T('view.empty.hint')),
             h('div', { style: { fontSize: 11, marginTop: 4 } },
-              '若已经问过却有这句提示，把上面的「事件」数告我。')))
+              T('view.empty.report'))))
           : null);
     }
 
@@ -2166,7 +2391,7 @@ window.__ModuleLoader__.load({
               fontSize: 12.5, lineHeight: 1.8, color: C.warn, background: C.canvas, overflow: 'auto',
             },
           },
-            h('div', { style: { fontWeight: 600, marginBottom: 6 } }, '树视图出错了'),
+            h('div', { style: { fontWeight: 600, marginBottom: 6 } }, T('error.title')),
             h('div', { style: { color: C.ink2, fontFamily: 'ui-monospace, monospace' } }, this.state.error),
             h('div', {
               style: {
@@ -2180,15 +2405,16 @@ window.__ModuleLoader__.load({
                 marginTop: 14, border: '1px solid ' + C.accent, background: C.accent, color: '#fff',
                 borderRadius: 8, fontSize: 12, padding: '4px 12px', cursor: 'pointer', fontFamily: FONT,
               },
-            }, '重新载入视图'),
+            }, T('error.reload')),
             h('span', { style: { color: C.ink3, fontSize: 11, marginLeft: 10 } },
-              '画布数据没有丢，只是这一次渲染炸了。'));
+              T('error.hint')));
         }
         return this.props.children;
       }
     }
 
     function Reader({ node, onClose }) {
+      useLocale();
       useEffect(() => {
         const onKey = (event) => {
           if (event.key === 'Escape') {
@@ -2224,14 +2450,14 @@ window.__ModuleLoader__.load({
             h('div', { style: { flex: 1, minWidth: 0 } },
               h('div', {
                 style: { fontSize: 10.5, color: C.ink3, letterSpacing: '0.05em', marginBottom: 4 },
-              }, (node.kind === 'branch' ? '分支' : '主线') + ' · ' + (node.id || '')),
+              }, (node.kind === 'branch' ? T('reader.branch') : T('reader.mainline')) + ' · ' + (node.id || '')),
               h('div', {
                 style: { fontSize: 15, fontWeight: 600, lineHeight: 1.5, color: C.ink },
-              }, node.question || '（无问题）')),
+              }, node.question || T('card.noQuestion'))),
             h('button', {
               onClick: onClose,
-              title: '关闭（Esc）',
-              'aria-label': '关闭阅读视图',
+              title: T('reader.close'),
+              'aria-label': T('reader.closeLabel'),
               className: 'dsh-tree-btn dsh-tree-btn--icon',
               style: { width: 30, height: 30, minWidth: 30, minHeight: 30 },
             }, h(Icon, { name: 'close' }))),
@@ -2240,14 +2466,14 @@ window.__ModuleLoader__.load({
               padding: '18px 22px 22px', overflow: 'auto', flex: 1,
               ...MD.body, fontSize: 13.4, lineHeight: 1.85,
             },
-          }, node.answer ? renderMarkdown(node.answer) : '（还没有回答）'),
+          }, node.answer ? renderMarkdown(node.answer) : T('reader.noAnswer')),
           h('div', {
             style: {
               padding: '8px 20px', borderTop: '1px solid ' + C.cardEdge, fontSize: 10.5,
               color: C.ink3, display: 'flex', gap: 10, alignItems: 'center',
             },
           },
-            h('span', null, 'Esc 关闭 · 点背景关闭'),
+            h('span', null, T('reader.hint')),
             h('span', { style: { flex: 1 } }),
             node.cost && (node.cost.ms || node.cost.tokens)
               ? h('span', null, formatCost(node.cost))
@@ -2256,6 +2482,7 @@ window.__ModuleLoader__.load({
 
     function TreeView(props) {
       const { sessionId, api } = props;
+      useLocale();
       const rootId = useMemo(() => api.rootOf(sessionId), [sessionId, api]);
       const store = useMemo(() => api.storeFor(rootId), [rootId, api]);
       const [, force] = useState(0);
@@ -2369,15 +2596,51 @@ window.__ModuleLoader__.load({
     }
 
     return {
-      inject: ['slots', 'sessions'],
+      inject: ['slots', 'sessions', 'locale'],
       apply(ctx) {
         ensureStyles();
         const runtime = createRuntime(ctx);
+
+        // The locale service owns the visible language. Registering the
+        // dictionary under our own namespace keeps the plugin's copy out of
+        // the shared "common" namespace, and the service's fallback chain
+        // serves English to any language we did not translate.
+        try {
+          ctx.effect(() => ctx.locale.register(NS, {
+            zh: DICT.zh,
+            en: DICT.en,
+          }), 'dsh-explore: locale dictionaries');
+        } catch (error) {
+          // A profile without the locale plugin still gets the built-in table.
+        }
+
+        const bind = () => {
+          try {
+            const translate = ctx.locale.bind(NS);
+            localeBridge.translate = (key, params) => translate(key, params);
+          } catch (error) {
+            localeBridge.translate = fallbackTranslate;
+          }
+        };
+        bind();
+        try {
+          ctx.effect(() => ctx.locale.subscribe(() => {
+            bind();
+            for (const listener of [...localeListeners]) {
+              try { listener(); } catch (error) { /* a listener must not break the rest */ }
+            }
+          }), 'dsh-explore: locale subscription');
+        } catch (error) {
+          /* keep the fallback translator */
+        }
+
         ctx.slots.inject('conversation.view', () => ctx.slots.register({
           name: 'conversation.view',
           id: 'tree',
           order: 5,
-          label: () => '无限探索',
+          // A thunk is re-read on every projection, so the tab follows the
+          // active language instead of freezing one string at mount time.
+          label: () => T('view.tab'),
           inject: () => ({ api: {
             rootOf: runtime.rootOf,
             storeFor: runtime.storeFor,

@@ -65,7 +65,8 @@ docs/design.md           设计文档：数据模型、取舍、已知缺口
 
 ## 实现要点
 
-- **注册点**：`conversation.view`，`id: tree`、`order: 5`、`label: 无限探索`，与 Chat / Trajectory 并列。
+- **注册点**：`conversation.view`，`id: tree`、`order: 5`、`label` 是一个 thunk（每次投影重新求值），与 Chat / Trajectory 并列。
+- **界面文案跟随宿主语言**：所有可见文本都是 `dsh-explore` 命名空间下的键，通过客户端 locale 服务查表；切换语言时页签标题和整个视图一起切换。没有 locale 插件的 profile 会退回内置的中英表（按 `document.documentElement.lang` 选择）。
 - **节点是日志的投影**：读取会话的 `entries`（持久事件 + 暂态 `assistant/live-chunk`），把一个 turn 投影成一张卡片；不额外写记录，所以在 Chat 里继续聊，树上就会自然长节点。
 - **分叉是真实会话**：`ctx.sessions.fork({ sessionId, atSeq })`，子会话天然继承到该回答为止的前缀上下文；每根枝会出现在会话列表里，插件会把它改名成 `⟂ 父问题 · 新问题` 便于辨认。
 - **父子关系存在本地**：这一版 fork 不记录 `parentSession`，树形关系由插件在 `localStorage` 里维护（同时缓存折叠状态、墓碑、卡片高度）。
@@ -75,7 +76,7 @@ docs/design.md           设计文档：数据模型、取舍、已知缺口
 
 ```bash
 node --check client.js        # 语法
-node test/render-smoke.cjs    # 渲染冒烟：把整个视图真渲染一遍并断言关键 UI 文本
+node test/render-smoke.cjs    # 渲染冒烟：把整个视图真渲染一遍，并断言中英两套文案
 ```
 
 `client.js` 是客户端插件（`window.__ModuleLoader__.load` 的惰性工厂），改完客户端热更新立即生效。注意样式表在每次 `apply()` 都会重写同一个 `<style>` 节点——如果只在节点已存在时跳过，热更新后的新规则永远不会生效。

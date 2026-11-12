@@ -1,4 +1,8 @@
-/* Throwaway smoke test: module evaluation + registration only, then delete. */
+/*
+ * Render smoke test: loads the client module, registers the view, renders the
+ * whole tree with a fake React, and asserts the visible copy. Runs in plain
+ * Node — no browser, no bundler.
+ */
 const fs = require('fs');
 const path = require('path');
 
@@ -24,6 +28,7 @@ const React = {
 
 const storage = new Map();
 const documentStub = {
+  documentElement: { lang: 'zh-CN' },
   getElementById: () => null,
   head: { appendChild: (node) => calls.push(['style', node.textContent.length]) },
   createElement: () => ({ textContent: '', id: '' }),
@@ -55,6 +60,43 @@ new Function('window', 'document', code)(global.window, documentStub);
 const plugin = global.__module;
 if (!plugin || typeof plugin.apply !== 'function') throw new Error('module did not export apply');
 
+// A minimal locale service: same contract as the shell's (register / bind /
+// subscribe), so the test exercises the same code path the app uses.
+const localeState = {
+  active: 'zh',
+  dicts: new Map(),
+  listeners: new Set(),
+};
+
+const localeService = {
+  register(ns, dicts) {
+    localeState.dicts.set(ns, dicts);
+    for (const listener of [...localeState.listeners]) listener();
+    return () => localeState.dicts.delete(ns);
+  },
+  bind(ns) {
+    return (key, params) => {
+      const dicts = localeState.dicts.get(ns) || {};
+      const chain = localeState.active === 'zh' ? ['zh', 'en'] : ['en'];
+      let template = key;
+      for (const locale of chain) {
+        const value = dicts[locale] && dicts[locale][key];
+        if (value !== undefined) { template = value; break; }
+      }
+      if (!params) return template;
+      return template.replace(/\{(\w+)\}/g, (m, name) => (name in params ? String(params[name]) : m));
+    };
+  },
+  subscribe(fn) {
+    localeState.listeners.add(fn);
+    return () => localeState.listeners.delete(fn);
+  },
+  setActive(lang) {
+    localeState.active = lang;
+    for (const listener of [...localeState.listeners]) listener();
+  },
+};
+
 const ctx = {
   slots: {
     inject: (slot, cb) => { calls.push(['inject', slot]); cb(); },
@@ -67,6 +109,8 @@ const ctx = {
     },
   },
   sessions: {},
+  locale: localeService,
+  effect: (fn) => { const disposer = fn(); return disposer; },
 };
 
 plugin.apply(ctx);
@@ -138,16 +182,16 @@ function renderText() {
   return seen.join(' ');
 }
 
-// Pass 1: the folded tree. The deepest node is hidden by the default-fold rule,
-// so this also proves the badge follows the actual newest creation time.
-const text = renderText();
-const expect = ['无限探索', '4 个节点', '定位最新', '适应画布', '正在调用 read', '第 3 步', '展开回答', '全屏阅读'];
-for (const needle of expect) {
-  if (text.indexOf(needle) < 0) throw new Error('missing UI text: ' + needle);
+// Pass 1 (zh): the folded tree. The deepest node is hidden by the default-fold
+// rule, so this also proves the badge follows the actual newest creation time.
+const zhText = renderText();
+const zhExpect = ['无限探索', '4 个节点', '定位最新', '适应画布', '正在调用 read', '第 3 步', '展开回答', '全屏阅读'];
+for (const needle of zhExpect) {
+  if (zhText.indexOf(needle) < 0) throw new Error('missing zh UI text: ' + needle);
 }
-if (text.indexOf('更深的分支') >= 0) throw new Error('depth-3 node should start folded');
+if (zhText.indexOf('更深的分支') >= 0) throw new Error('depth-3 node should start folded');
 
-// Pass 2: reveal is what 定位最新 uses; the badge must land on the newest node.
+// Pass 2 (zh): reveal is what 定位最新 uses; the badge must land on the newest node.
 nodeStore.reveal('b-mm9k99-c3d4');
 const revealed = renderText();
 const mark = revealed.lastIndexOf('最新', revealed.indexOf('定位最新') - 1);
@@ -155,5 +199,21 @@ if (mark < 0) throw new Error('latest badge did not render after reveal');
 const nearby = revealed.slice(mark, mark + 80);
 if (nearby.indexOf('更深的分支') < 0) throw new Error('latest badge is not on the newest node: ' + nearby);
 
-console.log('rendered chars:', revealed.length);
+// Pass 3 (en): switching the shell language must switch the plugin's copy.
+localeService.setActive('en');
+const enText = renderText();
+const enExpect = ['Infinite Exploration', '4 nodes', 'Jump to latest', 'Fit canvas', 'Calling read', 'step 3', 'Expand answer', 'Read full screen'];
+for (const needle of enExpect) {
+  if (enText.indexOf(needle) < 0) throw new Error('missing en UI text: ' + needle);
+}
+if (enText.indexOf('无限探索') >= 0) throw new Error('zh copy leaked into the en render');
+if (enText.indexOf('第 3 步') >= 0) throw new Error('zh step label leaked into the en render');
+
+// The tab label is a thunk, so it must follow the language too.
+localeService.setActive('zh');
+if (captured.options.label() !== '无限探索') throw new Error('zh tab label: ' + captured.options.label());
+localeService.setActive('en');
+if (captured.options.label() !== 'Infinite Exploration') throw new Error('en tab label: ' + captured.options.label());
+
+console.log('zh chars:', zhText.length, '| en chars:', enText.length);
 console.log('RENDER OK');
