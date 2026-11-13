@@ -16,16 +16,18 @@ window.__ModuleLoader__.load({
       // near-white in dark), so text painted on it must use the paired
       // foreground token instead of a literal white.
       onAccent: 'var(--dsw-alias-label-primary-foreground)',
+      buttonFill: 'var(--dsw-alias-button-primary-fill)',
       ink: 'var(--dsw-alias-label-primary)',
       ink2: 'var(--dsw-alias-label-secondary)',
       ink3: 'var(--dsw-alias-label-secondary)',
       line: 'var(--dsw-alias-border-l2)',
-      hairline: 'var(--dsw-alias-border-l1)',
       card: 'var(--dsw-alias-bg-layer-1)',
       cardEdge: 'var(--dsw-alias-border-l1)',
       canvas: 'var(--dsw-alias-bg-base)',
       code: 'var(--dsw-alias-markdown-code-block)',
-      codeInline: 'var(--dsw-alias-markdown-inline-code)',
+      // A `label-primary` tint keeps the chip visible on a white card (the
+      // markdown inline-code token is nearly white in the light theme).
+      codeInline: 'color-mix(in srgb, var(--dsw-alias-label-primary) 7%, transparent)',
       scrim: 'var(--dsw-alias-bg-mask-1)',
       warn: 'var(--dsw-alias-state-error-primary)',
       ok: 'var(--dsw-alias-state-success-primary)',
@@ -34,10 +36,13 @@ window.__ModuleLoader__.load({
     const NODE_H = 212;
     const GAP_X = 44;
     const GAP_Y = 76;
-    // Font stacks follow Settings → Appearance. The literal stack after the
-    // comma is the fallback the shell itself uses when nothing is configured.
-    const FONT = 'var(--dsh-font-family-text, system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif)';
-    const MONO = 'var(--dsh-font-family-code, ui-monospace, SFMono-Regular, Menlo, monospace)';
+    // Font families follow Settings → Appearance. DSH composes the user's list
+    // with its own default stack on body (`--dsw-font-family` /
+    // `--ds-font-family-code`), so reading the composed tokens keeps glyph
+    // fallback intact; the literal stacks are the fallback for a profile
+    // without the theme plugin.
+    const FONT = 'var(--dsw-font-family, system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif)';
+    const MONO = 'var(--ds-font-family-code, ui-monospace, SFMono-Regular, Menlo, monospace)';
 
     // ------------------------------------------------------------------ locale
     // Visible text must follow the shell language, so every string is a key
@@ -1421,10 +1426,10 @@ window.__ModuleLoader__.load({
         margin: '0 0 0.5em', paddingLeft: '0.75em', borderLeft: '2px solid ' + C.line,
         color: C.ink3,
       },
-      hr: { border: 'none', borderTop: '1px solid ' + C.hairline, margin: '0.75em 0' },
+      hr: { border: 'none', borderTop: '1px solid ' + C.line, margin: '0.75em 0' },
       codeBlock: {
         margin: '0 0 0.6em', padding: '0.55em 0.75em', borderRadius: 6, background: C.code,
-        border: '1px solid ' + C.hairline, fontFamily: MONO,
+        border: '1px solid ' + C.line, fontFamily: MONO,
         fontSize: '0.9em', lineHeight: 1.6, whiteSpace: 'pre-wrap', overflowX: 'auto', color: C.ink,
       },
       inlineCode: {
@@ -2416,7 +2421,7 @@ window.__ModuleLoader__.load({
             h('button', {
               onClick: () => this.setState({ error: null, stack: '' }),
               style: {
-                marginTop: 14, border: '1px solid ' + C.accent, background: C.accent, color: C.onAccent,
+                marginTop: 14, border: '1px solid ' + C.buttonFill, background: C.buttonFill, color: C.onAccent,
                 borderRadius: 8, fontSize: 12, padding: '4px 12px', cursor: 'pointer', fontFamily: FONT,
               },
             }, T('error.reload')),
@@ -2457,7 +2462,7 @@ window.__ModuleLoader__.load({
         },
           h('div', {
             style: {
-              padding: '14px 20px 11px', borderBottom: '1px solid ' + C.hairline,
+              padding: '14px 20px 11px', borderBottom: '1px solid ' + C.line,
               display: 'flex', alignItems: 'flex-start', gap: 12,
             },
           },

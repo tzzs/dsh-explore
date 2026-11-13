@@ -39,7 +39,7 @@
 
 **定位最新**：工具条最右的蓝色按钮，一次点击做三件事——把从根到最新节点的祖先路径全部展开、把这张卡片居中（按卡片实际高度和被工具条占据的顶部空间计算）、选中它。最新按**创建时间**判定（`createdAt`，回落到本轮开始时间 `startedAt`），不是完成时间，所以并行几条枝同时跑、完成顺序打乱时也不会跳错。最新那张卡片头部有一个「最新」小徽标，随时能看出现在会跳去哪。没有节点时按钮置灰。
 
-**按钮与主题**：所有按钮共用一个几何规格（32px 高、8px 圆角、图标+文字间距 6px），带 hover / active / `:focus-visible` 三态；颜色全部走主题 token（`--dsw-alias-*`），深色主题不用改代码，字体栈接 `--dsh-font-family-text` / `--dsh-font-family-code`。主按钮底色 `--dsw-alias-brand-primary` 会在深浅主题间反相（浅色近黑、深色近白），所以按钮文字必须用配套的 `--dsw-alias-label-primary-foreground`；Markdown 代码块、行内代码、阅读层遮罩与分隔线同样各有对应 token。`test/theme-tokens.cjs` 会拦下新写死的色值。卡片内动作是同一套的紧凑档（24px）与文字链档（`dsh-tree-link`）。
+**按钮与主题**：所有按钮共用一个几何规格（32px 高、8px 圆角、图标+文字间距 6px），带 hover / active / `:focus-visible` 三态；颜色全部走主题 token（`--dsw-alias-*`），深色主题不用改代码，字体接 DSH 组合后的 `--dsw-font-family` / `--ds-font-family-code`（用户字体 + 内置默认栈）。主按钮底色 `--dsw-alias-brand-primary` 会在深浅主题间反相（浅色近黑、深色近白），所以按钮文字必须用配套的 `--dsw-alias-label-primary-foreground`；Markdown 代码块用 `--dsw-alias-markdown-code-block` 配 `--dsw-alias-border-l2` 边框，行内代码用 `label-primary` 的 7% 着色（官方 inline-code token 在浅色下接近白色，白卡片上看不见），阅读层遮罩用 `--dsw-alias-bg-mask-1`。`npm test` 里的 `theme-tokens` 会拦下新写死的色值、拼错的 token 和被破坏的反相配对。卡片内动作是同一套的紧凑档（24px）与文字链档（`dsh-tree-link`）。
 
 **节点卡片**：默认宽度 ~320px。卡内自上而下：序号徽标（A、B、C…）、问题（加粗，最多 3 行）、回答（正文，先显示约 6 行，点「展开全文」原位变高）、底部一排轻量动作（展开 / 复制 / 在此追问）。右上角一个 `+`，就是追问入口。
 
