@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "scripts": {
+    "test": "node --check client.js && node test/render-smoke.cjs && node test/theme-tokens.cjs"
+  },
   "description": "DSH Explore — a branching-conversation canvas for DeepSeek Harness: ask a follow-up on any answer and grow a new branch.",
   "keywords": [
     "deepseek-harness",
