@@ -72,7 +72,8 @@ locale/zh.json           中文展示名与描述
 locale/en.json           英文展示名与描述
 icon.svg                 插件图标
 assets/hero.svg          README 头图（一条线分出多条路径）
-test/render-smoke.cjs    渲染冒烟测试（假 React + 假 DOM，无需浏览器）
+test/render-smoke.cjs    渲染冒烟测试（假 React + 假 DOM，断言中英两套文案）
+test/theme-tokens.cjs    主题守卫测试（禁止写死色值，检查关键 token 配对）
 docs/design.md           设计文档：数据模型、取舍、已知缺口
 ```
 
@@ -83,13 +84,14 @@ docs/design.md           设计文档：数据模型、取舍、已知缺口
 - **节点是日志的投影**：读取会话的 `entries`（持久事件 + 暂态 `assistant/live-chunk`），把一个 turn 投影成一张卡片；不额外写记录，所以在 Chat 里继续聊，树上就会自然长节点。
 - **分叉是真实会话**：`ctx.sessions.fork({ sessionId, atSeq })`，子会话天然继承到该回答为止的前缀上下文；每根枝会出现在会话列表里，插件会把它改名成 `⟂ 父问题 · 新问题` 便于辨认。
 - **父子关系存在本地**：这一版 fork 不记录 `parentSession`，树形关系由插件在 `localStorage` 里维护（同时缓存折叠状态、墓碑、卡片高度）。
-- **主题**：颜色全部使用 `--dsw-alias-*` CSS 变量，浅色 / 深色主题自动跟随，不写死色值。
+- **主题**：颜色全部使用 `--dsw-alias-*` CSS 变量，浅色 / 深色主题自动跟随，不写死色值；字体栈接 `--dsh-font-family-text` / `--dsh-font-family-code`，跟随外观设置。主按钮的 `--dsw-alias-brand-primary` 在深浅主题下会反相（浅色近黑、深色近白），所以文字必须用配套的 `--dsw-alias-label-primary-foreground`，不能写死 `#fff`。`test/theme-tokens.cjs` 守住这条规则。
 
 ## 开发
 
 ```bash
 node --check client.js        # 语法
 node test/render-smoke.cjs    # 渲染冒烟：把整个视图真渲染一遍，并断言中英两套文案
+node test/theme-tokens.cjs    # 主题守卫：色值不写死，主按钮文字用反相前景 token
 ```
 
 `client.js` 是客户端插件（`window.__ModuleLoader__.load` 的惰性工厂），改完客户端热更新立即生效。注意样式表在每次 `apply()` 都会重写同一个 `<style>` 节点——如果只在节点已存在时跳过，热更新后的新规则永远不会生效。
@@ -120,7 +122,7 @@ node test/render-smoke.cjs    # 渲染冒烟：把整个视图真渲染一遍，
 
 **Install** — clone this repo, then point DSH's plugin manager at the absolute directory (`install_bundle`, `target = <clone path>`). The tab shows up as「无限探索」.
 
-**Tech** — `client.js` registers `conversation.view` (`id: tree`); nodes are projections of session events (`entries`, including transient `assistant/live-chunk`); forks are real sessions created with `ctx.sessions.fork({ sessionId, atSeq })`; parent links live in `localStorage` because this DSH build does not record `parentSession`; all colours use `--dsw-alias-*` theme tokens.
+**Tech** — `client.js` registers `conversation.view` (`id: tree`); nodes are projections of session events (`entries`, including transient `assistant/live-chunk`); forks are real sessions created with `ctx.sessions.fork({ sessionId, atSeq })`; parent links live in `localStorage` because this DSH build does not record `parentSession`; all colours use `--dsw-alias-*` theme tokens (including the inverted `--dsw-alias-label-primary-foreground` on primary buttons), and font stacks follow `--dsh-font-family-*`.
 
 **Limits** — the tree relationship is local to this browser; there is no cross-session notebook; approvals/questions outside the viewport do not surface; sessions forked outside the plugin cannot be attached to a tree.
 
