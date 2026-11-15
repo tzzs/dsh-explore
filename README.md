@@ -28,8 +28,9 @@ DSH 探索在你的会话里加一个 **「无限探索」** 页签：把这一�
 - **无限画布** —— 拖拽平移、滚轮缩放（10%–200%）、适应画布，右下角小地图可点击跳转并显示当前视口。
 - **任意回答开新枝** —— 卡片右上角的 `+` 就是追问入口，就地长出一张输入卡，回车发送后新节点立刻出现。
 - **并行分支** —— 几条枝可以同时跑。正在回答的卡片带实时进度行：转圈指示器 +「正在思考… / 正在调用 read / 正在输出…」+ 第 N 步 + 已用秒数，正文按流式 token 边写边渲染，并带「停止」。
+- **等你回答** —— 分支停在提问或审批时，卡片改说「等你回答… / 等你授权…」并带一圈强调边框；画布自动展开到它并居中，工具条上的「N 个在等你」可点击跳转。正在跑的节点所在路径不会被默认折叠藏起来。
 - **定位最新** —— 一键展开到最新节点的祖先路径并把那张卡片居中；最新按创建时间判定，并行完成顺序打乱也不会跳错。
-- **折叠与搜索** —— 第三层起默认折叠；`Ctrl/Cmd+F` 聚焦搜索框，回车逐个跳转命中节点并自动展开祖先路径。
+- **折叠与搜索** —— 第三层起默认折叠，但通往「正在跑 / 在等你」节点的路径始终展开；`Ctrl/Cmd+F` 聚焦搜索框，回车逐个跳转命中节点并自动展开祖先路径。
 - **全屏阅读** —— 点卡片正文打开阅读层（Esc / 点背景 / × 关闭），长回答不用挤在 320px 里。
 - **删除与恢复** —— 删除只写墓碑并归档对应的 fork 会话，工具栏可一键恢复；会话日志本身从不改写。
 
@@ -82,6 +83,9 @@ docs/design.md           设计文档：数据模型、取舍、已知缺口
 - **注册点**：`conversation.view`，`id: tree`、`order: 5`、`label` 是一个 thunk（每次投影重新求值），与 Chat / Trajectory 并列。
 - **界面文案跟随宿主语言**：所有可见文本都是 `dsh-explore` 命名空间下的键，通过客户端 locale 服务查表；切换语言时页签标题和整个视图一起切换。没有 locale 插件的 profile 会退回内置的中英表（按 `document.documentElement.lang` 选择）。
 - **节点是日志的投影**：读取会话的 `entries`（持久事件 + 暂态 `assistant/live-chunk`），把一个 turn 投影成一张卡片；不额外写记录，所以在 Chat 里继续聊，树上就会自然长节点。
+- **等待态没有专门事件**：宿主里 `ask_user_question` 与审批都只是「工具还没返回」——等回答期间不发 `turn/end`，`running` 也保持 `true`。插件用 `tool/call` 的 `ask_user_question`（`callId` 在 `tool/result` 里结清）和 `approval/asked → approval/decided` 算出「在等你」，把卡片从「正在调用工具」改成「等你回答 / 等你授权」。`user/message` 的 `source.kind` 只有 `user` 与 `user-question-reply` 两种，投影两端都认。
+- **正在跑的路径不折叠**：布局只走「未折叠」的节点，被折叠的节点连位置都没有、根本不会被画。所以通往「正在跑 / 在等你」节点的祖先路径一律不套用默认折叠；节点进入运行态时还会把路径展开并持久化，停在等用户时再把画布移过去。工具条上的运行计数与「在等你」计数都是跳转按钮。
+- **会话会被重新绑定**：离开对话后宿主会释放它的引用，引用归零时 scope 被回收、`Session` 实例连同事件窗口一起丢掉；再进来时 `materializeScope` 会造一个新的 `eventSource`，窗口从空开始。所以订阅跟着 `eventSource` 换（旧的自动退订）、空窗口不当作「会话是空的」去剪枝、冷会话主动 `open()` 一次——否则直接在「无限探索」页签上切回来会得到一张空画布，而先点「回对话」再切回来又正常。`test/session-rebind.cjs` 守住这条。
 - **分叉是真实会话**：`ctx.sessions.fork({ sessionId, atSeq })`，子会话天然继承到该回答为止的前缀上下文；每根枝会出现在会话列表里，插件会把它改名成 `⟂ 父问题 · 新问题` 便于辨认。
 - **父子关系存在本地**：这一版 fork 不记录 `parentSession`，树形关系由插件在 `localStorage` 里维护（同时缓存折叠状态、墓碑、卡片高度）。
 - **主题**：颜色全部使用 `--dsw-alias-*` CSS 变量，浅色 / 深色主题自动跟随，不写死色值。主按钮的 `--dsw-alias-brand-primary` 在深浅主题下会反相（浅色近黑、深色近白），所以文字必须用配套的 `--dsw-alias-label-primary-foreground`，不能写死 `#fff`；行内代码用 `label-primary` 的 7% 着色（官方 inline-code token 在浅色下几乎是白的，放在白卡片上会看不见）。字体接组合后的 `--dsw-font-family` / `--ds-font-family-code`——DSH 已把用户字体和内置默认栈拼在一起，直接读组合 token 才能保住字形回退。`test/theme-tokens.cjs` 守住这些规则。
@@ -89,10 +93,12 @@ docs/design.md           设计文档：数据模型、取舍、已知缺口
 ## 开发
 
 ```bash
-npm test                      # 下面三条一起跑（package.json 里的 scripts.test）
+npm test                      # 下面五条一起跑（package.json 里的 scripts.test）
 
 node --check client.js        # 语法
 node test/render-smoke.cjs    # 渲染冒烟：把整个视图真渲染一遍，并断言中英两套文案
+node test/canvas-visibility.cjs  # 可见性回归：在跑/等你的节点必须被画出来，等待态文案与投影白名单
+node test/session-rebind.cjs  # 重新打开会话：scope 重建后换订阅、空窗口不剪枝、冷会话要 open
 node test/theme-tokens.cjs    # 主题守卫：色值不写死、token 必须存在、主按钮用反相前景 token
 ```
 
@@ -110,7 +116,7 @@ node test/theme-tokens.cjs    # 主题守卫：色值不写死、token 必须存
 
 - **树关系只在这台机器的这个浏览器里**：换浏览器、清站点数据或换 profile，树枝会平掉（每个会话自己那条链还在，但接不回同一棵树）。
 - **树是会话级的**：没有「把几棵树摆在一起」的本子。
-- **视口之外的状态**：审批、提问、出错只体现在卡片状态和工具条的运行计数上，卡片不在视口时不会主动冒出来。
+- **出错**：出错只体现在卡片状态上，不会自动跳过去；提问和审批则会（见「等你回答」）。
 - **插件之外的 fork**：在 DSH 里、插件之外 fork 出来的会话识别不到，会被当成新树的根。
 
 ## License
@@ -126,16 +132,17 @@ node test/theme-tokens.cjs    # 主题守卫：色值不写死、token 必须存
 - Infinite pan/zoom canvas with a clickable minimap that also shows the current viewport.
 - `+` on any finished answer opens an inline composer; the new node appears immediately.
 - Several branches run concurrently, each with a live progress row (thinking / tool name / step / elapsed) and a stop button; streamed tokens render as Markdown while they arrive.
+- **Waiting on you** — a branch parked on a question or an approval says so on its card (「等你回答…」/「等你授权…」 with an accent ring); the canvas opens the path to it and centres it, and the toolbar's "waiting on you" chip jumps to it. The path to a node that is running is never hidden by the default fold.
 - **Jump to latest** expands the ancestor path and centres the newest node; newest is judged by creation time, so out-of-order completions cannot send you to a stale card.
-- Depth-3 branches start folded; `Ctrl/Cmd+F` searches nodes and reveals the ancestor path.
+- Depth-3 branches start folded — except on the path to a running or waiting node; `Ctrl/Cmd+F` searches nodes and reveals the ancestor path.
 - Click the answer body for a full-screen reader; deleting is a tombstone plus archiving the fork's session, and it is reversible.
 
 **Install** — clone this repo, then point DSH's plugin manager at the absolute directory (`install_bundle`, `target = <clone path>`). The tab shows up as「无限探索」.
 
-**Tech** — `client.js` registers `conversation.view` (`id: tree`); nodes are projections of session events (`entries`, including transient `assistant/live-chunk`); forks are real sessions created with `ctx.sessions.fork({ sessionId, atSeq })`; parent links live in `localStorage` because this DSH build does not record `parentSession`; all colours use `--dsw-alias-*` theme tokens (including the inverted `--dsw-alias-label-primary-foreground` on primary buttons), and font families read the composed `--dsw-font-family` / `--ds-font-family-code` tokens so a custom font keeps DSH's fallback stack.
+**Tech** — `client.js` registers `conversation.view` (`id: tree`); nodes are projections of session events (`entries`, including transient `assistant/live-chunk`); forks are real sessions created with `ctx.sessions.fork({ sessionId, atSeq })`; parent links live in `localStorage` because this DSH build does not record `parentSession`; a pending `ask_user_question` / approval has no event of its own — the projection derives "waiting on you" from `tool/call` + `approval/asked` (and the turn staying open), and the layout never folds the path to an active node; all colours use `--dsw-alias-*` theme tokens (including the inverted `--dsw-alias-label-primary-foreground` on primary buttons), and font families read the composed `--dsw-font-family` / `--ds-font-family-code` tokens so a custom font keeps DSH's fallback stack.
 
 **CI & releases** — PRs and `main` run tests on Ubuntu / Windows with Node.js 22 / 24. Google Release Please maintains a release PR; merging it creates a version tag and GitHub Release with a plugin `.tgz` attachment. See the [release setup guide](docs/releasing.md) for Actions permissions and the optional `RELEASE_PLEASE_TOKEN` secret.
 
-**Limits** — the tree relationship is local to this browser; there is no cross-session notebook; approvals/questions outside the viewport do not surface; sessions forked outside the plugin cannot be attached to a tree.
+**Limits** — the tree relationship is local to this browser; there is no cross-session notebook; errors only show on the card (questions and approvals do jump into view); sessions forked outside the plugin cannot be attached to a tree.
 
 Licensed under [MIT](LICENSE).
