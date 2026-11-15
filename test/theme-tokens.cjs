@@ -121,6 +121,10 @@ const required = [
     'the live-progress chip edge must stay blue (business accent, not the inverting brand-primary)'],
   [!/accentEdge:.*brand-primary/.test(source.split('\n').find((line) => line.includes('accentEdge:')) || ''),
     'the live-progress chip edge must not fall back to the grey brand-primary'],
+  // The folded-descendants pill wraps a block-level chevron <svg>; a plain
+  // inline-block button would stack it above the label and double the height.
+  [/\.dsh-tree-chip \{[^}]*display: inline-flex;[^}]*align-items: center;/.test(source),
+    'the descendants chip must be an inline-flex box so its chevron and label share a line'],
   // DSH composes the user's font list with its own default stack on body;
   // reading the composed token keeps glyph fallback intact.
   [/const FONT = 'var\(--dsw-font-family, /.test(source),
