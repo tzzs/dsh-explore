@@ -6,7 +6,9 @@
 
 - [CI](../.github/workflows/ci.yml)：向 `main` 提 PR 时自动运行，也支持手动运行和被其他工作流调用。在 Ubuntu、Windows 上分别用 Node.js 22、24 执行入口语法检查、`npm test` 和 `npm pack --dry-run`。项目没有 npm 依赖，因此不需要安装步骤或 lockfile。
 - [Release Please](../.github/workflows/release-please.yml)：每次推送到 `main` 时先复用完整 CI；全部通过后才更新发版 PR 或创建 Release。支持在 Actions 页面选择 `main` 后手动运行；其他分支会跳过发版。主分支的测试在这个工作流里运行，不会重复启动一套 CI。
-- Release Please 先创建草稿 Release；同一工作流再将其返回的实际发版 commit 交给 CI，跑完整的 Ubuntu / Windows × Node.js 22 / 24 矩阵。全部通过后，从同一个 commit 通过 `npm pack` 生成 `local-dsh-explore-<version>.tgz`，上传附件，再公开 Release 并创建 tag。这样即使 `main` 在前一轮 CI 执行期间前进，公开发布的内容也已通过完整检查。包内容沿用 [package.json](../package.json) 的 `files` 清单。打包和发布留在同一工作流中，因为内置 `GITHUB_TOKEN` 创建的 tag 不会触发新的工作流。
+- 发版分两段，避免在版本内容还没被完整验证时就公开：Release Please 先只创建草稿 Release（此时还没有 tag），同一工作流再把它的实际发版 commit 交给 CI，跑完整的 Ubuntu / Windows × Node.js 22 / 24 矩阵。全部通过后，从同一个 commit 通过 `npm pack` 生成 `local-dsh-explore-<version>.tgz`，上传附件，最后公开 Release 并由 GitHub 创建 tag。这样即使 `main` 在前一轮 CI 执行期间前进，公开发布的内容也一定通过了完整检查。包内容沿用 [package.json](../package.json) 的 `files` 清单。
+- 草稿没有 tag，Release Please 此时算不出版本边界，所以「更新发版 PR」被推迟到草稿不存在或已发布之后（通常是下一次推送到 `main`）。存在未完成的草稿时，新一轮工作流会停止并发失败，避免算出重复版本；处理方式见「失败处理」。
+- 打包和发布留在同一工作流中，因为内置 `GITHUB_TOKEN` 创建的 tag 不会触发新的工作流。
 
 Actions 使用固定 commit SHA 引用第三方 action；升级时同时更新 SHA 和旁边的版本注释。
 
@@ -25,7 +27,8 @@ Secret 只用于 Release Please job，PR 测试无需访问它。仓库或组织
 1. 功能、修复照常提 PR，合并到 `main`。若使用 squash merge，确保最终的 PR 标题符合 Conventional Commits。
 2. CI 通过后，Release Please 创建或更新 `chore(main): release ...` 发版 PR，修改 [package.json](../package.json)、[CHANGELOG.md](../CHANGELOG.md) 和 [.release-please-manifest.json](../.release-please-manifest.json)。
 3. 维护者确认版本和变更日志后合并这个 PR。
-4. 主分支 CI 再次通过后，Release Please 创建草稿 Release；实际发版 commit 的完整 CI 矩阵通过后，后续 job 上传插件包并公开 Release，生成 `v<version>` tag。
+4. 主分支 CI 再次通过后，Release Please 创建草稿 Release；实际发版 commit 的完整 CI 矩阵通过后，后续 job 上传插件包、公开 Release，并由 GitHub 生成 `v<version>` tag。
+5. 下一次推送到 `main` 时，Release Please 基于新 tag 继续维护下一条发版 PR。
 
 发版 PR 不会自动合并。项目目前使用 `@local/dsh-explore` 包名且 `private: true`，工作流只创建 GitHub Release 和 `.tgz` 附件，不发布到 npm registry，也不需要 npm token。
 
@@ -61,4 +64,5 @@ tar -xzf local-dsh-explore-0.1.0.tgz -C dsh-explore-release
 - **CI 失败**：先修复测试或打包问题，Release Please 不会越过失败的 CI 执行发版。
 - **创建 PR 报权限不足**：检查 Actions 的创建 PR 开关，或 PAT 的仓库范围和权限；组织策略也可能限制写操作。
 - **发版 PR 的 CI 等待批准或没有生成**：检查是否配置了 `RELEASE_PLEASE_TOKEN`；使用内置 `GITHUB_TOKEN` 时，具有写权限的维护者可在 PR 上点击 **Approve workflows to run**，环境尚未提供此功能时推荐使用 PAT。
-- **草稿 Release 已创建，但发版检查、打包或上传失败**：在该次工作流运行中使用 **Re-run failed jobs**，重跑失败的检查及后续上传、发布 job；它们会继续使用原草稿的 commit 和 tag，并通过 `--clobber` 支持重复上传。失败时 Release 保持草稿。不要只重新执行 Release Please job 或重新手动启动整个工作流来尝试补附件，因为它不会把已存在的 Release 再次报告为新建。
+- **草稿 Release 已创建，但发版检查、打包或上传失败**：在该次工作流运行中使用 **Re-run failed jobs**，重跑失败的检查及后续上传、发布 job；它们会继续使用原草稿的 commit 和 tag，并通过 `--clobber` 支持重复上传。失败时 Release 保持草稿，不会公开未完成的版本。若原运行已无法重跑，删掉那个草稿 Release 后重新推送即可（草稿尚未创建 tag，删除不会影响已发布版本）。不要只重新执行 Release Please job 或重新手动启动整个工作流来尝试补附件，因为它不会把已存在的 Release 再次报告为新建。
+- **发版工作流报「A draft release is pending」**：说明上一次发版停在草稿阶段。优先在原运行的 **Re-run failed jobs** 里完成验证与发布；若原运行已不可用，按上一条删除草稿后重新推送。这道检查刻意阻止新一轮发版，因为草稿没有 tag 时 Release Please 会算错版本边界，可能生成重复的下一版 PR。

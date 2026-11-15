@@ -33,8 +33,28 @@ jobs:
       tag_name: ${{ steps.release.outputs.tag_name }}
       sha: ${{ steps.release.outputs.sha }}
     steps:
-      - name: Run Release Please
+      - name: Check for an unfinished draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          pending_drafts="$(gh api --paginate "repos/$GH_REPO/releases" --jq '.[] | select(.draft) | .id')"
+          if [[ -n "$pending_drafts" ]]; then
+            echo "::error::A draft release is pending. Re-run failed jobs in its original Release Please workflow."
+            exit 1
+          fi
+      - name: Create draft release
         id: release
+        uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
+          target-branch: main
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          skip-github-pull-request: true
+      # A draft has no tag yet, so defer PR generation until it is published.
+      - name: Update release PR
+        if: steps.release.outputs.release_created != 'true'
         uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4
         with:
           # A PAT runs release PR CI without manual approval; GITHUB_TOKEN needs no secret.
@@ -42,6 +62,7 @@ jobs:
           target-branch: main
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+          skip-github-release: true
 
   release-checks:
     name: Release CI
