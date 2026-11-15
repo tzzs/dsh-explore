@@ -98,6 +98,14 @@ node test/theme-tokens.cjs    # 主题守卫：色值不写死、token 必须存
 
 `client.js` 是客户端插件（`window.__ModuleLoader__.load` 的惰性工厂），改完客户端热更新立即生效。注意样式表在每次 `apply()` 都会重写同一个 `<style>` 节点——如果只在节点已存在时跳过，热更新后的新规则永远不会生效。
 
+## CI 与发版
+
+向 `main` 提 PR 时，GitHub Actions 会在 Ubuntu / Windows、Node.js 22 / 24 上执行测试与打包预检；推送到 `main` 时，发版工作流先运行同一套检查，再由 Google Release Please 创建或更新发版 PR。
+
+合并发版 PR 后自动创建 `v<version>` tag、GitHub Release，并附上可解压后本地安装的插件 `.tgz` 包。首版为 `v0.1.0`，后续版本由 Conventional Commits 决定。
+
+启用前请查看 [CI 与自动发版说明](docs/releasing.md)，完成仓库 Actions 权限与可选的 `RELEASE_PLEASE_TOKEN` 配置。
+
 ## 已知限制
 
 - **树关系只在这台机器的这个浏览器里**：换浏览器、清站点数据或换 profile，树枝会平掉（每个会话自己那条链还在，但接不回同一棵树）。
@@ -125,6 +133,8 @@ node test/theme-tokens.cjs    # 主题守卫：色值不写死、token 必须存
 **Install** — clone this repo, then point DSH's plugin manager at the absolute directory (`install_bundle`, `target = <clone path>`). The tab shows up as「无限探索」.
 
 **Tech** — `client.js` registers `conversation.view` (`id: tree`); nodes are projections of session events (`entries`, including transient `assistant/live-chunk`); forks are real sessions created with `ctx.sessions.fork({ sessionId, atSeq })`; parent links live in `localStorage` because this DSH build does not record `parentSession`; all colours use `--dsw-alias-*` theme tokens (including the inverted `--dsw-alias-label-primary-foreground` on primary buttons), and font families read the composed `--dsw-font-family` / `--ds-font-family-code` tokens so a custom font keeps DSH's fallback stack.
+
+**CI & releases** — PRs and `main` run tests on Ubuntu / Windows with Node.js 22 / 24. Google Release Please maintains a release PR; merging it creates a version tag and GitHub Release with a plugin `.tgz` attachment. See the [release setup guide](docs/releasing.md) for Actions permissions and the optional `RELEASE_PLEASE_TOKEN` secret.
 
 **Limits** — the tree relationship is local to this browser; there is no cross-session notebook; approvals/questions outside the viewport do not surface; sessions forked outside the plugin cannot be attached to a tree.
 
