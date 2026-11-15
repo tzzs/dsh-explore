@@ -93,13 +93,14 @@ docs/design.md           设计文档：数据模型、取舍、已知缺口
 ## 开发
 
 ```bash
-npm test                      # 下面五条一起跑（package.json 里的 scripts.test）
+npm test                      # 下面六条一起跑（package.json 里的 scripts.test）
 
 node --check client.js        # 语法
 node test/render-smoke.cjs    # 渲染冒烟：把整个视图真渲染一遍，并断言中英两套文案
 node test/canvas-visibility.cjs  # 可见性回归：在跑/等你的节点必须被画出来，等待态文案与投影白名单
 node test/session-rebind.cjs  # 重新打开会话：scope 重建后换订阅、空窗口不剪枝、冷会话要 open
 node test/theme-tokens.cjs    # 主题守卫：色值不写死、token 必须存在、主按钮用反相前景 token
+node test/motion.cjs          # 动效：画布移动、手势中断、导航替换、减少动态效果与清理
 ```
 
 `client.js` 是客户端插件（`window.__ModuleLoader__.load` 的惰性工厂），改完客户端热更新立即生效。注意样式表在每次 `apply()` 都会重写同一个 `<style>` 节点——如果只在节点已存在时跳过，热更新后的新规则永远不会生效。
