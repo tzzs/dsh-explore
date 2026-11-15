@@ -1761,7 +1761,7 @@ window.__ModuleLoader__.load({
         width: box, height: box, viewBox: '0 0 16 16', 'aria-hidden': true,
         style: {
           display: 'block', flex: '0 0 auto', color: color || 'currentColor',
-          transform: 'rotate(' + rotate + 'deg)', transition: 'transform 120ms ease',
+          transform: 'rotate(' + rotate + 'deg)',
         },
       }, h('path', {
         d: 'M3.5 6 L8 10.5 L12.5 6',
@@ -1771,6 +1771,86 @@ window.__ModuleLoader__.load({
     }
 
     // ------------------------------------------------------------- components
+    const MOTION_EXIT_MS = 140;
+    const MOTION_CAMERA_MS = 320;
+    const reducedMotion = () => typeof window.matchMedia === 'function'
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    /** Keep closing content only for its exit; timers never control app state. */
+    function Presence({ show, className, children, ...props }) {
+      const [present, setPresent] = useState(show);
+      useEffect(() => {
+        if (show) { setPresent(true); return undefined; }
+        if (reducedMotion()) { setPresent(false); return undefined; }
+        const timer = window.setTimeout(() => setPresent(false), MOTION_EXIT_MS);
+        return () => window.clearTimeout(timer);
+      }, [show]);
+      if (!show && !present) return null;
+      return h('div', {
+        ...props,
+        className: 'dsh-tree-presence ' + (className || ''),
+        'data-open': show ? 'true' : 'false',
+        inert: !show ? true : undefined,
+        'aria-hidden': !show ? true : undefined,
+      }, children);
+    }
+
+    /** Animate the actual camera so culling, dots and minimap stay in sync. */
+    function useCanvasView() {
+      const [view, setView] = useState({ x: 40, y: 40, z: 1 });
+      const current = useRef(view);
+      const motion = useRef(null);
+      const commit = useCallback((next) => {
+        current.current = next;
+        setView(next);
+      }, []);
+      const cancel = useCallback(() => {
+        if (motion.current) window.cancelAnimationFrame(motion.current.frame);
+        motion.current = null;
+      }, []);
+      const move = useCallback((target, animate) => {
+        cancel();
+        const from = current.current;
+        const next = typeof target === 'function' ? target(from) : target;
+        if (!animate || reducedMotion() || typeof window.requestAnimationFrame !== 'function') {
+          commit(next);
+          return;
+        }
+        const run = { frame: null, start: null, target: next };
+        const step = (time) => {
+          if (motion.current !== run) return;
+          if (run.start === null) run.start = time;
+          const progress = Math.min(1, (time - run.start) / MOTION_CAMERA_MS);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          commit({
+            x: from.x + (next.x - from.x) * eased,
+            y: from.y + (next.y - from.y) * eased,
+            z: from.z + (next.z - from.z) * eased,
+          });
+          if (progress < 1) run.frame = window.requestAnimationFrame(step);
+          else motion.current = null;
+        };
+        motion.current = run;
+        run.frame = window.requestAnimationFrame(step);
+      }, [cancel, commit]);
+      useEffect(() => {
+        const media = typeof window.matchMedia === 'function'
+          ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+        const onChange = () => {
+          if (!media.matches || !motion.current) return;
+          const target = motion.current.target;
+          cancel();
+          commit(target);
+        };
+        if (media && media.addEventListener) media.addEventListener('change', onChange);
+        return () => {
+          cancel();
+          if (media && media.removeEventListener) media.removeEventListener('change', onChange);
+        };
+      }, [cancel, commit]);
+      return [view, move, cancel];
+    }
+
     function Badge({ label, tone }) {
       return h('span', {
         style: {
@@ -1846,13 +1926,15 @@ window.__ModuleLoader__.load({
         elapsed > 0 ? h('span', { style: { fontVariantNumeric: 'tabular-nums', opacity: 0.6 } }, elapsed + 's') : null);
     }
 
-    function NodeCard({ node, selected, dimmed, index, store, api, rootId, match, collapsed, childCount, descendants, isLatest }) {
+    function NodeCard({ node, selected, dimmed, index, store, api, rootId, match, collapsed, childCount, descendants, isLatest, entering }) {
       useLocale();
       const snapshot = store.getSnapshot();
       const composing = snapshot.composingId === node.id;
       const [expanded, setExpanded] = useState(false);
       const [menuOpen, setMenuOpen] = useState(false);
       const cardRef = useRef(null);
+      // Freeze this mount's entry decision; streamed tokens do not restart it.
+      const animateEntry = useRef(entering);
       const isRunning = isInProgressNode(node);
       const awaiting = node.awaiting === 'question' || node.awaiting === 'approval';
       const answer = node.answer || '';
@@ -1892,6 +1974,7 @@ window.__ModuleLoader__.load({
 
       return h('div', {
         ref: cardRef,
+        className: 'dsh-tree-card' + (animateEntry.current ? ' dsh-tree-card--enter' : ''),
         onMouseDown: (event) => event.stopPropagation(),
         onClick: () => store.select(node.id),
         style: {
@@ -1912,7 +1995,6 @@ window.__ModuleLoader__.load({
           padding: '10px 12px 9px',
           opacity: dimmed ? 0.72 : 1,
           boxSizing: 'border-box',
-          transition: 'opacity 120ms ease, box-shadow 120ms ease',
           cursor: 'pointer',
         },
       },
@@ -1957,11 +2039,13 @@ window.__ModuleLoader__.load({
             ? h('button', {
               onClick: (event) => {
                 event.stopPropagation();
-                store.compose(node.id);
+                if (composing) store.cancelCompose();
+                else store.compose(node.id);
               },
-              title: T('card.ask'),
-              'aria-label': T('card.ask'),
-              className: 'dsh-tree-btn dsh-tree-btn--icon dsh-tree-btn--sm',
+              title: composing ? T('composer.cancel') : T('card.ask'),
+              'aria-label': composing ? T('composer.cancel') : T('card.ask'),
+              'aria-expanded': composing,
+              className: 'dsh-tree-btn dsh-tree-btn--icon dsh-tree-btn--sm dsh-tree-ask',
               style: { color: C.accent },
             }, h(Icon, { name: 'plus' }))
             : null,
@@ -1977,8 +2061,16 @@ window.__ModuleLoader__.load({
                 'aria-expanded': menuOpen,
                 className: 'dsh-tree-btn dsh-tree-btn--icon dsh-tree-btn--sm',
               }, h(Icon, { name: 'more' })),
-              menuOpen
-                ? h('div', {
+              h(Presence, {
+                  show: menuOpen,
+                  className: 'dsh-tree-menu',
+                  onKeyDown: (event) => {
+                    if (event.key === 'Escape') {
+                      event.stopPropagation();
+                      setMenuOpen(false);
+                      event.currentTarget.previousElementSibling.focus();
+                    }
+                  },
                   onMouseDown: (event) => event.stopPropagation(),
                   onClick: (event) => event.stopPropagation(),
                   style: {
@@ -1994,8 +2086,7 @@ window.__ModuleLoader__.load({
                   title: T('card.deleteTitle'),
                   className: 'dsh-tree-btn dsh-tree-btn--sm dsh-tree-btn--danger',
                   style: { border: 'none', background: 'transparent', width: '100%', justifyContent: 'flex-start' },
-                }, T('card.delete')))
-                : null)
+                }, T('card.delete'))))
             : null),
         h('div', {
           style: {
@@ -2021,9 +2112,8 @@ window.__ModuleLoader__.load({
           },
         }, answer ? renderMarkdown(answerText) : null),
         h(LiveProgress, { node }),
-        composing
-          ? h(Composer, { store, api, rootId, node })
-          : null,
+        h(Presence, { show: composing, className: 'dsh-tree-composer' },
+          h(Composer, { store, api, rootId, node, active: composing })),
         answer.length > 260 || childCount > 0
           ? h('div', {
             style: {
@@ -2078,18 +2168,18 @@ window.__ModuleLoader__.load({
           : null);
     }
 
-    function Composer({ store, api, rootId, node }) {
+    function Composer({ store, api, rootId, node, active }) {
       useLocale();
-      const snapshot = store.getSnapshot();
       const [value, setValue] = useState('');
       const ref = useRef(null);
       useEffect(() => {
-        if (ref.current) ref.current.focus();
-      }, []);
+        if (active && ref.current) ref.current.focus();
+        if (!active) setValue('');
+      }, [active]);
 
       const send = () => {
         const question = value.trim();
-        if (!question) return;
+        if (!question || store.getSnapshot().composingId !== node.id) return;
         store.cancelCompose();
         api.branch(rootId, node, question);
       };
@@ -2136,7 +2226,12 @@ window.__ModuleLoader__.load({
       useLocale();
       const snapshot = store.getSnapshot();
       const nodes = snapshot.nodes;
-      const [view, setView] = useState({ x: 40, y: 40, z: 1 });
+      const [view, setView, cancelViewMotion] = useCanvasView();
+      // All known nodes count as seen, including those outside the viewport.
+      const seenNodes = useRef(new Set(nodes.map((node) => node.id)));
+      useEffect(() => {
+        for (const node of nodes) seenNodes.current.add(node.id);
+      }, [nodes]);
       const [query, setQuery] = useState('');
       const drag = useRef(null);
       const wrapRef = useRef(null);
@@ -2224,7 +2319,7 @@ window.__ModuleLoader__.load({
         const height = snapshot.heights[pendingFocus] || NODE_H;
         const z = Math.max(0.2, Math.min(1, (rect.width - 48) / NODE_W, (rect.height - top - 32) / height));
         setView({ z, x: rect.width / 2 - (pos.x + NODE_W / 2) * z,
-          y: top + (rect.height - top) / 2 - (pos.y + height / 2) * z });
+          y: top + (rect.height - top) / 2 - (pos.y + height / 2) * z }, true);
         setPendingFocus(null);
       }, [pendingFocus, layout, snapshot.heights]);
       const latest = latestNodeOf(liveNodes);
@@ -2314,6 +2409,7 @@ window.__ModuleLoader__.load({
 
       const onMouseDown = (event) => {
         if (event.button !== 0) return;
+        cancelViewMotion();
         drag.current = { x: event.clientX, y: event.clientY, ox: view.x, oy: view.y };
         store.select(null);
       };
@@ -2347,7 +2443,7 @@ window.__ModuleLoader__.load({
           z: scale,
           x: (rect.width - layout.width * scale) / 2,
           y: chrome,
-        });
+        }, true);
       };
 
       /** Zoom around the viewport centre so the middle of the picture stays put. */
@@ -2359,7 +2455,7 @@ window.__ModuleLoader__.load({
           const next = Math.min(2, Math.max(0.2, current.z * factor));
           const scale = next / current.z;
           return { z: next, x: cx - (cx - current.x) * scale, y: cy - (cy - current.y) * scale };
-        });
+        }, true);
       };
 
       const fittedRef = useRef(false);
@@ -2396,6 +2492,7 @@ window.__ModuleLoader__.load({
 
       return h('div', {
         ref: wrapRef,
+        inert: snapshot.readingId ? true : undefined,
         onWheel,
         onMouseDown,
         onMouseMove,
@@ -2451,6 +2548,7 @@ window.__ModuleLoader__.load({
               childCount: counts.direct.get(node.id) || 0,
               descendants: counts.descendants.get(node.id) || 0,
               isLatest: latest ? latest.id === node.id : false,
+              entering: !seenNodes.current.has(node.id),
             }));
           })),
 
@@ -2570,7 +2668,7 @@ window.__ModuleLoader__.load({
                 z: current.z,
                 x: wrapper.width / 2 - localX * current.z,
                 y: wrapper.height / 2 - localY * current.z,
-              }));
+              }), true);
             },
           },
             h('div', {
@@ -2709,20 +2807,44 @@ window.__ModuleLoader__.load({
       }
     }
 
-    function Reader({ node, onClose }) {
+    function Reader({ node, open, onClose }) {
       useLocale();
+      const panelRef = useRef(null);
+      const closeRef = useRef(null);
+      const close = useRef(onClose);
+      close.current = onClose;
       useEffect(() => {
+        if (!open) return undefined;
+        const previousFocus = document.activeElement;
+        if (closeRef.current) closeRef.current.focus();
         const onKey = (event) => {
           if (event.key === 'Escape') {
             event.stopPropagation();
-            onClose();
+            close.current();
+          } else if (event.key === 'Tab' && panelRef.current) {
+            const controls = panelRef.current.querySelectorAll('button, a[href], input, textarea, [tabindex="0"]');
+            const first = controls[0];
+            const last = controls[controls.length - 1];
+            if (event.shiftKey && document.activeElement === first) {
+              event.preventDefault();
+              if (last) last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+              event.preventDefault();
+              if (first) first.focus();
+            }
           }
         };
         window.addEventListener('keydown', onKey, true);
-        return () => window.removeEventListener('keydown', onKey, true);
-      }, [onClose]);
+        return () => {
+          window.removeEventListener('keydown', onKey, true);
+          if (previousFocus && previousFocus.isConnected) previousFocus.focus();
+        };
+      }, [open]);
 
-      return h('div', {
+      if (!node) return null;
+      return h(Presence, {
+        show: open,
+        className: 'dsh-tree-reader',
         onClick: onClose,
         style: {
           position: 'absolute', inset: 0, zIndex: 40, background: C.scrim,
@@ -2730,6 +2852,11 @@ window.__ModuleLoader__.load({
         },
       },
         h('div', {
+          ref: panelRef,
+          className: 'dsh-tree-reader-panel',
+          role: 'dialog',
+          'aria-modal': true,
+          'aria-label': node.question || T('card.noQuestion'),
           onClick: (event) => event.stopPropagation(),
           style: {
             width: '100%', maxWidth: 820, maxHeight: '100%', background: C.card,
@@ -2751,6 +2878,7 @@ window.__ModuleLoader__.load({
                 style: { fontSize: 15, fontWeight: 600, lineHeight: 1.5, color: C.ink },
               }, node.question || T('card.noQuestion'))),
             h('button', {
+              ref: closeRef,
               onClick: onClose,
               title: T('reader.close'),
               'aria-label': T('reader.closeLabel'),
@@ -2805,16 +2933,19 @@ window.__ModuleLoader__.load({
 
       const snapshot = store.getSnapshot();
       const reading = snapshot.readingId ? store.getNode(snapshot.readingId) : undefined;
+      const readerNode = useRef(null);
+      if (reading) readerNode.current = reading;
 
       return h('div', {
         ref: hostRef,
+        className: 'dsh-tree-root',
         style: {
           position: 'relative', width: '100%', height: '100%', minHeight: 420,
           overflow: 'hidden', fontFamily: FONT, color: C.ink, background: C.canvas,
         },
       },
-        h(Boundary, null, h(Canvas, { store, api, rootId, size })),
-        reading ? h(Reader, { node: reading, onClose: () => store.closeReader() }) : null);
+        h(Boundary, null, h(Canvas, { key: rootId, store, api, rootId, size })),
+        h(Reader, { key: rootId, node: reading || readerNode.current, open: Boolean(reading), onClose: () => store.closeReader() }));
     }
 
     // ------------------------------------------------------------------ mount
@@ -2832,6 +2963,22 @@ window.__ModuleLoader__.load({
       style.textContent = [
         '@keyframes dshTreeSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }',
         '@keyframes dshTreePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }',
+        '.dsh-tree-root { --tree-fast: 120ms; --tree-enter: 240ms; --tree-exit: ' + MOTION_EXIT_MS + 'ms; --tree-ease: cubic-bezier(.2,.8,.2,1); --tree-spring: cubic-bezier(.16,1.3,.3,1); }',
+        '@keyframes dshTreeReveal { from { opacity: 0; transform: translateY(6px) scale(.985); } to { opacity: 1; transform: none; } }',
+        '@keyframes dshTreeDismiss { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(3px) scale(.99); } }',
+        '@keyframes dshTreeFadeIn { from { opacity: 0; } to { opacity: 1; } }',
+        '@keyframes dshTreeFadeOut { from { opacity: 1; } to { opacity: 0; } }',
+        '.dsh-tree-card { transition: opacity var(--tree-enter) var(--tree-ease), box-shadow var(--tree-enter) var(--tree-ease), border-color var(--tree-fast) ease; }',
+        '.dsh-tree-card--enter { animation: dshTreeReveal var(--tree-enter) var(--tree-ease); }',
+        '.dsh-tree-presence[data-open="true"] { animation: dshTreeReveal var(--tree-enter) var(--tree-ease); }',
+        '.dsh-tree-presence[data-open="false"] { pointer-events: none; animation: dshTreeDismiss var(--tree-exit) ease-in forwards; }',
+        '.dsh-tree-menu { transform-origin: top right; }',
+        '.dsh-tree-menu[data-open="true"] { animation-timing-function: var(--tree-spring); }',
+        '.dsh-tree-composer { transform-origin: top center; }',
+        '.dsh-tree-reader[data-open="true"] { animation: dshTreeFadeIn 180ms ease-out; }',
+        '.dsh-tree-reader[data-open="false"] { animation: dshTreeFadeOut var(--tree-exit) ease-in forwards; }',
+        '.dsh-tree-reader[data-open="true"] .dsh-tree-reader-panel { animation: dshTreeReveal var(--tree-enter) var(--tree-ease); }',
+        '.dsh-tree-reader[data-open="false"] .dsh-tree-reader-panel { animation: dshTreeDismiss var(--tree-exit) ease-in forwards; }',
         // Every control shares one geometry so the toolbar reads as one row.
         '.dsh-tree-btn {',
         '  border: 1px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-layer-1);',
@@ -2840,13 +2987,14 @@ window.__ModuleLoader__.load({
         '  min-height: 32px; min-width: 32px; padding: 5px 10px;',
         '  display: inline-flex; align-items: center; justify-content: center; gap: 6px;',
         '  white-space: nowrap; flex-shrink: 0; box-sizing: border-box; cursor: pointer;',
-        '  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;',
+        '  transition: background var(--tree-fast) ease, border-color var(--tree-fast) ease, color var(--tree-fast) ease, transform 180ms var(--tree-spring);',
         '}',
         '.dsh-tree-btn:hover:not([disabled]) {',
         '  background: color-mix(in srgb, var(--dsw-alias-label-primary) 6%, transparent);',
         '  border-color: var(--dsw-alias-border-l2); color: var(--dsw-alias-label-primary);',
         '}',
         '.dsh-tree-btn:active:not([disabled]) {',
+        '  transform: scale(.96); transition-duration: 70ms;',
         '  background: color-mix(in srgb, var(--dsw-alias-label-primary) 10%, transparent);',
         '}',
         '.dsh-tree-btn:focus-visible {',
@@ -2890,7 +3038,20 @@ window.__ModuleLoader__.load({
         '}',
         '.dsh-tree-link:hover { color: var(--dsw-alias-brand-primary); }',
         '.dsh-tree-link:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: 1px; }',
-        '.dsh-tree-textarea:focus { border-color: var(--dsw-alias-brand-primary) !important; }',
+        '.dsh-tree-ask svg { transition: transform var(--tree-enter) var(--tree-spring); }',
+        '.dsh-tree-ask[aria-expanded="true"] svg { transform: rotate(45deg); }',
+        '.dsh-tree-chip, .dsh-tree-link { transition: background var(--tree-fast) ease, color var(--tree-fast) ease, transform 180ms var(--tree-spring); }',
+        '.dsh-tree-chip:active, .dsh-tree-link:active { transform: scale(.97); transition-duration: 70ms; }',
+        '.dsh-tree-chip:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: 2px; }',
+        '.dsh-tree-link svg, .dsh-tree-chip svg { transition: transform var(--tree-enter) var(--tree-ease); }',
+        '.dsh-tree-textarea { transition: border-color var(--tree-fast) ease, box-shadow var(--tree-fast) ease; }',
+        '.dsh-tree-textarea:focus { border-color: var(--dsw-alias-brand-primary) !important; box-shadow: 0 0 0 3px color-mix(in srgb, var(--dsw-alias-brand-primary) 8%, transparent); }',
+        '@media (hover: hover) { .dsh-tree-btn:hover:not([disabled]):not(:active) { transform: translateY(-1px); } }',
+        '@media (prefers-reduced-motion: reduce) {',
+        '  .dsh-tree-root *, .dsh-tree-root *::before, .dsh-tree-root *::after { animation: none !important; transition: none !important; }',
+        '  .dsh-tree-root .dsh-tree-btn, .dsh-tree-root .dsh-tree-chip, .dsh-tree-root .dsh-tree-link { transform: none !important; }',
+        '  .dsh-tree-presence[data-open="false"] { display: none; }',
+        '}',
       ].join('\n');
       document.head.appendChild(style);
     }
