@@ -11,7 +11,10 @@ window.__ModuleLoader__.load({
     const C = {
       accent: 'var(--dsw-alias-brand-primary)',
       accentSoft: 'color-mix(in srgb, var(--dsw-alias-brand-primary) 12%, transparent)',
-      accentEdge: 'color-mix(in srgb, var(--dsw-alias-brand-primary) 18%, transparent)',
+      // The live-progress chip is the one blue accent in the view. It must use
+      // the business accent, not brand-primary: brand-primary is near-black in
+      // the light theme and would turn the chip grey.
+      accentEdge: 'color-mix(in srgb, var(--dsw-alias-state-business-primary) 18%, transparent)',
       // `--dsw-alias-brand-primary` inverts between themes (near-black in light,
       // near-white in dark), so text painted on it must use the paired
       // foreground token instead of a literal white.

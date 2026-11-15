@@ -37,6 +37,7 @@ const ALLOWED_ALIAS_TOKENS = new Set([
   '--dsw-alias-label-primary-foreground',
   '--dsw-alias-label-secondary',
   '--dsw-alias-markdown-code-block',
+  '--dsw-alias-state-business-primary',
   '--dsw-alias-state-error-primary',
   '--dsw-alias-state-success-primary',
 ]);
@@ -116,6 +117,10 @@ const required = [
     'inline code must use a label-primary tint so it stays visible on a white card'],
   [/scrim:\s*'var\(--dsw-alias-bg-mask-1\)'/.test(source),
     'the reader backdrop must use --dsw-alias-bg-mask-1'],
+  [/accentEdge:\s*'color-mix\(in srgb, var\(--dsw-alias-state-business-primary\) 18%, transparent\)'/.test(source),
+    'the live-progress chip edge must stay blue (business accent, not the inverting brand-primary)'],
+  [!/accentEdge:.*brand-primary/.test(source.split('\n').find((line) => line.includes('accentEdge:')) || ''),
+    'the live-progress chip edge must not fall back to the grey brand-primary'],
   // DSH composes the user's font list with its own default stack on body;
   // reading the composed token keeps glyph fallback intact.
   [/const FONT = 'var\(--dsw-font-family, /.test(source),
