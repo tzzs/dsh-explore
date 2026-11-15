@@ -8,6 +8,7 @@
 - [Release Please](../.github/workflows/release-please.yml)：每次推送到 `main` 时先复用完整 CI；全部通过后才更新发版 PR 或创建 Release。支持在 Actions 页面选择 `main` 后手动运行；其他分支会跳过发版。主分支的测试在这个工作流里运行，不会重复启动一套 CI。
 - 发版分两段，避免在版本内容还没被完整验证时就公开：Release Please 先只创建草稿 Release（此时还没有 tag），同一工作流再把它的实际发版 commit 交给 CI，跑完整的 Ubuntu / Windows × Node.js 22 / 24 矩阵。全部通过后，从同一个 commit 通过 `npm pack` 生成 `local-dsh-explore-<version>.tgz`，上传附件，最后公开 Release 并由 GitHub 创建 tag。这样即使 `main` 在前一轮 CI 执行期间前进，公开发布的内容也一定通过了完整检查。包内容沿用 [package.json](../package.json) 的 `files` 清单。
 - 草稿没有 tag，Release Please 此时算不出版本边界，所以「更新发版 PR」被推迟到草稿不存在或已发布之后（通常是下一次推送到 `main`）。存在未完成的草稿时，新一轮工作流会停止并发失败，避免算出重复版本；处理方式见「失败处理」。
+- 发版 PR 受 `always-update` 保护：每次运行都会按当前 `main` 重建它的分支，避免像普通分支那样因为基分支前进而卡在冲突里。
 - 打包和发布留在同一工作流中，因为内置 `GITHUB_TOKEN` 创建的 tag 不会触发新的工作流。
 
 Actions 使用固定 commit SHA 引用第三方 action；升级时同时更新 SHA 和旁边的版本注释。
