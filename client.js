@@ -2601,6 +2601,9 @@ window.__ModuleLoader__.load({
         '  background: color-mix(in srgb, var(--dsw-alias-brand-primary) 8%, transparent);',
         '  color: var(--dsw-alias-brand-primary); border-radius: 999px; font-family: inherit;',
         '  font-size: 11px; line-height: 18px; padding: 2px 10px; cursor: pointer; white-space: nowrap;',
+        // The chevron is a block-level <svg>; without an inline-flex box it takes
+        // its own line and doubles the pill's height.
+        '  display: inline-flex; align-items: center; gap: 4px; box-sizing: border-box;',
         '}',
         '.dsh-tree-chip:hover {',
         '  background: color-mix(in srgb, var(--dsw-alias-brand-primary) 14%, transparent);',
