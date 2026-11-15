@@ -26,7 +26,7 @@ Secret 只用于 Release Please job，PR 测试无需访问它。仓库或组织
 ## 日常发版
 
 1. 功能、修复照常提 PR，合并到 `main`。若使用 squash merge，确保最终的 PR 标题符合 Conventional Commits。
-2. CI 通过后，Release Please 创建或更新 `chore(main): release ...` 发版 PR，修改 [package.json](../package.json)、[CHANGELOG.md](../CHANGELOG.md) 和 [.release-please-manifest.json](../.release-please-manifest.json)。
+2. CI 通过后，Release Please 创建或更新 `chore(main): release ...` 发版 PR，修改 [package.json](../package.json)、`CHANGELOG.md` 和 [.release-please-manifest.json](../.release-please-manifest.json)。仓库里不放预置的 `CHANGELOG.md`：Release Please 会自己建这个文件；预置一个只有标题的空文件会被它当成旧内容，多挂一个空的 `## Changelog` 小节。
 3. 维护者确认版本和变更日志后合并这个 PR。
 4. 主分支 CI 再次通过后，Release Please 创建草稿 Release；实际发版 commit 的完整 CI 矩阵通过后，后续 job 上传插件包、公开 Release，并由 GitHub 生成 `v<version>` tag。
 5. 下一次推送到 `main` 时，Release Please 基于新 tag 继续维护下一条发版 PR。
