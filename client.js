@@ -60,6 +60,9 @@ window.__ModuleLoader__.load({
         'view.heading': '无限探索',
         'view.nodes': '{count} 个节点',
         'view.running': '{count} 条分支在跑',
+        'view.runningTitle': '跳到下一条在跑的节点',
+        'view.awaiting': '{count} 个在等你',
+        'view.awaitingTitle': '跳到正在等你的节点',
         'view.loadOlder': '加载更早',
         'view.restoreHidden': '已隐藏 {count} 个 · 恢复',
         'view.restoreHiddenTitle': '恢复被删除的节点和分支',
@@ -76,9 +79,10 @@ window.__ModuleLoader__.load({
         'view.latestTitleEmpty': '还没有节点',
         'view.empty.title': '这棵树还是空的',
         'view.empty.hint': '回到 Chat 问一句，这里就会长出第一个节点。',
-        'view.empty.report': '若已经问过却有这句提示，把上面的「事件」数告我。',
+        'view.empty.report': '若已经问过却是空的，把这一行告我：事件 {events} · 会话 {state}。',
 
         'card.noQuestion': '（无问题）',
+        'card.questionReply': '（回答上一轮的提问）',
         'card.latestBadge': '最新',
         'card.latestTitle': '这是最新创建的节点',
         'card.status.thinking': '思考中',
@@ -86,6 +90,8 @@ window.__ModuleLoader__.load({
         'card.status.error': '出错',
         'card.status.stopped': '已中止',
         'card.status.done': '已完成',
+        'card.status.awaiting': '等待回答',
+        'card.status.awaitingApproval': '等待授权',
         'card.stop': '停止',
         'card.stopTitle': '停止这条分支',
         'card.ask': '在这条分支上继续追问',
@@ -114,6 +120,8 @@ window.__ModuleLoader__.load({
         'live.outputting': '正在输出…',
         'live.thinking': '正在思考…',
         'live.starting': '正在开始…',
+        'live.awaiting': '等你回答…',
+        'live.awaitingApproval': '等你授权…',
         'live.step': '第 {step} 步',
 
         'composer.placeholder': '在这条分支上继续问…（Enter 发送，Shift+Enter 换行）',
@@ -149,6 +157,9 @@ window.__ModuleLoader__.load({
         'view.heading': 'Infinite Exploration',
         'view.nodes': '{count} nodes',
         'view.running': '{count} branches running',
+        'view.runningTitle': 'Jump to the next running node',
+        'view.awaiting': '{count} waiting on you',
+        'view.awaitingTitle': 'Jump to the node waiting on you',
         'view.loadOlder': 'Load earlier',
         'view.restoreHidden': '{count} hidden · Restore',
         'view.restoreHiddenTitle': 'Restore deleted nodes and branches',
@@ -165,9 +176,10 @@ window.__ModuleLoader__.load({
         'view.latestTitleEmpty': 'No nodes yet',
         'view.empty.title': 'This tree is still empty',
         'view.empty.hint': 'Ask something in Chat and the first node will grow here.',
-        'view.empty.report': 'If you already asked and still see this, tell me the "events" count above.',
+        'view.empty.report': 'If you already asked and this is still empty, tell me: {events} events · session {state}.',
 
         'card.noQuestion': '(no question)',
+        'card.questionReply': '(replying to the previous question)',
         'card.latestBadge': 'Latest',
         'card.latestTitle': 'The newest node in this tree',
         'card.status.thinking': 'Thinking',
@@ -175,6 +187,8 @@ window.__ModuleLoader__.load({
         'card.status.error': 'Error',
         'card.status.stopped': 'Stopped',
         'card.status.done': 'Done',
+        'card.status.awaiting': 'Needs answer',
+        'card.status.awaitingApproval': 'Needs approval',
         'card.stop': 'Stop',
         'card.stopTitle': 'Stop this branch',
         'card.ask': 'Follow up on this branch',
@@ -203,6 +217,8 @@ window.__ModuleLoader__.load({
         'live.outputting': 'Writing…',
         'live.thinking': 'Thinking…',
         'live.starting': 'Starting…',
+        'live.awaiting': 'Waiting for your answer…',
+        'live.awaitingApproval': 'Waiting for your approval…',
         'live.step': 'step {step}',
 
         'composer.placeholder': 'Ask a follow-up on this branch… (Enter to send, Shift+Enter for a new line)',
@@ -359,7 +375,13 @@ window.__ModuleLoader__.load({
       return parts.join(' · ');
     }
 
-    const PROMPT_KINDS = ['user', 'user-rpc', 'user_command', 'command'];
+    // The host names a human prompt `source.kind: 'user'` (the `user-rpc` source
+    // key carries that same kind, and a slash command is still `'user'`), and a
+    // steer that answers a pending question `'user-question-reply'`. The old
+    // list held `user-rpc` / `user_command` / `command`, which are not `kind`
+    // values the host ever emits, so those turns — every question reply included
+    // — were projected away entirely.
+    const PROMPT_KINDS = ['user', 'user-question-reply'];
 
     function sourceKindOf(data) {
       const source = data && data.source;
@@ -371,6 +393,22 @@ window.__ModuleLoader__.load({
       const kind = sourceKindOf(data);
       if (kind === undefined) return false;
       return PROMPT_KINDS.indexOf(kind) >= 0;
+    }
+
+    /** A question reply is a JSON envelope; surface the question, not the blob. */
+    function questionReplyTextOf(data) {
+      const raw = textOf(data.content).trim();
+      if (!raw) return '';
+      try {
+        const parsed = JSON.parse(raw);
+        const questions = parsed && parsed.questions;
+        if (Array.isArray(questions) && questions[0] && typeof questions[0].question === 'string') {
+          return questions[0].question;
+        }
+      } catch (error) {
+        /* not the envelope: keep whatever text the host wrote */
+      }
+      return raw;
     }
 
     /** Fold a session's event window into question/answer turns. */
@@ -400,22 +438,45 @@ window.__ModuleLoader__.load({
             question: '', answer: '', answerSeq: 0, qSeq: 0, status: 'running',
             real: false, kind: '', costFrom: index, streamText: '',
             step: 0, tool: '', startedAt: typeof event.time === 'number' ? event.time : 0,
+            awaiting: '', pendingQuestions: new Set(), pendingApprovals: new Set(),
           };
           turns.push(current);
         } else if (event.type === 'step/start') {
           if (current) current.step = typeof data.step === 'number' ? data.step : current.step + 1;
         } else if (event.type === 'tool/call') {
-          if (current && data.name) current.tool = String(data.name);
+          if (current) {
+            if (data.name) current.tool = String(data.name);
+            // A pending ask_user_question leaves only this call in the log: the
+            // turn cannot end while the tool awaits the human, so the call is
+            // the whole signal that the branch is blocked on the user.
+            if (data.name === 'ask_user_question' && data.callId) {
+              current.pendingQuestions.add(String(data.callId));
+            }
+          }
         } else if (event.type === 'tool/result') {
-          if (current) current.tool = '';
+          if (current) {
+            current.tool = '';
+            const settled = data.message && data.message.toolCallId;
+            if (settled) current.pendingQuestions.delete(String(settled));
+            else if (current.pendingQuestions.size) current.pendingQuestions.clear();
+          }
+        } else if (event.type === 'approval/asked') {
+          const target = current || turns[turns.length - 1];
+          if (target && data.id) target.pendingApprovals.add(String(data.id));
+        } else if (event.type === 'approval/decided') {
+          const target = current || turns[turns.length - 1];
+          if (target && data.id) target.pendingApprovals.delete(String(data.id));
         } else if (event.type === 'user/message') {
           const target = current || turns[turns.length - 1];
           if (target) {
             const text = textOf(data.content);
             if (text.trim() && isRealPrompt(data)) {
-              target.question = text;
+              const kind = sourceKindOf(data) || '';
+              target.question = kind === 'user-question-reply'
+                ? (questionReplyTextOf(data) || T('card.questionReply'))
+                : text;
               target.real = true;
-              target.kind = sourceKindOf(data) || '';
+              target.kind = kind;
               target.qSeq = typeof event.seq === 'number' ? event.seq : 0;
             }
           }
@@ -435,6 +496,9 @@ window.__ModuleLoader__.load({
             target.status = target.answer ? 'done' : 'stopped';
             target.tool = '';
             target.streamText = '';
+            target.awaiting = '';
+            target.pendingQuestions.clear();
+            target.pendingApprovals.clear();
           }
           if (current && typeof current.costFrom === 'number') {
             current.cost = turnCost(entries.slice(current.costFrom, index + 1), 0);
@@ -451,6 +515,16 @@ window.__ModuleLoader__.load({
       if (sessionRunning === false) {
         for (const turn of turns) if (turn.status === 'running') turn.status = turn.answer ? 'done' : 'stopped';
       }
+      // "Waiting on you" is only true while the turn is genuinely open: the host
+      // appends no turn/end while ask_user_question (or an approval) blocks, and
+      // keeps reporting the session as running.
+      for (const turn of turns) {
+        turn.awaiting = turn.status === 'running'
+          ? (turn.pendingQuestions.size ? 'question' : turn.pendingApprovals.size ? 'approval' : '')
+          : '';
+        delete turn.pendingQuestions;
+        delete turn.pendingApprovals;
+      }
       return turns.filter((turn) => turn.real && (turn.question.trim() || turn.answer.trim()));
     }
 
@@ -463,6 +537,8 @@ window.__ModuleLoader__.load({
       let step = 0;
       let tool = '';
       let startedAt = 0;
+      const pendingQuestions = new Set();
+      const pendingApprovals = new Set();
       const cost = turnCost(entries, baseline);
       for (const entry of entries) {
         const event = entry && entry.event;
@@ -481,14 +557,27 @@ window.__ModuleLoader__.load({
           startedAt = typeof event.time === 'number' ? event.time : startedAt;
           step = 0;
           tool = '';
+          pendingQuestions.clear();
+          pendingApprovals.clear();
         } else if (event.type === 'step/start') {
           const data = event.data || {};
           step = typeof data.step === 'number' ? data.step : step + 1;
         } else if (event.type === 'tool/call') {
           const data = event.data || {};
           if (data.name) tool = String(data.name);
+          if (data.name === 'ask_user_question' && data.callId) pendingQuestions.add(String(data.callId));
         } else if (event.type === 'tool/result') {
           tool = '';
+          const data = event.data || {};
+          const settled = data.message && data.message.toolCallId;
+          if (settled) pendingQuestions.delete(String(settled));
+          else if (pendingQuestions.size) pendingQuestions.clear();
+        } else if (event.type === 'approval/asked') {
+          const data = event.data || {};
+          if (data.id) pendingApprovals.add(String(data.id));
+        } else if (event.type === 'approval/decided') {
+          const data = event.data || {};
+          if (data.id) pendingApprovals.delete(String(data.id));
         } else if (event.type === 'assistant/message') {
           const data = event.data || {};
           if (data.message) {
@@ -502,14 +591,33 @@ window.__ModuleLoader__.load({
         } else if (event.type === 'turn/end') {
           ended = true;
           tool = '';
+          pendingQuestions.clear();
+          pendingApprovals.clear();
         }
       }
-      return { text, answer, answerSeq, ended, cost, step, tool, startedAt };
+      const awaiting = ended ? '' : (pendingQuestions.size ? 'question' : pendingApprovals.size ? 'approval' : '');
+      return { text, answer, answerSeq, ended, cost, step, tool, startedAt, awaiting };
     }
 
     // ----------------------------------------------------------------- layout
     /** Branches at this depth and deeper start folded, so a big tree opens readable. */
     const DEFAULT_COLLAPSE_DEPTH = 2;
+
+    /** Statuses that mean the model is still working on this node. */
+    const RUNNING_STATUSES = ['thinking', 'streaming', 'running'];
+
+    /**
+     * A node is active while it runs or while it is blocked on the user. The
+     * two are separate signals: the host keeps the turn open and reports the
+     * session as running while `ask_user_question` waits, so `awaiting` is the
+     * only record that the wait is on the human.
+     */
+    function isInProgressNode(node) {
+      if (!node) return false;
+      return RUNNING_STATUSES.indexOf(node.status) >= 0
+        || node.awaiting === 'question'
+        || node.awaiting === 'approval';
+    }
 
     /** Group nodes by parent id; '@root' holds every top-level node. */
     function childrenMapOf(nodes) {
@@ -541,8 +649,14 @@ window.__ModuleLoader__.load({
     /**
      * Fold the tri-state `collapsed` map into plain booleans.
      * undefined follows the depth default; true/false are the user's own choice.
+     *
+     * `keepOpen` holds nodes that sit on the path to an active node. A folded
+     * node is pruned out of the layout walk entirely, so the card below it has
+     * no position and is never drawn — which is how a running branch used to
+     * vanish behind a "⋯ N descendants" chip. The path to something in progress
+     * is therefore never folded by default; a manual fold is still respected.
      */
-    function effectiveCollapsedOf(nodes, collapsed) {
+    function effectiveCollapsedOf(nodes, collapsed, keepOpen) {
       const depthOf = depthMapOf(nodes);
       const childrenOf = childrenMapOf(nodes);
       const choices = collapsed || {};
@@ -553,10 +667,29 @@ window.__ModuleLoader__.load({
           result[node.id] = manual;
         } else {
           const hasChildren = (childrenOf.get(node.id) || []).length > 0;
-          result[node.id] = hasChildren && (depthOf.get(node.id) || 0) >= DEFAULT_COLLAPSE_DEPTH;
+          result[node.id] = hasChildren
+            && (depthOf.get(node.id) || 0) >= DEFAULT_COLLAPSE_DEPTH
+            && !(keepOpen && keepOpen.has(node.id));
         }
       }
       return result;
+    }
+
+    /** Ancestors of every active node: the folds that must stay open to draw it. */
+    function activeAncestorsOf(nodes, activeIds) {
+      const byId = new Map(nodes.map((node) => [node.id, node]));
+      const keep = new Set();
+      for (const node of nodes) {
+        if (!activeIds.has(node.id)) continue;
+        let cursor = node.parentId === null || node.parentId === undefined ? undefined : byId.get(node.parentId);
+        let guard = 0;
+        while (cursor && guard < 500) {
+          keep.add(cursor.id);
+          cursor = cursor.parentId === null || cursor.parentId === undefined ? undefined : byId.get(cursor.parentId);
+          guard += 1;
+        }
+      }
+      return keep;
     }
 
     /** How many descendants sit under every node, for the folded chip. */
@@ -789,7 +922,7 @@ window.__ModuleLoader__.load({
         draft: '',
         loaded: false,
         error: null,
-        meta: { events: 0, binding: false, hasMore: false },
+        meta: { events: 0, binding: false, hasMore: false, openState: '' },
         heights: {},
       };
       const stops = new Map();
@@ -905,6 +1038,7 @@ window.__ModuleLoader__.load({
               answerSeq: turn.answerSeq,
               kind: 'root',
               sourceKind: turn.kind || '',
+              awaiting: turn.awaiting || '',
               step: turn.step || 0,
               tool: turn.tool || '',
               startedAt: turn.startedAt || 0,
@@ -919,6 +1053,7 @@ window.__ModuleLoader__.load({
               existing.answer !== next.answer ||
               existing.answerSeq !== next.answerSeq ||
               existing.status !== next.status ||
+              (existing.awaiting || '') !== next.awaiting ||
               existing.step !== next.step ||
               existing.tool !== next.tool ||
               existing.startedAt !== next.startedAt ||
@@ -935,9 +1070,12 @@ window.__ModuleLoader__.load({
           // Only prune when the whole history is in hand. A partial window would
           // otherwise delete older root turns and orphan the branches hanging off
           // them, which then vanish from the canvas without a trace.
+          // Only prune when the projection actually produced turns. A freshly
+          // re-bound session starts with an empty window until its first page
+          // lands; pruning there used to erase the whole tree.
           const wanted = new Set(ids);
           const before = state.nodes.length;
-          if (!state.meta.hasMore) {
+          if (!state.meta.hasMore && turns.length > 0) {
             state.nodes = state.nodes.filter((node) => node.sessionId !== rootId || wanted.has(node.id));
             // A branch whose parent turn is gone would be unreachable; hoist it
             // to a root instead of silently dropping it from the canvas.
@@ -963,6 +1101,20 @@ window.__ModuleLoader__.load({
           }
           state.collapsed = collapsed;
           state.selectedId = id;
+          persist();
+          emit();
+        },
+        /** Open the path to a node without touching selection (auto-follow). */
+        expandPath(id) {
+          const collapsed = { ...state.collapsed };
+          let changed = false;
+          for (const ancestor of pathOf(state.nodes, id)) {
+            if (ancestor === id || collapsed[ancestor] === false) continue;
+            collapsed[ancestor] = false;
+            changed = true;
+          }
+          if (!changed) return;
+          state.collapsed = collapsed;
           persist();
           emit();
         },
@@ -1154,24 +1306,55 @@ window.__ModuleLoader__.load({
           store.setMeta({ binding: false, events: 0 });
           return;
         }
-        const read = () => {
-          const window = binding.eventSource.getSnapshot();
-          let running;
+        const sessionSnapshot = () => {
           try {
-            const session = binding.session && typeof binding.session.getSnapshot === 'function'
+            return binding.session && typeof binding.session.getSnapshot === 'function'
               ? binding.session.getSnapshot()
               : null;
-            running = session ? session.running : undefined;
           } catch (error) {
-            running = undefined;
+            return null;
           }
-          store.setMeta({ binding: true, events: window.entries.length, hasMore: Boolean(window.hasMore) });
-          store.ensureChain(projectTurns(window.entries, running));
         };
-        read();
-        if (!rootSubscriptions.has(rootId)) {
-          const unsubscribe = binding.eventSource.subscribe(read);
-          rootSubscriptions.set(rootId, unsubscribe);
+        const read = () => {
+          const window = binding.eventSource.getSnapshot();
+          const session = sessionSnapshot();
+          store.setMeta({
+            binding: true,
+            events: window.entries.length,
+            hasMore: Boolean(window.hasMore),
+            openState: session && session.openState ? session.openState : '',
+          });
+          store.ensureChain(projectTurns(window.entries, session ? session.running : undefined));
+          return { window, session };
+        };
+        // A retired scope drops its Session instance, and the next
+        // materialisation mints a new one with a new event source
+        // (ClientSessions.materializeScope). Keeping the old unsubscribe would
+        // leave this view frozen on the empty window it saw first.
+        const known = rootSubscriptions.get(rootId);
+        if (!known || known.source !== binding.eventSource) {
+          if (known && typeof known.unsubscribe === 'function') {
+            try { known.unsubscribe(); } catch (error) { /* the dropped source is already gone */ }
+          }
+          rootSubscriptions.set(rootId, {
+            source: binding.eventSource,
+            unsubscribe: binding.eventSource.subscribe(read),
+          });
+        }
+        const first = read();
+        if (store.getSnapshot().error) store.setError(null);
+        // A cold window is not final: ask the session to open (idempotent) and
+        // read again once its first page lands. A tab restored straight onto a
+        // freshly materialised session would otherwise stay blank until
+        // something else — the Chat view — filled the window first.
+        if (first.window.entries.length === 0
+          && first.session && first.session.openState !== 'open'
+          && binding.session && typeof binding.session.open === 'function') {
+          try {
+            Promise.resolve(binding.session.open()).then(read).catch(() => undefined);
+          } catch (error) {
+            /* opening is best effort; the subscription still wakes us */
+          }
         }
         autoLoadEarlier(rootId, binding, 8);
       }
@@ -1257,6 +1440,8 @@ window.__ModuleLoader__.load({
           if (read2.answerSeq) changes.answerSeq = read2.answerSeq;
           if (read2.step !== (current.step || 0)) changes.step = read2.step;
           if (read2.tool !== (current.tool || '')) changes.tool = read2.tool;
+          const awaiting = read2.awaiting || '';
+          if (awaiting !== (current.awaiting || '')) changes.awaiting = awaiting;
           if (read2.startedAt && read2.startedAt !== current.startedAt) changes.startedAt = read2.startedAt;
           // turnCost allocates a fresh object per event; compare before patching
           // so a streaming branch does not mark the store dirty on every chunk.
@@ -1269,7 +1454,7 @@ window.__ModuleLoader__.load({
           if (read2.ended || running === false) {
             changes.status = (read2.answer || read2.text || current.answer) ? 'done' : 'stopped';
             changes.tool = '';
-          } else if (read2.text || read2.answer || read2.tool) {
+          } else if (read2.text || read2.answer || read2.tool || awaiting) {
             changes.status = 'streaming';
           }
           if (Object.keys(changes).length) store.patch(nodeId, changes);
@@ -1316,6 +1501,9 @@ window.__ModuleLoader__.load({
           kind: 'branch',
           createdAt: parseInt(nodeId.split('-')[1], 36),
         });
+        // The new card sits below its parent: open the path so it is drawn even
+        // when the fork point was behind a folded branch.
+        store.expandPath(nodeId);
         store.compose(null);
         store.select(nodeId);
 
@@ -1379,6 +1567,9 @@ window.__ModuleLoader__.load({
             } else if (read.ended) {
               store.patch(nodeId, { status: 'done' });
             }
+            const awaiting = read.awaiting || '';
+            const node = store.getNode(nodeId);
+            if (node && awaiting !== (node.awaiting || '')) store.patch(nodeId, { awaiting });
             if (read.ended) {
               unsubscribe();
               try {
@@ -1589,9 +1780,9 @@ window.__ModuleLoader__.load({
       }, label);
     }
 
-    function StatusDot({ status }) {
+    function StatusDot({ status, waiting }) {
       const color = status === 'done' ? C.ok : status === 'error' ? C.warn : C.accent;
-      const pulse = status === 'thinking' || status === 'streaming' || status === 'running';
+      const pulse = waiting || status === 'thinking' || status === 'streaming' || status === 'running';
       return h('span', {
         style: {
           width: 6, height: 6, borderRadius: 3, background: color,
@@ -1605,7 +1796,8 @@ window.__ModuleLoader__.load({
     /** What the model is doing right now: thinking, calling a tool, or writing. */
     function LiveProgress({ node }) {
       useLocale();
-      const running = node.status === 'thinking' || node.status === 'streaming' || node.status === 'running';
+      const awaiting = node.awaiting === 'question' || node.awaiting === 'approval';
+      const running = awaiting || node.status === 'thinking' || node.status === 'streaming' || node.status === 'running';
       const [, tick] = useState(0);
       useEffect(() => {
         if (!running) return undefined;
@@ -1616,11 +1808,15 @@ window.__ModuleLoader__.load({
       const tool = node.tool || '';
       const step = node.step || 0;
       const elapsed = node.startedAt ? Math.max(0, Math.round((Date.now() - node.startedAt) / 1000)) : 0;
-      const label = tool
-        ? T('live.calling', { tool })
-        : node.answer
-          ? T('live.outputting')
-          : step > 0 ? T('live.thinking') : T('live.starting');
+      // A pending question/approval is not "calling the tool": name the wait so
+      // the card says the ball is in the user's court.
+      const label = awaiting
+        ? T(node.awaiting === 'approval' ? 'live.awaitingApproval' : 'live.awaiting')
+        : tool
+          ? T('live.calling', { tool })
+          : node.answer
+            ? T('live.outputting')
+            : step > 0 ? T('live.thinking') : T('live.starting');
       return h('div', {
         style: {
           marginTop: 7, padding: '6px 8px', borderRadius: 7,
@@ -1657,7 +1853,8 @@ window.__ModuleLoader__.load({
       const [expanded, setExpanded] = useState(false);
       const [menuOpen, setMenuOpen] = useState(false);
       const cardRef = useRef(null);
-      const isRunning = node.status === 'thinking' || node.status === 'streaming' || node.status === 'running';
+      const isRunning = isInProgressNode(node);
+      const awaiting = node.awaiting === 'question' || node.awaiting === 'approval';
       const answer = node.answer || '';
       const answerText = answer.length > 1400 ? answer.slice(0, 1400) + T('card.truncated') : answer;
 
@@ -1685,11 +1882,13 @@ window.__ModuleLoader__.load({
         if (ok) api.deleteSubtree(rootId, node.id);
       };
 
-      const statusLabel = node.status === 'thinking' ? T('card.status.thinking')
-        : node.status === 'streaming' || node.status === 'running' ? T('card.status.streaming')
-          : node.status === 'error' ? T('card.status.error')
-            : node.status === 'stopped' ? T('card.status.stopped')
-              : T('card.status.done');
+      const statusLabel = awaiting
+        ? T(node.awaiting === 'approval' ? 'card.status.awaitingApproval' : 'card.status.awaiting')
+        : node.status === 'thinking' ? T('card.status.thinking')
+          : node.status === 'streaming' || node.status === 'running' ? T('card.status.streaming')
+            : node.status === 'error' ? T('card.status.error')
+              : node.status === 'stopped' ? T('card.status.stopped')
+                : T('card.status.done');
 
       return h('div', {
         ref: cardRef,
@@ -1702,10 +1901,10 @@ window.__ModuleLoader__.load({
           width: NODE_W,
           minHeight: 132,
           background: C.card,
-          border: '1px solid ' + (match || selected ? C.accent : C.cardEdge),
+          border: '1px solid ' + (awaiting || match || selected ? C.accent : C.cardEdge),
           borderLeft: '3px solid ' + (selected || isRunning ? C.accent : dimmed ? C.cardEdge : C.line),
           borderRadius: 10,
-          boxShadow: selected
+          boxShadow: awaiting || selected
             ? '0 0 0 4px ' + C.accentSoft + ', 0 6px 18px rgba(0,0,0,0.08)'
             : match
               ? '0 0 0 3px ' + C.accentSoft + ', 0 2px 8px rgba(0,0,0,0.05)'
@@ -1718,7 +1917,7 @@ window.__ModuleLoader__.load({
         },
       },
         h('div', { style: { display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, minHeight: 20 } },
-          h(StatusDot, { status: node.status }),
+          h(StatusDot, { status: node.status, waiting: awaiting }),
           h(Badge, { label: index, tone: C.accent }),
           isLatest
             ? h('span', {
@@ -1950,9 +2149,19 @@ window.__ModuleLoader__.load({
       const liveNodes = useMemo(
         () => (hiddenIds.size ? nodes.filter((node) => !hiddenIds.has(node.id)) : nodes),
         [nodes, hiddenIds]);
-      const collapsedMap = useMemo(
+      const activeIds = useMemo(() => {
+        const set = new Set();
+        for (const node of liveNodes) if (isInProgressNode(node)) set.add(node.id);
+        return set;
+      }, [liveNodes]);
+      // `defaultCollapsedMap` is the raw depth rule, `collapsedMap` is what is
+      // actually laid out: the path to an active node stays open.
+      const defaultCollapsedMap = useMemo(
         () => effectiveCollapsedOf(liveNodes, snapshot.collapsed),
         [liveNodes, snapshot.collapsed]);
+      const collapsedMap = useMemo(
+        () => effectiveCollapsedOf(liveNodes, snapshot.collapsed, activeAncestorsOf(liveNodes, activeIds)),
+        [liveNodes, snapshot.collapsed, activeIds]);
       const counts = useMemo(() => {
         const childrenOf = childrenMapOf(liveNodes);
         const direct = new Map();
@@ -1976,7 +2185,8 @@ window.__ModuleLoader__.load({
         return hit;
       }, [liveNodes, query]);
       const labels = useMemo(() => labelMapOf(liveNodes, collapsedMap), [liveNodes, collapsedMap]);
-      const running = liveNodes.filter((node) => node.status === 'thinking' || node.status === 'streaming' || node.status === 'running').length;
+      const running = liveNodes.filter((node) => RUNNING_STATUSES.indexOf(node.status) >= 0).length;
+      const waiting = liveNodes.filter((node) => node.awaiting === 'question' || node.awaiting === 'approval').length;
       const hiddenCount = hiddenIds.size;
       const tombstoned = Object.keys(snapshot.hidden || {}).length;
 
@@ -2018,6 +2228,51 @@ window.__ModuleLoader__.load({
         setPendingFocus(null);
       }, [pendingFocus, layout, snapshot.heights]);
       const latest = latestNodeOf(liveNodes);
+
+      /** Jump to the next card matching `predicate`, wrapping around. */
+      const focusNext = useCallback((predicate) => {
+        const ids = liveNodes.filter(predicate).map((node) => node.id);
+        if (!ids.length) return;
+        const currentIndex = ids.indexOf(snapshot.selectedId);
+        focusNode(ids[currentIndex < 0 ? 0 : (currentIndex + 1) % ids.length]);
+      }, [liveNodes, snapshot.selectedId, focusNode]);
+
+      // The in-progress card must never be reachable only by unfolding by hand.
+      // Opening the path is enough for a running branch; the first branch that
+      // starts waiting on the user is also brought into view, because that is
+      // the one card the user has to act on.
+      const openedRef = useRef(new Set());
+      const announcedRef = useRef(new Set());
+      // A different tree means a different id space; start the follow state over.
+      useEffect(() => {
+        openedRef.current = new Set();
+        announcedRef.current = new Set();
+      }, [store]);
+      useEffect(() => {
+        for (const node of liveNodes) {
+          if (!isInProgressNode(node)) {
+            openedRef.current.delete(node.id);
+            announcedRef.current.delete(node.id);
+            continue;
+          }
+          if (!openedRef.current.has(node.id)) {
+            openedRef.current.add(node.id);
+            const ancestors = [...pathOf(liveNodes, node.id)].filter((id) => id !== node.id);
+            if (ancestors.some((id) => defaultCollapsedMap[id] === true)) store.expandPath(node.id);
+          }
+          const waitingNode = node.awaiting === 'question' || node.awaiting === 'approval';
+          if (!waitingNode) {
+            announcedRef.current.delete(node.id);
+            continue;
+          }
+          if (announcedRef.current.has(node.id)) continue;
+          const firstWait = announcedRef.current.size === 0;
+          announcedRef.current.add(node.id);
+          // Never yank the canvas out from under the reader overlay, and do not
+          // steal the viewport when another branch is already waiting.
+          if (firstWait && !store.getSnapshot().readingId) focusNode(node.id);
+        }
+      }, [liveNodes, defaultCollapsedMap, store, focusNode]);
 
       /** Minimap projection: fit the whole tree, centred, with a viewport frame. */
       const minimapRef = useRef({ scale: 1, ox: 0, oy: 0 });
@@ -2213,7 +2468,20 @@ window.__ModuleLoader__.load({
         },
           h('span', { style: { fontWeight: 600, color: C.ink, fontSize: 12 } }, T('view.heading')),
           h('span', null, '· ' + T('view.nodes', { count: liveNodes.length })),
-          running > 0 ? h('span', { style: { color: C.accent } }, '· ' + T('view.running', { count: running })) : null,
+          running > 0
+            ? h('button', {
+              onClick: () => focusNext(isInProgressNode),
+              title: T('view.runningTitle'),
+              ...pillProps(),
+            }, T('view.running', { count: running }))
+            : null,
+          waiting > 0
+            ? h('button', {
+              onClick: () => focusNext((node) => Boolean(node.awaiting)),
+              title: T('view.awaitingTitle'),
+              ...pillProps({ animation: 'dshTreePulse 2.4s ease-in-out infinite' }),
+            }, T('view.awaiting', { count: waiting }))
+            : null,
           snapshot.error ? h('span', { style: { color: C.warn } }, '· ' + snapshot.error) : null,
           snapshot.meta.hasMore
             ? h('button', { onClick: () => api.loadOlder(rootId), ...btnProps() }, T('view.loadOlder'))
@@ -2326,12 +2594,15 @@ window.__ModuleLoader__.load({
                   const pos = layout.positions.get(node.id);
                   if (!pos) return null;
                   const active = path.has(node.id);
+                  // A node waiting on the user is a filled dot on the minimap too,
+                  // so a blocked branch can be spotted without hunting for it.
+                  const waiting = node.awaiting === 'question' || node.awaiting === 'approval';
                   return h('rect', {
                     key: node.id,
                     x: pos.x, y: pos.y, width: NODE_W,
                     height: snapshot.heights[node.id] || NODE_H,
                     rx: 10,
-                    fill: matches && matches.has(node.id) ? C.accent : active ? C.accentSoft : C.line,
+                    fill: matches && matches.has(node.id) ? C.accent : waiting ? C.accent : active ? C.accentSoft : C.line,
                     stroke: active ? C.accent : 'transparent',
                     strokeWidth: 1 / minimap.scale,
                   });
@@ -2357,7 +2628,10 @@ window.__ModuleLoader__.load({
             h('div', { style: { fontSize: 11.5, lineHeight: 1.7 } },
               T('view.empty.hint')),
             h('div', { style: { fontSize: 11, marginTop: 4 } },
-              T('view.empty.report'))))
+              T('view.empty.report', {
+                events: snapshot.meta.events,
+                state: snapshot.meta.openState || '—',
+              }))))
           : null);
     }
 

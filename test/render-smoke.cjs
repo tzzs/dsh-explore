@@ -133,6 +133,9 @@ const rootId = api.rootOf('session-1');
 const nodeStore = api.storeFor(rootId);
 
 // A chain with a branch, a running node, a long answer and a selected node.
+// The depth-3 branch is `done` on purpose: a finished node still folds by
+// default, so this pass locks the fold rule. The rule that the path to an
+// *active* node never folds is covered by canvas-visibility.cjs.
 nodeStore.upsert({
   id: 'root-1', parentId: null, sessionId: rootId, question: '第一个问题', answer: '简短回答',
   status: 'done', answerSeq: 3, kind: 'root', createdAt: 1000, startedAt: 900,
@@ -151,7 +154,7 @@ nodeStore.upsert({
 });
 nodeStore.upsert({
   id: 'b-mm9k99-c3d4', parentId: 'b-mm9k21-a1b2', sessionId: 'child-2', question: '更深的分支',
-  answer: '', status: 'thinking', answerSeq: 0, kind: 'branch', createdAt: Date.parse('2026-11-12T02:00:00Z'),
+  answer: '', status: 'done', answerSeq: 0, kind: 'branch', createdAt: Date.parse('2026-11-12T02:00:00Z'),
 });
 nodeStore.select('b-mm9k21-a1b2');
 
