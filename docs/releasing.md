@@ -6,7 +6,7 @@
 
 - [CI](../.github/workflows/ci.yml)：向 `main` 提 PR 时自动运行，也支持手动运行和被其他工作流调用。在 Ubuntu、Windows 上分别用 Node.js 22、24 执行入口语法检查、`npm test` 和 `npm pack --dry-run`。项目没有 npm 依赖，因此不需要安装步骤或 lockfile。
 - [Release Please](../.github/workflows/release-please.yml)：每次推送到 `main` 时先复用完整 CI；全部通过后才更新发版 PR 或创建 Release。支持在 Actions 页面选择 `main` 后手动运行；其他分支会跳过发版。主分支的测试在这个工作流里运行，不会重复启动一套 CI。
-- 创建 Release 后，同一工作流会检出 Release Please 返回的发版 commit，重新测试并通过 `npm pack` 生成 `local-dsh-explore-<version>.tgz`，上传到对应 Release。包内容沿用 [package.json](../package.json) 的 `files` 清单。打包和上传留在同一工作流中，因为内置 `GITHUB_TOKEN` 创建的 tag 不会触发新的工作流。
+- Release Please 先创建草稿 Release；同一工作流再将其返回的实际发版 commit 交给 CI，跑完整的 Ubuntu / Windows × Node.js 22 / 24 矩阵。全部通过后，从同一个 commit 通过 `npm pack` 生成 `local-dsh-explore-<version>.tgz`，上传附件，再公开 Release 并创建 tag。这样即使 `main` 在前一轮 CI 执行期间前进，公开发布的内容也已通过完整检查。包内容沿用 [package.json](../package.json) 的 `files` 清单。打包和发布留在同一工作流中，因为内置 `GITHUB_TOKEN` 创建的 tag 不会触发新的工作流。
 
 Actions 使用固定 commit SHA 引用第三方 action；升级时同时更新 SHA 和旁边的版本注释。
 
@@ -25,7 +25,7 @@ Secret 只用于 Release Please job，PR 测试无需访问它。仓库或组织
 1. 功能、修复照常提 PR，合并到 `main`。若使用 squash merge，确保最终的 PR 标题符合 Conventional Commits。
 2. CI 通过后，Release Please 创建或更新 `chore(main): release ...` 发版 PR，修改 [package.json](../package.json)、[CHANGELOG.md](../CHANGELOG.md) 和 [.release-please-manifest.json](../.release-please-manifest.json)。
 3. 维护者确认版本和变更日志后合并这个 PR。
-4. 主分支 CI 再次通过后，Release Please 创建 `v<version>` tag 与 GitHub Release，并由后续 job 上传插件包。
+4. 主分支 CI 再次通过后，Release Please 创建草稿 Release；实际发版 commit 的完整 CI 矩阵通过后，后续 job 上传插件包并公开 Release，生成 `v<version>` tag。
 
 发版 PR 不会自动合并。项目目前使用 `@local/dsh-explore` 包名且 `private: true`，工作流只创建 GitHub Release 和 `.tgz` 附件，不发布到 npm registry，也不需要 npm token。
 
@@ -61,4 +61,4 @@ tar -xzf local-dsh-explore-0.1.0.tgz -C dsh-explore-release
 - **CI 失败**：先修复测试或打包问题，Release Please 不会越过失败的 CI 执行发版。
 - **创建 PR 报权限不足**：检查 Actions 的创建 PR 开关，或 PAT 的仓库范围和权限；组织策略也可能限制写操作。
 - **发版 PR 的 CI 等待批准或没有生成**：检查是否配置了 `RELEASE_PLEASE_TOKEN`；使用内置 `GITHUB_TOKEN` 时，具有写权限的维护者可在 PR 上点击 **Approve workflows to run**，环境尚未提供此功能时推荐使用 PAT。
-- **Release 已创建，但上传附件失败**：在该次工作流运行中使用 **Re-run failed jobs**，仅重跑失败的上传 job；它会继续使用原 Release 的 commit 和 tag，并通过 `--clobber` 支持重复上传。不要只重新执行 Release Please job 来尝试补附件，因为它不会把已存在的 Release 再次报告为新建。
+- **草稿 Release 已创建，但发版检查、打包或上传失败**：在该次工作流运行中使用 **Re-run failed jobs**，重跑失败的检查及后续上传、发布 job；它们会继续使用原草稿的 commit 和 tag，并通过 `--clobber` 支持重复上传。失败时 Release 保持草稿。不要只重新执行 Release Please job 或重新手动启动整个工作流来尝试补附件，因为它不会把已存在的 Release 再次报告为新建。

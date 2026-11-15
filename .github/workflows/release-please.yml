@@ -19,7 +19,7 @@ jobs:
     uses: ./.github/workflows/ci.yml
 
   release-please:
-    name: Update release PR or create release
+    name: Update release PR or create draft
     needs: checks
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -43,9 +43,17 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-  upload-package:
-    name: Attach plugin package
+  release-checks:
+    name: Release CI
     needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ needs.release-please.outputs.sha }}
+
+  upload-package:
+    name: Attach package and publish release
+    needs: [release-please, release-checks]
     if: needs.release-please.outputs.release_created == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -62,16 +70,16 @@ jobs:
         with:
           node-version: 24
           package-manager-cache: false
-      - name: Test the released commit
-        run: npm test
       - name: Pack plugin
         run: |
           mkdir -p dist
           npm pack --pack-destination dist
       # Keep this in the same workflow: tags made with GITHUB_TOKEN do not start workflows.
-      - name: Upload package to GitHub Release
+      - name: Upload package and publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ needs.release-please.outputs.tag_name }}
-        run: gh release upload "$RELEASE_TAG" dist/*.tgz --clobber
+        run: |
+          gh release upload "$RELEASE_TAG" dist/*.tgz --clobber
+          gh release edit "$RELEASE_TAG" --draft=false
