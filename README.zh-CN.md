@@ -132,9 +132,9 @@ node test/motion.cjs          # 动效：画布移动、手势中断、导航替
 
 向 `main` 提 PR 时，`.github/workflows/ci.yml` 在 Ubuntu / Windows × Node.js 22 / 24 上执行 `node --check index.js`、`npm test`、`npm pack --dry-run`。没有安装步骤——插件和测试都没有 npm 依赖，仓库里也没有 lockfile。
 
-发版走 Google Release Please，版本由 Conventional Commits 决定：它创建或更新一条发版 PR（改 `package.json`、manifest 和 `CHANGELOG.md`）；合并后发版 job 在发版 commit 上跑完整矩阵，`npm pack` 出 `tanzz-dsh-explore-<version>.tgz`，附到 GitHub Release 上再公开，tag 由 GitHub 生成为 `v<version>`，同一 commit 还会带 provenance 发布到 npm。`v0.1.0` 已经打过 tag；首次 npm 发布是手动运行 **Publish npm** 工作流（建议先勾 `dry_run`）。
+发版走 Google Release Please，版本由 Conventional Commits 决定：它创建或更新一条发版 PR（改 `package.json`、manifest 和 `CHANGELOG.md`）；合并后发版 job 在发版 commit 上跑完整矩阵，`npm pack` 出 `tanzz-dsh-explore-<version>.tgz`，附到 GitHub Release 上再公开，tag 由 GitHub 生成为 `v<version>`，同一 commit 还会带 provenance 发布到 npm。`@tanzz/dsh-explore@0.1.0` 是已发布的基线版本，之后每次发版都由这个工作流自动发布。
 
-首次启用（Actions 权限、可选的 `RELEASE_PLEASE_TOKEN`、npm Trusted Publishing 或 `NPM_TOKEN`）见 [CI 与自动发版说明](docs/releasing.md)。
+首次启用（Actions 权限、可选的 `RELEASE_PLEASE_TOKEN`、npm Trusted Publishing）见 [CI 与自动发版说明](docs/releasing.md)。
 
 ## 参与贡献
 

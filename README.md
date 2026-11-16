@@ -132,9 +132,9 @@ node test/motion.cjs          # camera moves, gesture interruption, navigation r
 
 A PR to `main` runs `.github/workflows/ci.yml` on Ubuntu and Windows with Node.js 22 and 24: `node --check index.js`, `npm test`, `npm pack --dry-run`. There is no install step — the plugin and its tests have no npm dependencies, and there is no lockfile.
 
-Releases are driven by Conventional Commits through Google's Release Please: it opens or updates a release PR that bumps `package.json`, the manifest and `CHANGELOG.md`; merging it starts the release job, which runs the full matrix on the released commit, packs `tanzz-dsh-explore-<version>.tgz`, attaches it to the GitHub Release, publishes the release, lets GitHub create the `v<version>` tag, and publishes the same commit to npm with provenance. `v0.1.0` is already tagged; the first npm publish is a manual run of the **Publish npm** workflow, preferably with `dry_run` first.
+Releases are driven by Conventional Commits through Google's Release Please: it opens or updates a release PR that bumps `package.json`, the manifest and `CHANGELOG.md`; merging it starts the release job, which runs the full matrix on the released commit, packs `tanzz-dsh-explore-<version>.tgz`, attaches it to the GitHub Release, publishes the release, lets GitHub create the `v<version>` tag, and publishes the same commit to npm with provenance. `@tanzz/dsh-explore@0.1.0` is the published baseline; later versions publish automatically from that workflow.
 
-See [CI and releases](docs/releasing.md) (currently in Chinese) for first-time setup — Actions permissions, the optional `RELEASE_PLEASE_TOKEN` secret, and npm Trusted Publishing or an `NPM_TOKEN`.
+See [CI and releases](docs/releasing.md) (currently in Chinese) for first-time setup — Actions permissions, the optional `RELEASE_PLEASE_TOKEN` secret, and npm Trusted Publishing.
 
 ## Contributing
 
