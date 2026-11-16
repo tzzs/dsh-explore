@@ -45,7 +45,7 @@ jobs:
           fi
       - name: Create draft release
         id: release
-        uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
           token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
           target-branch: main
@@ -55,7 +55,7 @@ jobs:
       # A draft has no tag yet, so defer PR generation until it is published.
       - name: Update release PR
         if: steps.release.outputs.release_created != 'true'
-        uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
           # A PAT runs release PR CI without manual approval; GITHUB_TOKEN needs no secret.
           token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
