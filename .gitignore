@@ -5,5 +5,8 @@ dist/
 Thumbs.db
 .DS_Store
 
+# Packed plugin bundles (npm pack writes these next to package.json)
+*.tgz
+
 # DSH sandbox ACL diagnostics
 .dsh-acl-recovery/

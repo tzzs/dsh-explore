@@ -1,0 +1,83 @@
+name: Bug report
+description: Something in the Infinite Exploration view or the plugin bundle is broken.
+title: "[bug] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Search the existing issues first — the [design doc](https://github.com/tzzs/dsh-explore/blob/main/docs/design.md) lists known gaps, and some missing behaviour is a deliberate non-goal.
+  - type: textarea
+    id: what_happened
+    attributes:
+      label: What happened
+      description: What you saw, and where in the view it happened (canvas, card, reader overlay, toolbar, composer).
+      placeholder: The canvas showed an empty tree after switching tabs and back.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      description: What should have happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps, starting from a fresh session where possible.
+      placeholder: |
+        1. Open a conversation with ...
+        2. Click ...
+        3. Switch to ...
+    validations:
+      required: true
+  - type: input
+    id: dsh_version
+    attributes:
+      label: DeepSeek Harness version
+      description: From the app's About dialog, or the DSH release you installed.
+      placeholder: e.g. 0.42.0
+    validations:
+      required: true
+  - type: input
+    id: plugin_version
+    attributes:
+      label: Plugin version or commit
+      description: The release tag or `.tgz` version, or `git rev-parse --short HEAD` of your clone.
+      placeholder: e.g. 0.1.0 or 5858e5d
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform and DSH build
+      description: Where DSH is running.
+      options:
+        - Windows — desktop app
+        - macOS — desktop app
+        - Linux — desktop app
+        - Web — browser build
+    validations:
+      required: true
+  - type: textarea
+    id: console_errors
+    attributes:
+      label: Console or DevTools errors (optional)
+      description: Paste errors from the DSH DevTools console. Remove tokens and private conversation text first.
+      render: shell
+    validations:
+      required: false
+  - type: markdown
+    attributes:
+      value: |
+        Screenshots or a short screen recording help a lot with layout, folding and motion bugs. Drag them into the issue after submitting; this form has no file upload field.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I ran `npm test` against the version I am reporting, and it passes (or I pasted the failure above).
+          required: true
+        - label: This is not a security issue. Security reports go through [SECURITY.md](https://github.com/tzzs/dsh-explore/blob/main/SECURITY.md), not a public issue.
+          required: true

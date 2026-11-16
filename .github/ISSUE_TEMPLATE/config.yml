@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Design notes, non-goals and known gaps
+    url: https://github.com/tzzs/dsh-explore/blob/main/docs/design.md
+    about: Read the design record before filing a feature request or a "missing behaviour" bug.
+  - name: CI, releases and versioning
+    url: https://github.com/tzzs/dsh-explore/blob/main/docs/releasing.md
+    about: How CI, Release Please and version tags work, and what to do when a release fails.
+  - name: Report a security vulnerability
+    url: https://github.com/tzzs/dsh-explore/security/advisories/new
+    about: Report privately through GitHub Security Advisories. Do not open a public issue.

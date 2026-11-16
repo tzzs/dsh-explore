@@ -1,0 +1,14 @@
+version: 2
+updates:
+  # The plugin has zero npm dependencies and no lockfile, so there is no npm
+  # ecosystem entry here. Only the workflows are third-party code.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: ci
+    # Actions are pinned by commit SHA with a version comment next to it
+    # (see .github/workflows/), so Dependabot has to bump both the SHA and that
+    # comment when it updates an action.
