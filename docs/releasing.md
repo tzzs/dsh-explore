@@ -11,7 +11,7 @@
 - 发版 PR 受 `always-update` 保护：每次运行都会按当前 `main` 重建它的分支，避免像普通分支那样因为基分支前进而卡在冲突里。
 - 打包和发布留在同一工作流中，因为内置 `GITHUB_TOKEN` 创建的 tag 不会触发新的工作流。
 - [Release Please](../.github/workflows/release-please.yml) 的最后一个 job 是 **Publish to npm**：Release 公开后，从同一个 commit 校验 `package.json` 版本与 tag 一致，再用 `npm publish --provenance --access public` 发布到 npm。它同样留在 Release Please 工作流里，原因与上一条相同。版本已在 npm 上时直接跳过，所以重跑失败 job 不会因为「版本已存在」再次失败。
-- [Publish npm](../.github/workflows/publish-npm.yml)：手动工作流（`workflow_dispatch`），用于首次发布和补发。先跑完整 CI，再按输入 ref 的 `package.json` 版本发布；可以只跑 `npm publish --dry-run`。
+- npm 发布 job 只能留在 Release Please 工作流里，原因同上：发版流程需要草稿 Release 的 commit 和 tag，而 `GITHUB_TOKEN` 建的 tag 不会触发新工作流。补发时不要另起工作流，直接在那个运行里 **Re-run failed jobs**——job 会先查 registry，已发布的版本自动跳过。
 
 Actions 使用固定 commit SHA 引用第三方 action；升级时同时更新 SHA 和旁边的版本注释。
 
@@ -37,12 +37,13 @@ Secret 只用于 Release Please job，PR 测试无需访问它。仓库或组织
 
 ## 发布到 npm
 
-发布凭证二选一：
+发布走 **Trusted Publishing（OIDC）**，不需要长期 token：
 
-- **Trusted Publishing（推荐）**：在 npmjs.com 的包设置里把 GitHub 仓库 `tzzs/dsh-explore` 与工作流文件 `release-please.yml` 登记为 trusted publisher，之后 workflow 用 OIDC（`id-token: write`）发布，不需要长期 token。首次发布前包还不存在，无法登记，所以第一个版本要先走下面的 token 方式。
-- **`NPM_TOKEN` secret**：在 Settings → Secrets and variables → Actions 添加 `NPM_TOKEN`，值为有 publish 权限的 npm granular access token（scope 选 `@tanzz`，勾选 bypass 2FA）。工作流检测到该 secret 就写进临时 `.npmrc`；没配置时依赖 trusted publishing。注意 npm 从 2027 年 1 月起限制 bypass 2FA 的 token 直接发布，长期看应迁移到 trusted publishing。
+- npmjs.com 的包设置（Settings → Trusted Publisher）里已有一条 GitHub Actions 连接：仓库 `tzzs/dsh-explore`、工作流文件 `release-please.yml`、允许 `npm publish`。连接创建后状态是 Pending validation，登记页会给出验证截止时间；在截止时间前完成一次发版即可转为 validated，否则 npm 会移除这条连接，重新登记即可（需要再次 2FA）。
+- 工作流只申请 `id-token: write`，没有 token 也能发布。临时兜底可以在 Settings → Secrets and variables → Actions 添加 `NPM_TOKEN`（granular token，勾选 bypass 2FA）；工作流检测到这个 secret 就写进临时 `.npmrc` 并优先用 token。注意 npm 从 2027 年 1 月起限制 bypass 2FA 的 token 直接发布，只用它应急。
+- 换工作流文件名（例如把发布拆到独立文件）必须同步更新这条 trusted publisher 连接，否则 OIDC 校验会拒绝。
 
-首次发布：在 Actions 页面手动运行 **Publish npm**（ref 留空 = `main`；建议先勾 `dry-run` 验证打包内容），成功后到 npmjs.com 登记 trusted publisher，再删除 `NPM_TOKEN` secret。之后发版由 Release Please 工作流自动完成。
+首次发布已完成：`@tanzz/dsh-explore@0.1.0`（2026-11-16，本地 `npm publish` 完成，因为登记 trusted publisher 前包必须已存在）。后续版本全部走发版 PR，由 Release Please 工作流里的 **Publish to npm** job 自动发布。
 
 `npm publish` 会带上 provenance（`id-token: write` + 公开仓库），npm 页面会显示构建来源。发布前请确认 `package.json` 的 `files` 里包含 `client.js`、`index.js`、`cordis.patch.yml`、`locale/` 与 `icon.svg`——`dsh.bundle.patch` 指向的 `cordis.patch.yml` 缺失会让 DSH 拒绝安装。
 
