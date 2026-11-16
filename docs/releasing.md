@@ -6,10 +6,12 @@
 
 - [CI](../.github/workflows/ci.yml)：向 `main` 提 PR 时自动运行，也支持手动运行和被其他工作流调用。在 Ubuntu、Windows 上分别用 Node.js 22、24 执行入口语法检查、`npm test` 和 `npm pack --dry-run`。项目没有 npm 依赖，因此不需要安装步骤或 lockfile。
 - [Release Please](../.github/workflows/release-please.yml)：每次推送到 `main` 时先复用完整 CI；全部通过后才更新发版 PR 或创建 Release。支持在 Actions 页面选择 `main` 后手动运行；其他分支会跳过发版。主分支的测试在这个工作流里运行，不会重复启动一套 CI。
-- 发版分两段，避免在版本内容还没被完整验证时就公开：Release Please 先只创建草稿 Release（此时还没有 tag），同一工作流再把它的实际发版 commit 交给 CI，跑完整的 Ubuntu / Windows × Node.js 22 / 24 矩阵。全部通过后，从同一个 commit 通过 `npm pack` 生成 `local-dsh-explore-<version>.tgz`，上传附件，最后公开 Release 并由 GitHub 创建 tag。这样即使 `main` 在前一轮 CI 执行期间前进，公开发布的内容也一定通过了完整检查。包内容沿用 [package.json](../package.json) 的 `files` 清单。
+- 发版分两段，避免在版本内容还没被完整验证时就公开：Release Please 先只创建草稿 Release（此时还没有 tag），同一工作流再把它的实际发版 commit 交给 CI，跑完整的 Ubuntu / Windows × Node.js 22 / 24 矩阵。全部通过后，从同一个 commit 通过 `npm pack` 生成 `tanzz-dsh-explore-<version>.tgz`，上传附件，最后公开 Release 并由 GitHub 创建 tag。这样即使 `main` 在前一轮 CI 执行期间前进，公开发布的内容也一定通过了完整检查。包内容沿用 [package.json](../package.json) 的 `files` 清单。
 - 草稿没有 tag，Release Please 此时算不出版本边界，所以「更新发版 PR」被推迟到草稿不存在或已发布之后（通常是下一次推送到 `main`）。存在未完成的草稿时，新一轮工作流会停止并发失败，避免算出重复版本；处理方式见「失败处理」。
 - 发版 PR 受 `always-update` 保护：每次运行都会按当前 `main` 重建它的分支，避免像普通分支那样因为基分支前进而卡在冲突里。
 - 打包和发布留在同一工作流中，因为内置 `GITHUB_TOKEN` 创建的 tag 不会触发新的工作流。
+- [Release Please](../.github/workflows/release-please.yml) 的最后一个 job 是 **Publish to npm**：Release 公开后，从同一个 commit 校验 `package.json` 版本与 tag 一致，再用 `npm publish --provenance --access public` 发布到 npm。它同样留在 Release Please 工作流里，原因与上一条相同。版本已在 npm 上时直接跳过，所以重跑失败 job 不会因为「版本已存在」再次失败。
+- [Publish npm](../.github/workflows/publish-npm.yml)：手动工作流（`workflow_dispatch`），用于首次发布和补发。先跑完整 CI，再按输入 ref 的 `package.json` 版本发布；可以只跑 `npm publish --dry-run`。
 
 Actions 使用固定 commit SHA 引用第三方 action；升级时同时更新 SHA 和旁边的版本注释。
 
@@ -31,7 +33,18 @@ Secret 只用于 Release Please job，PR 测试无需访问它。仓库或组织
 4. 主分支 CI 再次通过后，Release Please 创建草稿 Release；实际发版 commit 的完整 CI 矩阵通过后，后续 job 上传插件包、公开 Release，并由 GitHub 生成 `v<version>` tag。
 5. 下一次推送到 `main` 时，Release Please 基于新 tag 继续维护下一条发版 PR。
 
-发版 PR 不会自动合并。项目目前使用 `@local/dsh-explore` 包名且 `private: true`，工作流只创建 GitHub Release 和 `.tgz` 附件，不发布到 npm registry，也不需要 npm token。
+发版 PR 不会自动合并。包名是 `@tanzz/dsh-explore`（npm 用户名作用域），发布目标 registry 固定为 `https://registry.npmjs.org/`，`publishConfig.access` 为 `public`。npm 上不带作用域的 `dsh-explore` 已被另一个无关项目占用，不要改回去。
+
+## 发布到 npm
+
+发布凭证二选一：
+
+- **Trusted Publishing（推荐）**：在 npmjs.com 的包设置里把 GitHub 仓库 `tzzs/dsh-explore` 与工作流文件 `release-please.yml` 登记为 trusted publisher，之后 workflow 用 OIDC（`id-token: write`）发布，不需要长期 token。首次发布前包还不存在，无法登记，所以第一个版本要先走下面的 token 方式。
+- **`NPM_TOKEN` secret**：在 Settings → Secrets and variables → Actions 添加 `NPM_TOKEN`，值为有 publish 权限的 npm granular access token（scope 选 `@tanzz`，勾选 bypass 2FA）。工作流检测到该 secret 就写进临时 `.npmrc`；没配置时依赖 trusted publishing。注意 npm 从 2027 年 1 月起限制 bypass 2FA 的 token 直接发布，长期看应迁移到 trusted publishing。
+
+首次发布：在 Actions 页面手动运行 **Publish npm**（ref 留空 = `main`；建议先勾 `dry-run` 验证打包内容），成功后到 npmjs.com 登记 trusted publisher，再删除 `NPM_TOKEN` secret。之后发版由 Release Please 工作流自动完成。
+
+`npm publish` 会带上 provenance（`id-token: write` + 公开仓库），npm 页面会显示构建来源。发布前请确认 `package.json` 的 `files` 里包含 `client.js`、`index.js`、`cordis.patch.yml`、`locale/` 与 `icon.svg`——`dsh.bundle.patch` 指向的 `cordis.patch.yml` 缺失会让 DSH 拒绝安装。
 
 ## 提交与版本规则
 
@@ -50,11 +63,13 @@ Secret 只用于 Release Please job，PR 测试无需访问它。仓库或组织
 
 ## 安装指定版本
 
-可以克隆仓库并切到 Release 对应的 tag，然后让 DSH 插件管理器安装该目录；也可以下载 Release 的 `.tgz` 附件，解压后将 `package` 目录的绝对路径交给 `install_bundle`：
+从 npm 装指定版本：`install_bundle` 的 `target` 写 `@tanzz/dsh-explore@<version>`（例如 `@tanzz/dsh-explore@0.1.0`）。
+
+不走 npm 也可以：克隆仓库并切到 Release 对应的 tag，让 DSH 插件管理器安装该目录；或下载 Release 的 `.tgz` 附件，解压后将 `package` 目录的绝对路径交给 `install_bundle`：
 
 ```bash
 mkdir dsh-explore-release
-tar -xzf local-dsh-explore-0.1.0.tgz -C dsh-explore-release
+tar -xzf tanzz-dsh-explore-0.1.0.tgz -C dsh-explore-release
 # 安装目录：<绝对路径>/dsh-explore-release/package
 ```
 
@@ -67,3 +82,6 @@ tar -xzf local-dsh-explore-0.1.0.tgz -C dsh-explore-release
 - **发版 PR 的 CI 等待批准或没有生成**：检查是否配置了 `RELEASE_PLEASE_TOKEN`；使用内置 `GITHUB_TOKEN` 时，具有写权限的维护者可在 PR 上点击 **Approve workflows to run**，环境尚未提供此功能时推荐使用 PAT。
 - **草稿 Release 已创建，但发版检查、打包或上传失败**：在该次工作流运行中使用 **Re-run failed jobs**，重跑失败的检查及后续上传、发布 job；它们会继续使用原草稿的 commit 和 tag，并通过 `--clobber` 支持重复上传。失败时 Release 保持草稿，不会公开未完成的版本。若原运行已无法重跑，删掉那个草稿 Release 后重新推送即可（草稿尚未创建 tag，删除不会影响已发布版本）。不要只重新执行 Release Please job 或重新手动启动整个工作流来尝试补附件，因为它不会把已存在的 Release 再次报告为新建。
 - **发版工作流报「A draft release is pending」**：说明上一次发版停在草稿阶段。优先在原运行的 **Re-run failed jobs** 里完成验证与发布；若原运行已不可用，按上一条删除草稿后重新推送。这道检查刻意阻止新一轮发版，因为草稿没有 tag 时 Release Please 会算错版本边界，可能生成重复的下一版 PR。
+- **npm 发布失败（401 / 403）**：检查 `NPM_TOKEN` 是否过期、是否勾选 bypass 2FA，或 trusted publisher 是否登记了正确的仓库与工作流文件名（`release-please.yml`）。修好后在 Actions 里 **Re-run failed jobs**。
+- **npm 报版本已存在**：发布前会先查 registry，已存在则跳过；若仍报错，说明 `package.json` 的版本被手工改过。不要重复发布同一版本，让发版 PR 递增版本。
+- **npm 的 `latest` 指向不对**：`npm publish` 默认打 `latest` tag；补发旧版本后用 `npm dist-tag add @tanzz/dsh-explore@<version> latest` 修正。

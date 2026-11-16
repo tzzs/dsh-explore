@@ -36,19 +36,22 @@ DSH 探索在你的会话里加一个 **「无限探索」** 页签：把这一�
 
 ## 安装
 
-前置：**DeepSeek Harness**（桌面版或 Web 版），且 profile 允许安装本地插件。
+前置：**DeepSeek Harness**（桌面版或 Web 版），且 profile 允许安装插件。
+
+插件发布在 npm，包名 `@tanzz/dsh-explore`。在 DSH 里安装：
+
+1. 打开插件管理（`plugin_manager`）→ `install_bundle`；
+2. `target` 填包名 `@tanzz/dsh-explore`；要锁版本就写 `@tanzz/dsh-explore@0.1.0`；
+3. 安装完成后，会话页签里会多出「无限探索」。
+
+> 包名是 `@tanzz/dsh-explore`。它是安装标识，不是展示名：展示名来自 `locale/`，中文「DSH 探索」、英文「DSH Explore」。npm 上不带作用域的 `dsh-explore` 已被另一个无关项目占用，所以这里用 npm 用户名作用域。
+
+改代码时不必走 npm：克隆仓库，让 `install_bundle` 的 `target` 直接填**这个目录的绝对路径**（profile 里会记成 `link:` 依赖），改完热更新。
 
 ```bash
 git clone https://github.com/tzzs/dsh-explore.git
+# target 填这个目录，例如 E:\workspaces\dsh-explore
 ```
-
-然后在 DSH 里用插件管理把**这个目录的绝对路径**作为安装目标：
-
-1. 打开插件管理（`plugin_manager`）→ `install_bundle`；
-2. `target` 填克隆出来的目录，例如 `E:\workspaces\dsh-explore`；
-3. 安装完成后，会话页签里会多出「无限探索」。
-
-> 包名是 `@local/dsh-explore`。它是安装标识，不是展示名：展示名来自 `locale/`，中文「DSH 探索」、英文「DSH Explore」。
 
 ## 命名
 
@@ -57,7 +60,7 @@ git clone https://github.com/tzzs/dsh-explore.git
 | 层 | 名字 | 出现在哪 | 为什么是这个 |
 |---|---|---|---|
 | 仓库 | `dsh-explore` | GitHub URL、`git clone` | 公开地址，一旦发布就不改；短、全小写、无空格 |
-| 包 | `@local/dsh-explore` | `package.json`、profile 的 `link:` 依赖 | 与仓库同名，安装时一眼对得上；改它要卸载重装 |
+| 包 | `@tanzz/dsh-explore` | `package.json`、npm registry、profile 依赖 | 与仓库同名，安装时一眼对得上；npm 上 `dsh-explore` 被占用，所以用作用域；改它要卸载重装 |
 | 插件（展示名） | 「DSH 探索」/ `DSH Explore` | 插件列表、设置页 | 人读的产品名；前缀 `DSH` 说明它属于哪个宿主 |
 | 视图（页签） | 「无限探索」/ `Infinite Exploration` | 会话里的第三个页签 | 描述这个视图在做什么，不是产品名；跟随界面语言切换 |
 
@@ -109,9 +112,9 @@ node test/motion.cjs          # 动效：画布移动、手势中断、导航替
 
 向 `main` 提 PR 时，GitHub Actions 会在 Ubuntu / Windows、Node.js 22 / 24 上执行测试与打包预检；推送到 `main` 时，发版工作流先运行同一套检查，再由 Google Release Please 创建或更新发版 PR。
 
-合并发版 PR 后自动创建 `v<version>` tag、GitHub Release，并附上可解压后本地安装的插件 `.tgz` 包。首版为 `v0.1.0`，后续版本由 Conventional Commits 决定。
+合并发版 PR 后自动创建 `v<version>` tag、GitHub Release，并附上可解压后本地安装的插件 `.tgz` 包，同一 commit 还会以 `--provenance` 发布到 npm。首版为 `v0.1.0`，后续版本由 Conventional Commits 决定。
 
-启用前请查看 [CI 与自动发版说明](docs/releasing.md)，完成仓库 Actions 权限与可选的 `RELEASE_PLEASE_TOKEN` 配置。
+启用前请查看 [CI 与自动发版说明](docs/releasing.md)，完成仓库 Actions 权限、`RELEASE_PLEASE_TOKEN` 与 npm 发布凭证配置。
 
 ## 已知限制
 
@@ -138,11 +141,11 @@ node test/motion.cjs          # 动效：画布移动、手势中断、导航替
 - Depth-3 branches start folded — except on the path to a running or waiting node; `Ctrl/Cmd+F` searches nodes and reveals the ancestor path.
 - Click the answer body for a full-screen reader; deleting is a tombstone plus archiving the fork's session, and it is reversible.
 
-**Install** — clone this repo, then point DSH's plugin manager at the absolute directory (`install_bundle`, `target = <clone path>`). The tab shows up as「无限探索」.
+**Install** — install `@tanzz/dsh-explore` from npm with DSH's plugin manager (`install_bundle`, `target = @tanzz/dsh-explore`, or pin a version such as `@tanzz/dsh-explore@0.1.0`). For local development, clone this repo and point `install_bundle` at the absolute directory instead; the tab shows up as「无限探索」.
 
 **Tech** — `client.js` registers `conversation.view` (`id: tree`); nodes are projections of session events (`entries`, including transient `assistant/live-chunk`); forks are real sessions created with `ctx.sessions.fork({ sessionId, atSeq })`; parent links live in `localStorage` because this DSH build does not record `parentSession`; a pending `ask_user_question` / approval has no event of its own — the projection derives "waiting on you" from `tool/call` + `approval/asked` (and the turn staying open), and the layout never folds the path to an active node; all colours use `--dsw-alias-*` theme tokens (including the inverted `--dsw-alias-label-primary-foreground` on primary buttons), and font families read the composed `--dsw-font-family` / `--ds-font-family-code` tokens so a custom font keeps DSH's fallback stack.
 
-**CI & releases** — PRs and `main` run tests on Ubuntu / Windows with Node.js 22 / 24. Google Release Please maintains a release PR; merging it creates a version tag and GitHub Release with a plugin `.tgz` attachment. See the [release setup guide](docs/releasing.md) for Actions permissions and the optional `RELEASE_PLEASE_TOKEN` secret.
+**CI & releases** — PRs and `main` run tests on Ubuntu / Windows with Node.js 22 / 24. Google Release Please maintains a release PR; merging it creates a version tag and GitHub Release with a plugin `.tgz` attachment, then publishes the same commit to npm with provenance. See the [release setup guide](docs/releasing.md) for Actions permissions and the `RELEASE_PLEASE_TOKEN` / npm publishing setup.
 
 **Limits** — the tree relationship is local to this browser; there is no cross-session notebook; errors only show on the card (questions and approvals do jump into view); sessions forked outside the plugin cannot be attached to a tree.
 
