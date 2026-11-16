@@ -1,0 +1,36 @@
+name: Feature request
+description: Propose a change to the canvas, the cards or the plugin's behaviour.
+title: "[feature] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before writing, check the goals and non-goals in §2 of the [design doc](https://github.com/tzzs/dsh-explore/blob/main/docs/design.md). Automatic branching, multi-turn nodes, export/share and replacing the Chat view are deliberate non-goals.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do that the current view makes hard? Describe the situation, not the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: proposed_behaviour
+    attributes:
+      label: Proposed behaviour
+      description: What the view should do instead. Interaction details (click, keyboard, state) are welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered (optional)
+      description: Workarounds you use today, or other shapes the feature could take.
+    validations:
+      required: false
+  - type: textarea
+    id: scope_check
+    attributes:
+      label: Scope check
+      description: Which goal in docs/design.md §2 does this serve, and does it conflict with a non-goal? Say so if it does — that is a design discussion, not a rejection.
+    validations:
+      required: true

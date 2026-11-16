@@ -1,152 +1,158 @@
 <p align="center">
-  <img src="assets/hero.svg" width="760" alt="A single line of conversation opens into several branching paths" />
+  <img src="assets/hero.svg" width="760" alt="One line of conversation opens into several branching paths" />
 </p>
 
-<h1 align="center">DSH 探索 · DSH Explore</h1>
+<h1 align="center">DSH Explore</h1>
 
 <p align="center">
-  把一条对话摊成一张能自己长枝的画布。
-  <br />
   A branching-conversation canvas for <b>DeepSeek Harness</b>.
 </p>
 
-<p align="center">
-  <img src="https://img.shields.io/badge/license-MIT-3B6FD4" alt="MIT" />
-  <img src="https://img.shields.io/badge/platform-DeepSeek%20Harness-3B6FD4" alt="DeepSeek Harness" />
-</p>
+[![CI](https://github.com/tzzs/dsh-explore/actions/workflows/ci.yml/badge.svg)](https://github.com/tzzs/dsh-explore/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/tzzs/dsh-explore)](https://github.com/tzzs/dsh-explore/releases)
+[![License: MIT](https://img.shields.io/github/license/tzzs/dsh-explore)](LICENSE)
+![Platform: DeepSeek Harness](https://img.shields.io/badge/platform-DeepSeek%20Harness-3B6FD4)
+
+**English** | [简体中文](README.zh-CN.md)
 
 ---
 
-## 这是什么
+## What it is
 
-DSH 里的对话是一条线：A → B → C。但真实的思考不长这样——同一个回答上，人往往同时想问好几件互不相干的事，问完之后又都压在历史里，没法并排看。
+A conversation in DSH is a line: A → B → C. Real thinking does not look like that — on one answer you often want to ask several unrelated things at once, and once asked they all sink into history with no way to put them side by side.
 
-DSH 探索在你的会话里加一个 **「无限探索」** 页签：把这一轮轮问答铺到一张无限画布上，**任意一个回答都可以成为新的分岔口**。从某个节点再问一句，就长出一根新枝，它带着从根到这里的完整上下文继续往下走，枝条之间互不污染。
+DSH Explore adds an **Infinite Exploration** tab to every conversation: it lays the turns out on an infinite canvas where **any answer can become a fork point**. Ask a follow-up on a node and a new branch grows from it, carrying the full context from the root to that node while leaving its siblings untouched.
 
-## 功能
+A branch is not a prompt with history pasted into it. It is a real DSH session created with `ctx.sessions.fork({ sessionId, atSeq })`, so it inherits the exact event prefix up to that answer; tools, approvals, streaming, cancellation and retries all behave like any other conversation.
 
-- **无限画布** —— 拖拽平移、滚轮缩放（10%–200%）、适应画布，右下角小地图可点击跳转并显示当前视口。
-- **任意回答开新枝** —— 卡片右上角的 `+` 就是追问入口，就地长出一张输入卡，回车发送后新节点立刻出现。
-- **并行分支** —— 几条枝可以同时跑。正在回答的卡片带实时进度行：转圈指示器 +「正在思考… / 正在调用 read / 正在输出…」+ 第 N 步 + 已用秒数，正文按流式 token 边写边渲染，并带「停止」。
-- **等你回答** —— 分支停在提问或审批时，卡片改说「等你回答… / 等你授权…」并带一圈强调边框；画布自动展开到它并居中，工具条上的「N 个在等你」可点击跳转。正在跑的节点所在路径不会被默认折叠藏起来。
-- **定位最新** —— 一键展开到最新节点的祖先路径并把那张卡片居中；最新按创建时间判定，并行完成顺序打乱也不会跳错。
-- **折叠与搜索** —— 第三层起默认折叠，但通往「正在跑 / 在等你」节点的路径始终展开；`Ctrl/Cmd+F` 聚焦搜索框，回车逐个跳转命中节点并自动展开祖先路径。
-- **全屏阅读** —— 点卡片正文打开阅读层（Esc / 点背景 / × 关闭），长回答不用挤在 320px 里。
-- **删除与恢复** —— 删除只写墓碑并归档对应的 fork 会话，工具栏可一键恢复；会话日志本身从不改写。
+## Features
 
-## 安装
+- **Infinite canvas** — drag to pan, scroll to zoom (20%–200%), fit to canvas; the minimap in the bottom-right corner shows the current viewport and jumps on click.
+- **Fork from any answer** — the `+` in the corner of a finished card opens an inline composer; press Enter and the new node appears immediately.
+- **Concurrent branches** — several branches can run at once. A running card carries a live progress row (spinner, "Thinking… / Calling read / Writing…", step N, elapsed seconds), renders streamed tokens as Markdown while they arrive, and offers Stop.
+- **Waiting on you** — a branch parked on a question or an approval says so on its card ("Waiting for your answer…" / "Waiting for your approval…") with an accent ring; the canvas expands the path to it and centres it, and the toolbar chip "N waiting on you" jumps there. The path to a running or waiting node is never hidden by the default fold.
+- **Jump to latest** — expands the ancestor path of the newest node and centres that card; newest is judged by creation time, so out-of-order completions cannot send you to a stale card.
+- **Fold and search** — branches at depth 3 and deeper start folded, except on the path to a running or waiting node; `Ctrl/Cmd+F` focuses the search box, and Enter steps through matches, revealing their ancestor paths.
+- **Full-screen reader** — click a card body to open the reader (Esc, backdrop, or × closes it); long answers no longer have to fit in 320 px.
+- **Delete and restore** — deleting writes a tombstone and archives the fork's session; the toolbar restores them in one click. The session log itself is never rewritten.
 
-前置：**DeepSeek Harness**（桌面版或 Web 版），且 profile 允许安装插件。
+## Requirements
 
-插件发布在 npm，包名 `@tanzz/dsh-explore`。在 DSH 里安装：
+- **DeepSeek Harness**, desktop or web, on a profile that allows installing plugins.
+- **Node.js 22+** — development only. The plugin has no build step and no npm dependencies of its own.
 
-1. 打开插件管理（`plugin_manager`）→ `install_bundle`；
-2. `target` 填包名 `@tanzz/dsh-explore`；要锁版本就写 `@tanzz/dsh-explore@0.1.0`；
-3. 安装完成后，会话页签里会多出「无限探索」。
+## Install
 
-> 包名是 `@tanzz/dsh-explore`。它是安装标识，不是展示名：展示名来自 `locale/`，中文「DSH 探索」、英文「DSH Explore」。npm 上不带作用域的 `dsh-explore` 已被另一个无关项目占用，所以这里用 npm 用户名作用域。
+The plugin is published to npm as `@tanzz/dsh-explore`. Install it through DSH's plugin manager:
 
-改代码时不必走 npm：克隆仓库，让 `install_bundle` 的 `target` 直接填**这个目录的绝对路径**（profile 里会记成 `link:` 依赖），改完热更新。
+1. Open the plugin manager (`plugin_manager`) → `install_bundle`.
+2. Set `target` to `@tanzz/dsh-explore`; pin a version with `@tanzz/dsh-explore@0.1.0`.
+3. When it finishes, the conversation tabs include 「无限探索」 / Infinite Exploration.
+
+> The package name is an install identifier, not a display name: the display name comes from `locale/` — 「DSH 探索」 in Chinese, DSH Explore in English. npm's unscoped `dsh-explore` is taken by an unrelated project, so the package lives under the user scope.
+
+To work on the plugin itself, install the clone instead — the profile records it as a `link:` dependency, and edits hot-swap:
 
 ```bash
 git clone https://github.com/tzzs/dsh-explore.git
-# target 填这个目录，例如 E:\workspaces\dsh-explore
+# target: the absolute path, e.g. E:\workspaces\dsh-explore
 ```
 
-## 命名
-
-四层名字各管一件事，刻意不互相套用：
-
-| 层 | 名字 | 出现在哪 | 为什么是这个 |
-|---|---|---|---|
-| 仓库 | `dsh-explore` | GitHub URL、`git clone` | 公开地址，一旦发布就不改；短、全小写、无空格 |
-| 包 | `@tanzz/dsh-explore` | `package.json`、npm registry、profile 依赖 | 与仓库同名，安装时一眼对得上；npm 上 `dsh-explore` 被占用，所以用作用域；改它要卸载重装 |
-| 插件（展示名） | 「DSH 探索」/ `DSH Explore` | 插件列表、设置页 | 人读的产品名；前缀 `DSH` 说明它属于哪个宿主 |
-| 视图（页签） | 「无限探索」/ `Infinite Exploration` | 会话里的第三个页签 | 描述这个视图在做什么，不是产品名；跟随界面语言切换 |
-
-「无限探索」是**视图名**而不是插件名，所以没有把它并进展示名（「DSH 无限探索」会让产品名和页签名撞在一起，英文也会变成冗长的 `DSH Infinite Exploration`）。同理没有把页签改成 `Explore`——那会丢掉「无限」这层意思，而画布确实是无限延展的。
-
-## 目录结构
-
-```
-client.js                客户端视图：事件投影、布局、画布、卡片、阅读层
-index.js                 宿主侧空实现（这个插件只在客户端做事）
-cordis.patch.yml         向 profile 插入一行 dsh-explore
-locale/zh.json           中文展示名与描述
-locale/en.json           英文展示名与描述
-icon.svg                 插件图标
-assets/hero.svg          README 头图（一条线分出多条路径）
-test/render-smoke.cjs    渲染冒烟测试（假 React + 假 DOM，断言中英两套文案）
-test/theme-tokens.cjs    主题守卫测试（禁止写死色值，检查关键 token 配对）
-docs/design.md           设计文档：数据模型、取舍、已知缺口
-```
-
-## 实现要点
-
-- **注册点**：`conversation.view`，`id: tree`、`order: 5`、`label` 是一个 thunk（每次投影重新求值），与 Chat / Trajectory 并列。
-- **界面文案跟随宿主语言**：所有可见文本都是 `dsh-explore` 命名空间下的键，通过客户端 locale 服务查表；切换语言时页签标题和整个视图一起切换。没有 locale 插件的 profile 会退回内置的中英表（按 `document.documentElement.lang` 选择）。
-- **节点是日志的投影**：读取会话的 `entries`（持久事件 + 暂态 `assistant/live-chunk`），把一个 turn 投影成一张卡片；不额外写记录，所以在 Chat 里继续聊，树上就会自然长节点。
-- **等待态没有专门事件**：宿主里 `ask_user_question` 与审批都只是「工具还没返回」——等回答期间不发 `turn/end`，`running` 也保持 `true`。插件用 `tool/call` 的 `ask_user_question`（`callId` 在 `tool/result` 里结清）和 `approval/asked → approval/decided` 算出「在等你」，把卡片从「正在调用工具」改成「等你回答 / 等你授权」。`user/message` 的 `source.kind` 只有 `user` 与 `user-question-reply` 两种，投影两端都认。
-- **正在跑的路径不折叠**：布局只走「未折叠」的节点，被折叠的节点连位置都没有、根本不会被画。所以通往「正在跑 / 在等你」节点的祖先路径一律不套用默认折叠；节点进入运行态时还会把路径展开并持久化，停在等用户时再把画布移过去。工具条上的运行计数与「在等你」计数都是跳转按钮。
-- **会话会被重新绑定**：离开对话后宿主会释放它的引用，引用归零时 scope 被回收、`Session` 实例连同事件窗口一起丢掉；再进来时 `materializeScope` 会造一个新的 `eventSource`，窗口从空开始。所以订阅跟着 `eventSource` 换（旧的自动退订）、空窗口不当作「会话是空的」去剪枝、冷会话主动 `open()` 一次——否则直接在「无限探索」页签上切回来会得到一张空画布，而先点「回对话」再切回来又正常。`test/session-rebind.cjs` 守住这条。
-- **分叉是真实会话**：`ctx.sessions.fork({ sessionId, atSeq })`，子会话天然继承到该回答为止的前缀上下文；每根枝会出现在会话列表里，插件会把它改名成 `⟂ 父问题 · 新问题` 便于辨认。
-- **父子关系存在本地**：这一版 fork 不记录 `parentSession`，树形关系由插件在 `localStorage` 里维护（同时缓存折叠状态、墓碑、卡片高度）。
-- **主题**：颜色全部使用 `--dsw-alias-*` CSS 变量，浅色 / 深色主题自动跟随，不写死色值。主按钮的 `--dsw-alias-brand-primary` 在深浅主题下会反相（浅色近黑、深色近白），所以文字必须用配套的 `--dsw-alias-label-primary-foreground`，不能写死 `#fff`；行内代码用 `label-primary` 的 7% 着色（官方 inline-code token 在浅色下几乎是白的，放在白卡片上会看不见）。字体接组合后的 `--dsw-font-family` / `--ds-font-family-code`——DSH 已把用户字体和内置默认栈拼在一起，直接读组合 token 才能保住字形回退。`test/theme-tokens.cjs` 守住这些规则。
-
-## 开发
+To install a specific release without npm, download the `.tgz` attached to that GitHub Release and point `install_bundle` at the unpacked `package` directory:
 
 ```bash
-npm test                      # 下面六条一起跑（package.json 里的 scripts.test）
-
-node --check client.js        # 语法
-node test/render-smoke.cjs    # 渲染冒烟：把整个视图真渲染一遍，并断言中英两套文案
-node test/canvas-visibility.cjs  # 可见性回归：在跑/等你的节点必须被画出来，等待态文案与投影白名单
-node test/session-rebind.cjs  # 重新打开会话：scope 重建后换订阅、空窗口不剪枝、冷会话要 open
-node test/theme-tokens.cjs    # 主题守卫：色值不写死、token 必须存在、主按钮用反相前景 token
-node test/motion.cjs          # 动效：画布移动、手势中断、导航替换、减少动态效果与清理
+mkdir dsh-explore-release
+tar -xzf tanzz-dsh-explore-0.1.0.tgz -C dsh-explore-release
+# target: <absolute path>/dsh-explore-release/package
 ```
 
-`client.js` 是客户端插件（`window.__ModuleLoader__.load` 的惰性工厂），改完客户端热更新立即生效。注意样式表在每次 `apply()` 都会重写同一个 `<style>` 节点——如果只在节点已存在时跳过，热更新后的新规则永远不会生效。
+## Naming
 
-## CI 与发版
+Four layers, four jobs, deliberately not collapsed into one name:
 
-向 `main` 提 PR 时，GitHub Actions 会在 Ubuntu / Windows、Node.js 22 / 24 上执行测试与打包预检；推送到 `main` 时，发版工作流先运行同一套检查，再由 Google Release Please 创建或更新发版 PR。
+| Layer | Name | Where it appears | Why this one |
+|---|---|---|---|
+| Repository | `dsh-explore` | GitHub URL, `git clone` | the public address; short, lowercase, no spaces, and it does not change after release |
+| Package | `@tanzz/dsh-explore` | `package.json`, npm registry, the profile's dependency | matches the repo, so an install is easy to trace; npm's unscoped `dsh-explore` is taken, so it uses the user scope; renaming it means uninstall and reinstall |
+| Plugin (display name) | DSH Explore / 「DSH 探索」 | plugin list, settings page | the product name a human reads; the `DSH` prefix says which host it belongs to |
+| View (tab) | Infinite Exploration / 「无限探索」 | the third tab inside a conversation | describes what the view does, not the product; follows the UI language |
 
-合并发版 PR 后自动创建 `v<version>` tag、GitHub Release，并附上可解压后本地安装的插件 `.tgz` 包，同一 commit 还会以 `--provenance` 发布到 npm。首版为 `v0.1.0`，后续版本由 Conventional Commits 决定。
+The tab is a **view name**, so it is not folded into the display name — "DSH Infinite Exploration" would collide with the tab and read badly in both languages. Nor is the tab shortened to `Explore`: that drops the "infinite" part, and the canvas really does extend without bound.
 
-启用前请查看 [CI 与自动发版说明](docs/releasing.md)，完成仓库 Actions 权限、`RELEASE_PLEASE_TOKEN` 与 npm 发布凭证配置。
+## Project layout
 
-## 已知限制
+```
+client.js                        client view: event projection, layout, canvas, cards, reader overlay
+index.js                         host half, an empty apply() — all the work happens in the client
+cordis.patch.yml                 inserts the dsh-explore row into the DSH profile
+locale/zh.json                   Chinese display name and description
+locale/en.json                   English display name and description
+icon.svg                         plugin icon
+assets/hero.svg                  README hero: one line branching into several paths
+test/render-smoke.cjs            renders the whole view with a fake React and asserts both language tables
+test/canvas-visibility.cjs       running/waiting nodes must be laid out and drawn; waiting copy; projection whitelist
+test/session-rebind.cjs          re-subscribe on a new eventSource, no pruning on an empty window, cold session open()
+test/theme-tokens.cjs            no literal colours, required tokens exist, inverted primary-button foreground
+test/motion.cjs                  camera interpolation, gesture interruption, navigation replacement, reduced motion
+docs/design.md                   design doc: data model, trade-offs, known gaps
+docs/releasing.md                CI, Release Please and npm publishing
+.github/workflows/               CI, Release Please and the manual npm publish workflow
+```
 
-- **树关系只在这台机器的这个浏览器里**：换浏览器、清站点数据或换 profile，树枝会平掉（每个会话自己那条链还在，但接不回同一棵树）。
-- **树是会话级的**：没有「把几棵树摆在一起」的本子。
-- **出错**：出错只体现在卡片状态上，不会自动跳过去；提问和审批则会（见「等你回答」）。
-- **插件之外的 fork**：在 DSH 里、插件之外 fork 出来的会话识别不到，会被当成新树的根。
+## How it works
+
+The view is a single client plugin; the full design — data model, trade-offs, known gaps — is in [docs/design.md](docs/design.md) (currently in Chinese).
+
+- **Registration.** One `conversation.view` slot: `id: 'tree'`, `order: 5`, and a `label` thunk that is re-evaluated on every projection, next to Chat and Trajectory.
+- **Copy follows the host language.** Every visible string is a key in the `dsh-explore` namespace resolved through the client locale service, so switching language swaps the tab title and the whole view. A profile without the locale plugin falls back to the built-in Chinese/English tables, chosen by `document.documentElement.lang`.
+- **Nodes are projections.** The view reads a session's `entries` (durable events plus the transient `assistant/live-chunk`) and projects one turn onto one card. Nothing extra is recorded, so continuing the chat in Chat simply grows the tree.
+- **"Waiting on you" has no event of its own.** In the host, `ask_user_question` and approvals are just "a tool that has not returned yet": no `turn/end` is emitted while waiting and `running` stays `true`. The plugin derives the state from `tool/call` (`ask_user_question`, settled by `callId` in `tool/result`) and `approval/asked → approval/decided`, and relabels the card from calling a tool to waiting. `user/message` only ever carries `source.kind: 'user'` or `'user-question-reply'`, and both are projected.
+- **The path to an active node is never folded.** Layout only walks unfolded nodes, and a folded node has no position and is never drawn — that was the root cause of "the canvas does not show the node that is running". So the ancestor path of a running or waiting node skips the default fold; a node entering the running state also expands and persists that path, and a node that starts waiting moves the canvas onto itself. The toolbar's running count and "waiting on you" count are both jump buttons.
+- **Sessions get re-bound.** Leaving a conversation drops the host's reference; at zero the scope is collected and the `Session` instance is discarded together with its event window. On the way back, `materializeScope` mints a new `eventSource` and the window starts empty. Subscriptions therefore follow `eventSource` (the old one unsubscribes), an empty window is never treated as "the session is empty" and pruned, and a cold session is `open()`ed once — otherwise returning straight to the tab gives a blank canvas while Chat-then-tab works. `test/session-rebind.cjs` pins this.
+- **Forks are real sessions.** `ctx.sessions.fork({ sessionId, atSeq })` gives the child the prefix context up to that answer. Each branch also lands in the session list, so it is renamed `⟂ parent question · new question` to stay recognisable.
+- **Parent links live locally.** This DSH build does not record `parentSession`, so the plugin keeps the tree in `localStorage`, alongside fold state, tombstones and card heights.
+- **Theme.** All colours are `--dsw-alias-*` variables, so light and dark follow the host and no literal value is written. `--dsw-alias-brand-primary` inverts between themes, so primary-button text must use the matching `--dsw-alias-label-primary-foreground` rather than `#fff`; inline code is tinted with 7% `label-primary` because the official inline-code token is nearly white in light mode. Fonts read the composed `--dsw-font-family` / `--ds-font-family-code` tokens, which already join the user's font with the built-in fallback stack. `test/theme-tokens.cjs` guards all of it.
+
+## Development
+
+```bash
+npm test                      # all six commands below (scripts.test in package.json)
+
+node --check client.js        # syntax
+node test/render-smoke.cjs    # render the whole view with a fake React; assert both language tables
+node test/canvas-visibility.cjs  # running/waiting nodes must be laid out and drawn; waiting copy; projection whitelist
+node test/session-rebind.cjs  # re-subscribe after a scope rebuild; no pruning on an empty window; cold session open()
+node test/theme-tokens.cjs    # no literal colours, tokens exist, primary buttons use the inverted foreground
+node test/motion.cjs          # camera moves, gesture interruption, navigation replacement, reduced motion, cleanup
+```
+
+`client.js` is a client plugin — the lazy factory behind `window.__ModuleLoader__.load` — and edits hot-swap into the running host without a page reload. Note that the stylesheet rewrites the same `<style>` node on every `apply()`: skipping the rewrite when the node already exists means new rules never take effect after a hot reload.
+
+## CI & releases
+
+A PR to `main` runs `.github/workflows/ci.yml` on Ubuntu and Windows with Node.js 22 and 24: `node --check index.js`, `npm test`, `npm pack --dry-run`. There is no install step — the plugin and its tests have no npm dependencies, and there is no lockfile.
+
+Releases are driven by Conventional Commits through Google's Release Please: it opens or updates a release PR that bumps `package.json`, the manifest and `CHANGELOG.md`; merging it starts the release job, which runs the full matrix on the released commit, packs `tanzz-dsh-explore-<version>.tgz`, attaches it to the GitHub Release, publishes the release, lets GitHub create the `v<version>` tag, and publishes the same commit to npm with provenance. `v0.1.0` is already tagged; the first npm publish is a manual run of the **Publish npm** workflow, preferably with `dry_run` first.
+
+See [CI and releases](docs/releasing.md) (currently in Chinese) for first-time setup — Actions permissions, the optional `RELEASE_PLEASE_TOKEN` secret, and npm Trusted Publishing or an `NPM_TOKEN`.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Commit messages and PR titles follow [Conventional Commits](https://www.conventionalcommits.org/) — Release Please derives the next version from them — and bug reports and feature requests have issue templates.
+
+## Security
+
+See [SECURITY.md](SECURITY.md) for how to report a vulnerability privately. Please do not open a public issue for one.
+
+## Limitations
+
+- **The tree relationship lives in this browser on this machine.** Another browser, cleared site data or another profile flattens the tree: each session keeps its own chain, but the branches cannot be reattached.
+- **A tree is per session.** There is no notebook that puts several trees side by side.
+- **Errors stay on the card.** A failed turn shows its state there and does not pull the canvas over to itself; questions and approvals do.
+- **Forks made outside the plugin are invisible.** A session forked in DSH by other means is opened as the root of a new tree.
 
 ## License
 
 [MIT](LICENSE) © 2026 tzzs
 
----
-
-## English
-
-**DSH Explore**（DSH 探索）adds an **Infinite Exploration** tab to every DeepSeek Harness conversation: it lays the turns out on an infinite canvas where **any answer can become a fork point**. Ask a follow-up there and a new branch grows, carrying the full prefix context of the path that led to it, without contaminating its siblings.
-
-- Infinite pan/zoom canvas with a clickable minimap that also shows the current viewport.
-- `+` on any finished answer opens an inline composer; the new node appears immediately.
-- Several branches run concurrently, each with a live progress row (thinking / tool name / step / elapsed) and a stop button; streamed tokens render as Markdown while they arrive.
-- **Waiting on you** — a branch parked on a question or an approval says so on its card (「等你回答…」/「等你授权…」 with an accent ring); the canvas opens the path to it and centres it, and the toolbar's "waiting on you" chip jumps to it. The path to a node that is running is never hidden by the default fold.
-- **Jump to latest** expands the ancestor path and centres the newest node; newest is judged by creation time, so out-of-order completions cannot send you to a stale card.
-- Depth-3 branches start folded — except on the path to a running or waiting node; `Ctrl/Cmd+F` searches nodes and reveals the ancestor path.
-- Click the answer body for a full-screen reader; deleting is a tombstone plus archiving the fork's session, and it is reversible.
-
-**Install** — install `@tanzz/dsh-explore` from npm with DSH's plugin manager (`install_bundle`, `target = @tanzz/dsh-explore`, or pin a version such as `@tanzz/dsh-explore@0.1.0`). For local development, clone this repo and point `install_bundle` at the absolute directory instead; the tab shows up as「无限探索」.
-
-**Tech** — `client.js` registers `conversation.view` (`id: tree`); nodes are projections of session events (`entries`, including transient `assistant/live-chunk`); forks are real sessions created with `ctx.sessions.fork({ sessionId, atSeq })`; parent links live in `localStorage` because this DSH build does not record `parentSession`; a pending `ask_user_question` / approval has no event of its own — the projection derives "waiting on you" from `tool/call` + `approval/asked` (and the turn staying open), and the layout never folds the path to an active node; all colours use `--dsw-alias-*` theme tokens (including the inverted `--dsw-alias-label-primary-foreground` on primary buttons), and font families read the composed `--dsw-font-family` / `--ds-font-family-code` tokens so a custom font keeps DSH's fallback stack.
-
-**CI & releases** — PRs and `main` run tests on Ubuntu / Windows with Node.js 22 / 24. Google Release Please maintains a release PR; merging it creates a version tag and GitHub Release with a plugin `.tgz` attachment, then publishes the same commit to npm with provenance. See the [release setup guide](docs/releasing.md) for Actions permissions and the `RELEASE_PLEASE_TOKEN` / npm publishing setup.
-
-**Limits** — the tree relationship is local to this browser; there is no cross-session notebook; errors only show on the card (questions and approvals do jump into view); sessions forked outside the plugin cannot be attached to a tree.
-
-Licensed under [MIT](LICENSE).
+By participating you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).

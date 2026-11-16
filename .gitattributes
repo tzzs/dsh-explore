@@ -1,0 +1,16 @@
+# Enforce LF in every checkout, on every platform.
+# CI runs a windows-latest leg and this plugin ships plain JS/YAML/JSON/SVG that
+# must stay byte-identical across checkouts; with autocrlf the Windows leg could
+# otherwise get a CRLF working tree, spurious diffs and CRLF-sensitive failures.
+# The rule below already covers every text file, so no per-extension list is needed.
+* text=auto eol=lf
+
+# Binary assets: never diff, merge or line-ending-normalize them.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.webp binary
+*.gif  binary
+*.ico  binary
+*.tgz  binary
+*.zip  binary
