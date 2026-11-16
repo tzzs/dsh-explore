@@ -1,7 +1,6 @@
 {
-  "name": "@local/dsh-explore",
+  "name": "@tanzz/dsh-explore",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "scripts": {
     "test": "node --check client.js && node test/render-smoke.cjs && node test/canvas-visibility.cjs && node test/session-rebind.cjs && node test/theme-tokens.cjs && node test/motion.cjs"
@@ -14,11 +13,19 @@
     "conversation-canvas"
   ],
   "license": "MIT",
+  "author": "tanzz",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/tzzs/dsh-explore.git"
   },
+  "bugs": {
+    "url": "https://github.com/tzzs/dsh-explore/issues"
+  },
   "homepage": "https://github.com/tzzs/dsh-explore#readme",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
