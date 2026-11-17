@@ -39,6 +39,24 @@ window.__ModuleLoader__.load({
     const NODE_H = 212;
     const GAP_X = 44;
     const GAP_Y = 76;
+    const LAYOUT_DIRECTION_KEY = 'dsh-explore:layout-direction';
+
+    function readLayoutDirection() {
+      try {
+        return window.localStorage.getItem(LAYOUT_DIRECTION_KEY) === 'horizontal' ? 'horizontal' : 'vertical';
+      } catch (error) {
+        return 'vertical';
+      }
+    }
+
+    function saveLayoutDirection(direction) {
+      try {
+        window.localStorage.setItem(LAYOUT_DIRECTION_KEY, direction);
+      } catch (error) {
+        /* Layout remains available for this view when storage is blocked. */
+      }
+    }
+
     // Font families follow Settings → Appearance. DSH composes the user's list
     // with its own default stack on body (`--dsw-font-family` /
     // `--ds-font-family-code`), so reading the composed tokens keeps glyph
@@ -72,6 +90,8 @@ window.__ModuleLoader__.load({
         'view.zoomOut': '缩小画布',
         'view.zoomIn': '放大画布',
         'view.zoomLevel': '当前缩放比例',
+        'view.layoutHorizontal': '左右布局',
+        'view.layoutTitle': '切换左右布局和上下布局',
         'view.fit': '适应画布',
         'view.fitTitle': '缩放到能看见整棵树',
         'view.latest': '定位最新',
@@ -169,6 +189,8 @@ window.__ModuleLoader__.load({
         'view.zoomOut': 'Zoom out',
         'view.zoomIn': 'Zoom in',
         'view.zoomLevel': 'Current zoom level',
+        'view.layoutHorizontal': 'Left to right',
+        'view.layoutTitle': 'Switch between left-to-right and top-to-bottom layouts',
         'view.fit': 'Fit canvas',
         'view.fitTitle': 'Zoom out to show the whole tree',
         'view.latest': 'Jump to latest',
@@ -769,13 +791,70 @@ window.__ModuleLoader__.load({
       return result;
     }
 
-    function layoutTree(nodes, collapsed, heights) {
+    function layoutTree(nodes, collapsed, heights, direction) {
       const childrenOf = childrenMapOf(nodes);
       const kids = (node) => (collapsed[node.id] ? [] : childrenOf.get(node.id) || []);
       const roots = childrenOf.get('@root') || [];
-      const widths = new Map();
       const depthOf = depthMapOf(nodes);
 
+      if (direction === 'horizontal') {
+        const spans = new Map();
+        const positions = new Map();
+        const edges = [];
+        const heightOf = (node) => heights[node.id] || NODE_H;
+        function measure(node) {
+          const list = kids(node);
+          const childSpan = list.reduce((total, child, index) => total + measure(child) + (index ? GAP_X : 0), 0);
+          const span = Math.max(heightOf(node), childSpan);
+          spans.set(node.id, span);
+          return span;
+        }
+        function place(node, top) {
+          const list = kids(node);
+          const ownHeight = heightOf(node);
+          const span = spans.get(node.id);
+          const childSpan = list.reduce((total, child, index) => total + spans.get(child.id) + (index ? GAP_X : 0), 0);
+          let cursor = top + (span - childSpan) / 2;
+          for (const child of list) {
+            place(child, cursor);
+            cursor += spans.get(child.id) + GAP_X;
+          }
+          let center = top + span / 2;
+          if (list.length) {
+            const first = list[0];
+            const last = list[list.length - 1];
+            center = (positions.get(first.id).y + heightOf(first) / 2 + positions.get(last.id).y + heightOf(last) / 2) / 2;
+          }
+          const y = Math.max(top, Math.min(top + span - ownHeight, center - ownHeight / 2));
+          positions.set(node.id, { x: (depthOf.get(node.id) || 0) * (NODE_W + GAP_Y), y });
+        }
+        let top = 0;
+        for (const root of roots) {
+          measure(root);
+          place(root, top);
+          top += spans.get(root.id) + GAP_X * 2;
+        }
+        let maxX = 0;
+        let maxY = 0;
+        for (const node of nodes) {
+          const pos = positions.get(node.id);
+          if (!pos) continue;
+          const height = heightOf(node);
+          maxX = Math.max(maxX, pos.x + NODE_W);
+          maxY = Math.max(maxY, pos.y + height);
+          for (const child of kids(node)) {
+            const childPos = positions.get(child.id);
+            if (childPos) edges.push({
+              id: node.id + '>' + child.id,
+              x1: pos.x + NODE_W, y1: pos.y + height / 2,
+              x2: childPos.x, y2: childPos.y + heightOf(child) / 2,
+            });
+          }
+        }
+        return { positions, edges, width: maxX, height: maxY, roots };
+      }
+
+      const widths = new Map();
       const rowHeight = [];
       for (const node of nodes) {
         const depth = depthOf.get(node.id);
@@ -2222,7 +2301,7 @@ window.__ModuleLoader__.load({
           }, T('composer.send'))));
     }
 
-    function Canvas({ store, api, rootId, size }) {
+    function Canvas({ store, api, rootId, size, ready }) {
       useLocale();
       const snapshot = store.getSnapshot();
       const nodes = snapshot.nodes;
@@ -2233,6 +2312,7 @@ window.__ModuleLoader__.load({
         for (const node of nodes) seenNodes.current.add(node.id);
       }, [nodes]);
       const [query, setQuery] = useState('');
+      const [direction, setDirection] = useState(readLayoutDirection);
       const drag = useRef(null);
       const wrapRef = useRef(null);
       const searchRef = useRef(null);
@@ -2264,8 +2344,8 @@ window.__ModuleLoader__.load({
         return { direct, descendants: descendantCountsOf(liveNodes, childrenOf) };
       }, [liveNodes]);
       const layout = useMemo(
-        () => layoutTree(liveNodes, collapsedMap, snapshot.heights),
-        [liveNodes, collapsedMap, snapshot.heights]);
+        () => layoutTree(liveNodes, collapsedMap, snapshot.heights, direction),
+        [liveNodes, collapsedMap, snapshot.heights, direction]);
       const path = useMemo(
         () => (snapshot.selectedId ? pathOf(liveNodes, snapshot.selectedId) : new Set()),
         [liveNodes, snapshot.selectedId]);
@@ -2315,13 +2395,14 @@ window.__ModuleLoader__.load({
         const pos = layout.positions.get(pendingFocus);
         if (!pos) { setPendingFocus(null); return; }
         const rect = wrapRef.current ? wrapRef.current.getBoundingClientRect() : { width: 900, height: 600 };
-        const top = (toolbarRef.current ? toolbarRef.current.offsetHeight : 44) + 28;
+        const top = size.top + (toolbarRef.current ? toolbarRef.current.offsetHeight : 44) + 28;
+        const availableHeight = Math.max(1, rect.height - top - size.bottom);
         const height = snapshot.heights[pendingFocus] || NODE_H;
-        const z = Math.max(0.2, Math.min(1, (rect.width - 48) / NODE_W, (rect.height - top - 32) / height));
+        const z = Math.max(0.2, Math.min(1, (rect.width - 48) / NODE_W, (availableHeight - 32) / height));
         setView({ z, x: rect.width / 2 - (pos.x + NODE_W / 2) * z,
-          y: top + (rect.height - top) / 2 - (pos.y + height / 2) * z }, true);
+          y: top + availableHeight / 2 - (pos.y + height / 2) * z }, true);
         setPendingFocus(null);
-      }, [pendingFocus, layout, snapshot.heights]);
+      }, [pendingFocus, layout, snapshot.heights, size.top, size.bottom]);
       const latest = latestNodeOf(liveNodes);
 
       /** Jump to the next card matching `predicate`, wrapping around. */
@@ -2429,14 +2510,14 @@ window.__ModuleLoader__.load({
       };
 
       /** Height the floating toolbar occupies, so the tree starts below it. */
-      const chromeHeight = () => (toolbarRef.current ? toolbarRef.current.offsetHeight : 48) + 22;
+      const chromeHeight = () => size.top + (toolbarRef.current ? toolbarRef.current.offsetHeight : 48) + 22;
 
       const fit = () => {
         const rect = wrapRef.current ? wrapRef.current.getBoundingClientRect() : { width: 900, height: 600 };
         if (!layout.width || !layout.height) return;
         const chrome = chromeHeight();
         const availableW = Math.max(200, rect.width - 80);
-        const availableH = Math.max(200, rect.height - chrome - 48);
+        const availableH = Math.max(200, rect.height - chrome - size.bottom - 48);
         const z = Math.min(1, Math.min(availableW / layout.width, availableH / layout.height));
         const scale = Math.max(0.2, z);
         setView({
@@ -2458,14 +2539,22 @@ window.__ModuleLoader__.load({
         }, true);
       };
 
+      const previousDirection = useRef(direction);
+      useEffect(() => {
+        if (previousDirection.current === direction) return;
+        previousDirection.current = direction;
+        if (snapshot.selectedId && layout.positions.has(snapshot.selectedId)) setPendingFocus(snapshot.selectedId);
+        else fit();
+      }, [direction]);
+
       const fittedRef = useRef(false);
       useEffect(() => {
-        if (fittedRef.current || !liveNodes.length || !size.w) return;
+        if (fittedRef.current || !ready || !liveNodes.length || !size.w) return;
         fittedRef.current = true;
         const rect = wrapRef.current ? wrapRef.current.getBoundingClientRect() : { width: 900, height: 600 };
         const chrome = chromeHeight();
         const availableW = Math.max(200, rect.width - 96);
-        const availableH = Math.max(200, rect.height - chrome - 56);
+        const availableH = Math.max(200, rect.height - chrome - size.bottom - 56);
         const raw = Math.min(1, availableW / Math.max(1, layout.width), availableH / Math.max(1, layout.height));
         const scale = Math.max(0.62, raw);
         setView({
@@ -2473,7 +2562,7 @@ window.__ModuleLoader__.load({
           x: Math.max(28, (rect.width - layout.width * scale) / 2),
           y: chrome,
         });
-      }, [liveNodes.length, size.w]);
+      }, [liveNodes.length, size.w, ready]);
 
       // Ctrl/Cmd+F is the tree's own search while this view is mounted.
       useEffect(() => {
@@ -2525,7 +2614,9 @@ window.__ModuleLoader__.load({
               const active = path.has(edge.id.split('>')[0]) && path.has(edge.id.split('>')[1]);
               return h('path', {
                 key: edge.id,
-                d: 'M' + edge.x1 + ' ' + edge.y1 + ' C' + edge.x1 + ' ' + (edge.y1 + 40) + ', ' + edge.x2 + ' ' + (edge.y2 - 40) + ', ' + edge.x2 + ' ' + edge.y2,
+                d: direction === 'horizontal'
+                  ? 'M' + edge.x1 + ' ' + edge.y1 + ' C' + (edge.x1 + 40) + ' ' + edge.y1 + ', ' + (edge.x2 - 40) + ' ' + edge.y2 + ', ' + edge.x2 + ' ' + edge.y2
+                  : 'M' + edge.x1 + ' ' + edge.y1 + ' C' + edge.x1 + ' ' + (edge.y1 + 40) + ', ' + edge.x2 + ' ' + (edge.y2 - 40) + ', ' + edge.x2 + ' ' + edge.y2,
                 fill: 'none',
                 stroke: active ? C.accent : C.line,
                 strokeWidth: active ? 2 : 1.4,
@@ -2558,7 +2649,7 @@ window.__ModuleLoader__.load({
           onMouseDown: (event) => event.stopPropagation(),
           onWheel: (event) => event.stopPropagation(),
           style: {
-            position: 'absolute', top: 10, left: 12, right: 12, display: 'flex', gap: 8,
+            position: 'absolute', top: size.top + 10, left: 12, right: 12, display: 'flex', gap: 8,
             flexWrap: 'wrap', padding: 8, borderRadius: 12, background: C.card,
             border: '1px solid ' + C.cardEdge, boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
             alignItems: 'center', fontSize: 12, color: C.ink3,
@@ -2638,6 +2729,16 @@ window.__ModuleLoader__.load({
               onClick: () => zoomBy(1.15),
               className: BTN_ICON,
             }, h(Icon, { name: 'plus' }))),
+          h('button', {
+            className: BTN,
+            title: T('view.layoutTitle'),
+            'aria-pressed': direction === 'horizontal',
+            onClick: () => {
+              const next = direction === 'horizontal' ? 'vertical' : 'horizontal';
+              saveLayoutDirection(next);
+              setDirection(next);
+            },
+          }, T('view.layoutHorizontal')),
           h('button', { onClick: fit, className: BTN, title: T('view.fitTitle') }, h(Icon, { name: 'fit' }), T('view.fit')),
           h('button', {
             disabled: !latest,
@@ -2651,7 +2752,7 @@ window.__ModuleLoader__.load({
           ? h('div', {
             onMouseDown: (event) => event.stopPropagation(),
             style: {
-              position: 'absolute', right: 12, bottom: 12, width: 168, height: 112,
+              position: 'absolute', right: 12, bottom: 12 + Math.min(size.bottom, Math.max(0, size.h - size.top - 160)), width: 168, height: 112,
               border: '1px solid ' + C.cardEdge, borderRadius: 8, background: C.card,
               boxShadow: '0 2px 10px rgba(0,0,0,0.06)', overflow: 'hidden', cursor: 'pointer',
             },
@@ -2704,15 +2805,14 @@ window.__ModuleLoader__.load({
                     stroke: active ? C.accent : 'transparent',
                     strokeWidth: 1 / minimap.scale,
                   });
-                })),
-              // What the canvas is looking at right now.
-              h('rect', {
-                x: -view.x / view.z, y: -view.y / view.z,
-                width: size.w / view.z, height: size.h / view.z,
-                fill: C.accentSoft, fillOpacity: 0.45,
-                stroke: C.accent, strokeWidth: 1.5 / minimap.scale,
-                rx: 6,
-              })))
+                }),
+                h('rect', {
+                  x: -view.x / view.z, y: -view.y / view.z,
+                  width: size.w / view.z, height: size.h / view.z,
+                  fill: C.accentSoft, fillOpacity: 0.45,
+                  stroke: C.accent, strokeWidth: 1.5 / minimap.scale,
+                  rx: 6,
+                }))))
           : null,
 
         nodes.length === 0
@@ -2910,17 +3010,41 @@ window.__ModuleLoader__.load({
       const rootId = useMemo(() => api.rootOf(sessionId), [sessionId, api]);
       const store = useMemo(() => api.storeFor(rootId), [rootId, api]);
       const [, force] = useState(0);
+      const anchorRef = useRef(null);
       const hostRef = useRef(null);
-      const [size, setSize] = useState({ w: 0, h: 0 });
+      const [surface, setSurface] = useState(null);
+      const [size, setSize] = useState({ w: 0, h: 0, top: 0, bottom: 0 });
 
       useEffect(() => store.subscribe(() => force((n) => n + 1)), [store]);
       useEffect(() => {
         api.ensureOpen(rootId, store);
       }, [rootId, store, api]);
       useEffect(() => {
+        const anchor = anchorRef.current;
+        const body = anchor && anchor.closest('[data-conversation-content]');
+        const container = body && body.parentElement;
+        const header = container && (container.querySelector(':scope > header') ||
+          container.querySelector(':scope > [data-slot="conversation.header"] > header'));
+        const composer = body && body.querySelector('[data-composer-seat]');
+        if (!container || !header || !composer) return;
+        try {
+          const { createPortal } = require('react-dom');
+          if (typeof createPortal !== 'function') return;
+          setSize({ w: 0, h: 0, top: 0, bottom: 0 });
+          setSurface({ container, header, composer, createPortal });
+        } catch (error) {
+          /* Hosts without a portal keep the canvas inside the view. */
+        }
+      }, []);
+      useEffect(() => {
         const element = hostRef.current;
         if (!element) return undefined;
-        const measure = () => setSize({ w: element.clientWidth, h: element.clientHeight });
+        const measure = () => {
+          const rect = element.getBoundingClientRect();
+          const top = surface ? Math.max(0, surface.header.getBoundingClientRect().bottom - rect.top) : 0;
+          const bottom = surface ? Math.max(0, rect.bottom - surface.composer.getBoundingClientRect().top) : 0;
+          setSize({ w: element.clientWidth, h: element.clientHeight, top, bottom, container: surface ? surface.container : null });
+        };
         measure();
         if (typeof ResizeObserver === 'undefined') {
           window.addEventListener('resize', measure);
@@ -2928,24 +3052,31 @@ window.__ModuleLoader__.load({
         }
         const observer = new ResizeObserver(measure);
         observer.observe(element);
+        if (surface) {
+          observer.observe(surface.header);
+          observer.observe(surface.composer);
+        }
         return () => observer.disconnect();
-      }, []);
+      }, [surface]);
 
       const snapshot = store.getSnapshot();
       const reading = snapshot.readingId ? store.getNode(snapshot.readingId) : undefined;
       const readerNode = useRef(null);
       if (reading) readerNode.current = reading;
 
-      return h('div', {
+      const canvas = h('div', {
         ref: hostRef,
-        className: 'dsh-tree-root',
+        className: surface ? 'dsh-tree-root dsh-tree-root--overlay' : 'dsh-tree-root',
         style: {
-          position: 'relative', width: '100%', height: '100%', minHeight: 420,
+          position: surface ? 'absolute' : 'relative', inset: surface ? 0 : undefined,
+          width: '100%', height: '100%', minHeight: 0, zIndex: surface ? (reading ? 20 : 1) : undefined,
           overflow: 'hidden', fontFamily: FONT, color: C.ink, background: C.canvas,
         },
       },
-        h(Boundary, null, h(Canvas, { key: rootId, store, api, rootId, size })),
+        h(Boundary, null, h(Canvas, { key: rootId, store, api, rootId, size, ready: !surface || size.container === surface.container })),
         h(Reader, { key: rootId, node: reading || readerNode.current, open: Boolean(reading), onClose: () => store.closeReader() }));
+      return h('div', { ref: anchorRef, style: { width: '100%', height: '100%', minHeight: 0, flex: '1 1 0' } },
+        surface ? surface.createPortal(canvas, surface.container) : canvas);
     }
 
     // ------------------------------------------------------------------ mount
@@ -2964,6 +3095,8 @@ window.__ModuleLoader__.load({
         '@keyframes dshTreeSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }',
         '@keyframes dshTreePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }',
         '.dsh-tree-root { --tree-fast: 120ms; --tree-enter: 240ms; --tree-exit: ' + MOTION_EXIT_MS + 'ms; --tree-ease: cubic-bezier(.2,.8,.2,1); --tree-spring: cubic-bezier(.16,1.3,.3,1); }',
+        ':has(> .dsh-tree-root--overlay) > header, :has(> .dsh-tree-root--overlay) > [data-slot="conversation.header"] > header { position: relative; z-index: 2; }',
+        ':has(> .dsh-tree-root--overlay) > [data-conversation-content] [data-composer-seat]:not(:has([data-conversation-composer-overlay])) { width: min(100%, calc(var(--dsh-composer-card-max-width, 920px) + 2 * var(--dsh-composer-side-clearance, 16px))); align-self: center; background: transparent !important; }',
         '@keyframes dshTreeReveal { from { opacity: 0; transform: translateY(6px) scale(.985); } to { opacity: 1; transform: none; } }',
         '@keyframes dshTreeDismiss { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(3px) scale(.99); } }',
         '@keyframes dshTreeFadeIn { from { opacity: 0; } to { opacity: 1; } }',
@@ -3001,6 +3134,7 @@ window.__ModuleLoader__.load({
         '  outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: 1px;',
         '}',
         '.dsh-tree-btn[disabled] { opacity: 0.45; cursor: default; }',
+        '.dsh-tree-btn[aria-pressed="true"] { color: var(--dsw-alias-brand-primary); border-color: var(--dsw-alias-brand-primary); background: color-mix(in srgb, var(--dsw-alias-brand-primary) 8%, transparent); }',
         '.dsh-tree-btn--icon { padding: 0; min-width: 30px; min-height: 30px; }',
         '.dsh-tree-btn--primary {',
         '  background: var(--dsw-alias-button-primary-fill); border-color: var(--dsw-alias-button-primary-fill);',

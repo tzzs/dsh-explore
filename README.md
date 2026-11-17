@@ -27,7 +27,9 @@ A branch is not a prompt with history pasted into it. It is a real DSH session c
 
 ## Features
 
-- **Infinite canvas** — drag to pan, scroll to zoom (20%–200%), fit to canvas; the minimap in the bottom-right corner shows the current viewport and jumps on click.
+- **Infinite canvas** — drag to pan, scroll to zoom (20%–200%), fit to canvas; the minimap in the bottom-right corner shows the current viewport and jumps on click. On supported DSH layouts, the canvas extends behind the title and composer.
+- **Tree direction** — use **Left to right** in the toolbar to switch between horizontal and vertical layouts. The choice is saved in this browser and applies to other conversations.
+- **Host appearance** — the interface follows DSH's language and light or dark theme.
 - **Fork from any answer** — the `+` in the corner of a finished card opens an inline composer; press Enter and the new node appears immediately.
 - **Concurrent branches** — several branches can run at once. A running card carries a live progress row (spinner, "Thinking… / Calling read / Writing…", step N, elapsed seconds), renders streamed tokens as Markdown while they arrive, and offers Stop.
 - **Waiting on you** — a branch parked on a question or an approval says so on its card ("Waiting for your answer…" / "Waiting for your approval…") with an accent ring; the canvas expands the path to it and centres it, and the toolbar chip "N waiting on you" jumps there. The path to a running or waiting node is never hidden by the default fold.
@@ -94,6 +96,8 @@ test/canvas-visibility.cjs       running/waiting nodes must be laid out and draw
 test/session-rebind.cjs          re-subscribe on a new eventSource, no pruning on an empty window, cold session open()
 test/theme-tokens.cjs            no literal colours, required tokens exist, inverted primary-button foreground
 test/motion.cjs                  camera interpolation, gesture interruption, navigation replacement, reduced motion
+test/layout-direction.cjs        horizontal and vertical geometry, unequal heights, collapsed branches
+test/host-overlay.cjs            conversation overlay, chrome measurement, reader and fallback
 docs/design.md                   design doc: data model, trade-offs, known gaps
 docs/releasing.md                CI, Release Please and npm publishing
 .github/workflows/               CI, Release Please and the manual npm publish workflow
@@ -110,13 +114,13 @@ The view is a single client plugin; the full design — data model, trade-offs, 
 - **The path to an active node is never folded.** Layout only walks unfolded nodes, and a folded node has no position and is never drawn — that was the root cause of "the canvas does not show the node that is running". So the ancestor path of a running or waiting node skips the default fold; a node entering the running state also expands and persists that path, and a node that starts waiting moves the canvas onto itself. The toolbar's running count and "waiting on you" count are both jump buttons.
 - **Sessions get re-bound.** Leaving a conversation drops the host's reference; at zero the scope is collected and the `Session` instance is discarded together with its event window. On the way back, `materializeScope` mints a new `eventSource` and the window starts empty. Subscriptions therefore follow `eventSource` (the old one unsubscribes), an empty window is never treated as "the session is empty" and pruned, and a cold session is `open()`ed once — otherwise returning straight to the tab gives a blank canvas while Chat-then-tab works. `test/session-rebind.cjs` pins this.
 - **Forks are real sessions.** `ctx.sessions.fork({ sessionId, atSeq })` gives the child the prefix context up to that answer. Each branch also lands in the session list, so it is renamed `⟂ parent question · new question` to stay recognisable.
-- **Parent links live locally.** This DSH build does not record `parentSession`, so the plugin keeps the tree in `localStorage`, alongside fold state, tombstones and card heights.
+- **Parent links live locally.** This DSH build does not record `parentSession`, so the plugin keeps the tree in `localStorage`, alongside fold state, tombstones and the layout preference. Card heights are measured at runtime.
 - **Theme.** All colours are `--dsw-alias-*` variables, so light and dark follow the host and no literal value is written. `--dsw-alias-brand-primary` inverts between themes, so primary-button text must use the matching `--dsw-alias-label-primary-foreground` rather than `#fff`; inline code is tinted with 7% `label-primary` because the official inline-code token is nearly white in light mode. Fonts read the composed `--dsw-font-family` / `--ds-font-family-code` tokens, which already join the user's font with the built-in fallback stack. `test/theme-tokens.cjs` guards all of it.
 
 ## Development
 
 ```bash
-npm test                      # all six commands below (scripts.test in package.json)
+npm test                      # all eight commands below (scripts.test in package.json)
 
 node --check client.js        # syntax
 node test/render-smoke.cjs    # render the whole view with a fake React; assert both language tables
@@ -124,6 +128,8 @@ node test/canvas-visibility.cjs  # running/waiting nodes must be laid out and dr
 node test/session-rebind.cjs  # re-subscribe after a scope rebuild; no pruning on an empty window; cold session open()
 node test/theme-tokens.cjs    # no literal colours, tokens exist, primary buttons use the inverted foreground
 node test/motion.cjs          # camera moves, gesture interruption, navigation replacement, reduced motion, cleanup
+node test/layout-direction.cjs # geometry in both directions, unequal heights, collapsed branches
+node test/host-overlay.cjs     # host overlay, chrome measurement, reader, fallback
 ```
 
 `client.js` is a client plugin — the lazy factory behind `window.__ModuleLoader__.load` — and edits hot-swap into the running host without a page reload. Note that the stylesheet rewrites the same `<style>` node on every `apply()`: skipping the rewrite when the node already exists means new rules never take effect after a hot reload.

@@ -159,6 +159,7 @@ nodeStore.upsert({
 nodeStore.select('b-mm9k21-a1b2');
 
 const seen = [];
+const layoutButtons = [];
 function walk(el) {
   if (el === null || el === undefined || el === false) return;
   if (typeof el === 'string' || typeof el === 'number') {
@@ -170,7 +171,11 @@ function walk(el) {
   const { type, props } = el;
   const children = [];
   if (props && props.children !== undefined) children.push(props.children);
-  if (typeof type === 'string') { children.forEach(walk); return; }
+  if (typeof type === 'string') {
+    if (type === 'button' && Object.hasOwn(props, 'aria-pressed')) layoutButtons.push(props);
+    children.forEach(walk);
+    return;
+  }
   if (typeof type !== 'function') return;
   if (type.prototype instanceof React.Component) {
     walk(new type(props).render());
@@ -179,9 +184,10 @@ function walk(el) {
   walk(type(props));
 }
 
-function renderText() {
+function renderText(sessionId = 'session-1') {
   seen.length = 0;
-  walk(captured.component({ sessionId: 'session-1', api }));
+  layoutButtons.length = 0;
+  walk(captured.component({ sessionId, api }));
   return seen.join(' ');
 }
 
@@ -217,6 +223,24 @@ localeService.setActive('zh');
 if (captured.options.label() !== '无限探索') throw new Error('zh tab label: ' + captured.options.label());
 localeService.setActive('en');
 if (captured.options.label() !== 'Infinite Exploration') throw new Error('en tab label: ' + captured.options.label());
+
+renderText();
+if (layoutButtons.length !== 1 || layoutButtons[0]['aria-pressed'] !== false) throw new Error('the default layout must grow down');
+layoutButtons[0].onClick();
+renderText('another-session');
+if (layoutButtons[0]['aria-pressed'] !== true) throw new Error('the horizontal preference must survive another session');
+layoutButtons[0].onClick();
+renderText();
+if (layoutButtons[0]['aria-pressed'] !== false) throw new Error('the layout must switch back to vertical');
+storage.set('dsh-explore:layout-direction', 'unexpected');
+renderText();
+if (layoutButtons[0]['aria-pressed'] !== false) throw new Error('an invalid preference must use the default layout');
+const storageApi = window.localStorage;
+window.localStorage = { getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); } };
+renderText();
+if (layoutButtons[0]['aria-pressed'] !== false) throw new Error('blocked storage must use the default layout');
+layoutButtons[0].onClick();
+window.localStorage = storageApi;
 
 console.log('zh chars:', zhText.length, '| en chars:', enText.length);
 console.log('RENDER OK');

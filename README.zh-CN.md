@@ -27,7 +27,9 @@ DSH 探索在每个会话里加一个 **「无限探索」** 页签：把一轮�
 
 ## 功能
 
-- **无限画布** —— 拖拽平移、滚轮缩放（20%–200%）、适应画布，右下角小地图可点击跳转并显示当前视口。
+- **无限画布** —— 拖拽平移、滚轮缩放（20%–200%）、适应画布，右下角小地图可点击跳转并显示当前视口。在支持的 DSH 页面布局中，画布延伸到标题和输入框后方。
+- **树的方向** —— 使用工具栏的「左右布局」切换横向或纵向排列。选择保存在当前浏览器中，对其他会话也生效。
+- **跟随宿主外观** —— 界面跟随 DSH 的语言和浅色、深色主题。
 - **任意回答开新枝** —— 卡片右上角的 `+` 就是追问入口，就地长出一张输入卡，回车发送后新节点立刻出现。
 - **并行分支** —— 几条枝可以同时跑。正在回答的卡片带实时进度行：转圈指示器 +「正在思考… / 正在调用 read / 正在输出…」+ 第 N 步 + 已用秒数，正文按流式 token 边写边渲染，并带「停止」。
 - **等你回答** —— 分支停在提问或审批时，卡片改说「等你回答… / 等你授权…」并带一圈强调边框；画布自动展开到它并居中，工具条上的「N 个在等你」可点击跳转。正在跑的节点所在路径不会被默认折叠藏起来。
@@ -94,6 +96,8 @@ test/canvas-visibility.cjs       可见性回归：在跑/等你节点必须被�
 test/session-rebind.cjs          重新绑定：换 eventSource 后重订阅、空窗口不剪枝、冷会话要 open
 test/theme-tokens.cjs            主题守卫：色值不写死、关键 token 必须存在、主按钮用反相前景
 test/motion.cjs                  动效：镜头插值、手势中断、导航替换、减少动态效果与清理
+test/layout-direction.cjs        双向布局、不等高节点与折叠分支
+test/host-overlay.cjs            宿主覆盖层、区域测量、阅读层与回退
 docs/design.md                   设计文档：数据模型、取舍、已知缺口
 docs/releasing.md                CI、Release Please 与 npm 发布
 .github/workflows/               CI、Release Please 与手动的 npm 发布工作流
@@ -110,13 +114,13 @@ docs/releasing.md                CI、Release Please 与 npm 发布
 - **正在跑的路径不折叠**：布局只走「未折叠」的节点，被折叠的节点连位置都没有、根本不会被画。所以通往「正在跑 / 在等你」节点的祖先路径一律不套用默认折叠；节点进入运行态时还会把路径展开并持久化，停在等用户时再把画布移过去。工具条上的运行计数与「在等你」计数都是跳转按钮。
 - **会话会被重新绑定**：离开对话后宿主会释放它的引用，引用归零时 scope 被回收、`Session` 实例连同事件窗口一起丢掉；再进来时 `materializeScope` 会造一个新的 `eventSource`，窗口从空开始。所以订阅跟着 `eventSource` 换（旧的自动退订）、空窗口不当作「会话是空的」去剪枝、冷会话主动 `open()` 一次——否则直接在「无限探索」页签上切回来会得到一张空画布，而先点「回对话」再切回来又正常。`test/session-rebind.cjs` 守住这条。
 - **分叉是真实会话**：`ctx.sessions.fork({ sessionId, atSeq })`，子会话天然继承到该回答为止的前缀上下文；每根枝会出现在会话列表里，插件会把它改名成 `⟂ 父问题 · 新问题` 便于辨认。
-- **父子关系存在本地**：这一版 fork 不记录 `parentSession`，树形关系由插件在 `localStorage` 里维护（同时缓存折叠状态、墓碑、卡片高度）。
+- **父子关系存在本地**：这一版 fork 不记录 `parentSession`，树形关系由插件在 `localStorage` 里维护，同时保存折叠状态、墓碑和布局方向。卡片高度在运行时测量。
 - **主题**：颜色全部使用 `--dsw-alias-*` CSS 变量，浅色 / 深色主题自动跟随，不写死色值。主按钮的 `--dsw-alias-brand-primary` 在深浅主题下会反相（浅色近黑、深色近白），所以文字必须用配套的 `--dsw-alias-label-primary-foreground`，不能写死 `#fff`；行内代码用 `label-primary` 的 7% 着色（官方 inline-code token 在浅色下几乎是白的，放在白卡片上会看不见）。字体接组合后的 `--dsw-font-family` / `--ds-font-family-code`——DSH 已把用户字体和内置默认栈拼在一起，直接读组合 token 才能保住字形回退。`test/theme-tokens.cjs` 守住这些规则。
 
 ## 开发
 
 ```bash
-npm test                      # 下面六条一起跑（package.json 里的 scripts.test）
+npm test                      # 下面八条一起跑（package.json 里的 scripts.test）
 
 node --check client.js        # 语法
 node test/render-smoke.cjs    # 渲染冒烟：把整个视图真渲染一遍，并断言中英两套文案
@@ -124,6 +128,8 @@ node test/canvas-visibility.cjs  # 可见性回归：在跑/等你的节点必�
 node test/session-rebind.cjs  # 重新打开会话：scope 重建后换订阅、空窗口不剪枝、冷会话要 open
 node test/theme-tokens.cjs    # 主题守卫：色值不写死、token 必须存在、主按钮用反相前景 token
 node test/motion.cjs          # 动效：画布移动、手势中断、导航替换、减少动态效果与清理
+node test/layout-direction.cjs # 双向布局、不等高节点和折叠分支
+node test/host-overlay.cjs     # 宿主覆盖层、区域测量、阅读层与回退
 ```
 
 `client.js` 是客户端插件（`window.__ModuleLoader__.load` 的惰性工厂），改完客户端热更新立即生效。注意样式表在每次 `apply()` 都会重写同一个 `<style>` 节点——如果只在节点已存在时跳过，热更新后的新规则永远不会生效。
