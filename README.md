@@ -99,6 +99,7 @@ test/theme-tokens.cjs            no literal colours, required tokens exist, inve
 test/motion.cjs                  camera interpolation, gesture interruption, navigation replacement, reduced motion
 test/wheel-scroll.cjs            the canvas yields the wheel to inner scroll areas and stops at their ends
 test/live-clock.cjs              the running card counts wall clock, and only one timer exists
+test/reader-dialog.cjs           the reader is a native modal: no hand-built focus trap, contained scroll
 test/layout-direction.cjs        horizontal and vertical geometry, unequal heights, collapsed branches
 test/host-overlay.cjs            conversation overlay, chrome measurement, reader and fallback
 test/locale-parity.cjs           all eight dictionaries: same key set, aligned {placeholders}, no cross-script leakage
@@ -128,7 +129,7 @@ The view is a single client plugin; the full design — data model, trade-offs, 
 ## Development
 
 ```bash
-npm test                      # all thirteen commands below (scripts.test in package.json)
+npm test                      # all fourteen commands below (scripts.test in package.json)
 
 node --check client.js        # syntax
 node test/render-smoke.cjs    # render the whole view with a fake React; assert both language tables
@@ -138,6 +139,7 @@ node test/theme-tokens.cjs    # no literal colours, tokens exist, primary button
 node test/motion.cjs          # camera moves, gesture interruption, navigation replacement, reduced motion, cleanup
 node test/wheel-scroll.cjs    # the wheel belongs to the reasoning box, not the canvas zoom
 node test/live-clock.cjs      # the elapsed time advances between events, from one timer
+node test/reader-dialog.cjs   # the reader is a native <dialog>: showModal, close mirroring, backdrop scroll containment
 node test/layout-direction.cjs # geometry in both directions, unequal heights, collapsed branches
 node test/host-overlay.cjs     # host overlay, chrome measurement, reader, fallback
 node test/locale-parity.cjs   # all eight dictionaries agree on keys, placeholders and script

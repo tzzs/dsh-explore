@@ -119,8 +119,19 @@ const required = [
     'code blocks must use --dsw-alias-markdown-code-block'],
   [/codeInline:\s*'color-mix\(in srgb, var\(--dsw-alias-label-primary\) 7%, transparent\)'/.test(source),
     'inline code must use a label-primary tint so it stays visible on a white card'],
-  [/scrim:\s*'var\(--dsw-alias-bg-mask-1\)'/.test(source),
+  // The reader is a native modal dialog now: the scrim is ::backdrop, and the
+  // three rules below are the ones that keep a modal from leaking scroll or
+  // showing up while closed.
+  [/\.dsh-tree-reader::backdrop \{[^}]*background: var\(--dsw-alias-bg-mask-1\)/.test(source),
     'the reader backdrop must use --dsw-alias-bg-mask-1'],
+  [/\.dsh-tree-reader::backdrop \{[^}]*overflow: hidden;[^}]*overscroll-behavior: contain;/.test(source),
+    'the reader backdrop must be a scroll container with contained overscroll, or a gesture over it scrolls the page behind'],
+  [/\.dsh-tree-reader \{[^}]*overscroll-behavior: contain;/.test(source),
+    'the reader dialog must contain overscroll'],
+  [!/\.dsh-tree-reader \{[^}]*display:/.test(source.match(/\.dsh-tree-reader \{[^}]*\}/)[0]),
+    'the reader must not set display on the closed dialog; scope it to [open] or the closed state stops working'],
+  [/\.dsh-tree-reader\[open\] \{[^}]*display: flex;/.test(source),
+    'the reader must lay itself out only while open'],
   [/accentEdge:\s*'color-mix\(in srgb, var\(--dsw-alias-state-business-primary\) 18%, transparent\)'/.test(source),
     'the live-progress chip edge must stay blue (business accent, not the inverting brand-primary)'],
   [!/accentEdge:.*brand-primary/.test(source.split('\n').find((line) => line.includes('accentEdge:')) || ''),

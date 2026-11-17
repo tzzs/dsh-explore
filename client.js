@@ -38,7 +38,6 @@ window.__ModuleLoader__.load({
       // A `label-primary` tint keeps the chip visible on a white card (the
       // markdown inline-code token is nearly white in the light theme).
       codeInline: 'color-mix(in srgb, var(--dsw-alias-label-primary) 7%, transparent)',
-      scrim: 'var(--dsw-alias-bg-mask-1)',
       warn: 'var(--dsw-alias-state-error-primary)',
       ok: 'var(--dsw-alias-state-success-primary)',
     };
@@ -3011,7 +3010,7 @@ window.__ModuleLoader__.load({
       const preview = reasoningTail(text);
       if (!preview) return null;
       return h('div', {
-        className: 'dsh-tree-reasoning-tail',
+        className: 'dsh-tree-reasoning-tail dsh-tree-clamp-2',
         // The title is the preview, not the whole reasoning: this row re-renders
         // on every reasoning token, and a multi-kilobyte attribute would be
         // rebuilt each time for a tooltip nobody reads at that size.
@@ -3021,8 +3020,6 @@ window.__ModuleLoader__.load({
           borderLeft: '2px solid ' + C.accentEdge,
           background: 'color-mix(in srgb, var(--dsw-alias-label-primary) 4%, transparent)',
           fontSize: 10.5, color: C.ink4, lineHeight: 1.45,
-          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-          wordBreak: 'break-word',
         },
       }, preview);
     }
@@ -3077,12 +3074,10 @@ window.__ModuleLoader__.load({
           : null,
         showPreview
           ? h('div', {
-            className: 'dsh-tree-reasoning-preview',
+            className: 'dsh-tree-reasoning-preview dsh-tree-clamp-2',
             style: {
               marginTop: 4, paddingLeft: 13, fontSize: 10.8, lineHeight: 1.5,
               color: C.ink4,
-              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-              wordBreak: 'break-word',
             },
           }, preview)
           : null,
@@ -3280,9 +3275,9 @@ window.__ModuleLoader__.load({
                 }, T('card.delete'))))
             : null),
         h('div', {
+          className: 'dsh-tree-clamp-3',
           style: {
             fontSize: 12.5, fontWeight: 600, lineHeight: 1.45, color: C.ink,
-            display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
           },
         }, node.question || T('card.noQuestion')),
         h('div', {
@@ -3402,7 +3397,7 @@ window.__ModuleLoader__.load({
           },
         }),
         h('div', { style: { display: 'flex', gap: 6, marginTop: 8, alignItems: 'center' } },
-          h('span', { style: { fontSize: 10.5, color: C.ink3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
+          h('span', { className: 'dsh-tree-one-line', style: { fontSize: 10.5, color: C.ink3 } },
             T('composer.from', { question: (node.question || '').slice(0, 12) })),
           h('span', { style: { flex: 1 } }),
           h('button', {
@@ -4090,63 +4085,62 @@ window.__ModuleLoader__.load({
       }
     }
 
+    /**
+     * The full-screen reader.
+     *
+     * A native <dialog> opened with `showModal()`, not a hand-built overlay.
+     * The browser then owns everything that is easy to get wrong here: focus is
+     * contained, the page behind is inert, Esc and the back gesture close it,
+     * and it renders in the top layer — which matters here because a card lives
+     * inside the transformed canvas, so a positioned child of it would be
+     * clipped and scaled along with the canvas.
+     *
+     * The plugin therefore writes no focus trap, no Tab handler, no Esc handler
+     * and no focus restoration; it only mirrors the element's `close` event back
+     * into React state.
+     */
     function Reader({ node, open, onClose }) {
       useLocale();
-      const panelRef = useRef(null);
-      const closeRef = useRef(null);
+      const dialogRef = useRef(null);
       const close = useRef(onClose);
       close.current = onClose;
+
+      // `show()` would leave the page interactive; the reader is blocking.
       useEffect(() => {
-        if (!open) return undefined;
-        const previousFocus = document.activeElement;
-        if (closeRef.current) closeRef.current.focus();
-        const onKey = (event) => {
-          if (event.key === 'Escape') {
-            event.stopPropagation();
-            close.current();
-          } else if (event.key === 'Tab' && panelRef.current) {
-            const controls = panelRef.current.querySelectorAll('button, a[href], input, textarea, [tabindex="0"]');
-            const first = controls[0];
-            const last = controls[controls.length - 1];
-            if (event.shiftKey && document.activeElement === first) {
-              event.preventDefault();
-              if (last) last.focus();
-            } else if (!event.shiftKey && document.activeElement === last) {
-              event.preventDefault();
-              if (first) first.focus();
-            }
+        const dialog = dialogRef.current;
+        if (!dialog) return undefined;
+        if (open) {
+          if (!dialog.open) {
+            if (typeof dialog.showModal === 'function') dialog.showModal();
+            else dialog.setAttribute('open', '');
           }
-        };
-        window.addEventListener('keydown', onKey, true);
-        return () => {
-          window.removeEventListener('keydown', onKey, true);
-          if (previousFocus && previousFocus.isConnected) previousFocus.focus();
-        };
-      }, [open]);
+        } else if (dialog.open) {
+          dialog.close();
+        }
+        return undefined;
+      }, [open, node && node.id]);
+
+      // Esc, the back gesture and light dismiss all end in a `close` event.
+      useEffect(() => {
+        const dialog = dialogRef.current;
+        if (!dialog) return undefined;
+        const onDismiss = () => close.current();
+        dialog.addEventListener('close', onDismiss);
+        return () => dialog.removeEventListener('close', onDismiss);
+      }, []);
 
       if (!node) return null;
-      return h(Presence, {
-        show: open,
+      const titleId = 'dsh-tree-reader-title-' + (node.id || 'node');
+      return h('dialog', {
+        ref: dialogRef,
         className: 'dsh-tree-reader',
-        onClick: onClose,
-        style: {
-          position: 'absolute', inset: 0, zIndex: 40, background: C.scrim,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '28px 34px',
-        },
+        // The modal already carries role="dialog" and aria-modal: adding them
+        // here would announce the overlay twice.
+        'aria-labelledby': titleId,
+        // Click-outside dismissal. Where `closedby` is unsupported the dialog
+        // still closes on Esc and the back gesture, so this only degrades.
+        closedby: 'any',
       },
-        h('div', {
-          ref: panelRef,
-          className: 'dsh-tree-reader-panel',
-          role: 'dialog',
-          'aria-modal': true,
-          'aria-label': node.question || T('card.noQuestion'),
-          onClick: (event) => event.stopPropagation(),
-          style: {
-            width: '100%', maxWidth: 820, maxHeight: '100%', background: C.card,
-            borderRadius: 14, boxShadow: 'var(--dsh-tree-shadow-3)',
-            display: 'flex', flexDirection: 'column', overflow: 'hidden',
-          },
-        },
           h('div', {
             style: {
               padding: '14px 20px 11px', borderBottom: '1px solid ' + C.line,
@@ -4158,10 +4152,10 @@ window.__ModuleLoader__.load({
                 style: { fontSize: 10.5, color: C.ink3, letterSpacing: '0.05em', marginBottom: 4 },
               }, (node.kind === 'branch' ? T('reader.branch') : T('reader.mainline')) + ' · ' + (node.id || '')),
               h('div', {
+                id: titleId,
                 style: { fontSize: 15, fontWeight: 600, lineHeight: 1.5, color: C.ink },
               }, node.question || T('card.noQuestion'))),
             h('button', {
-              ref: closeRef,
               onClick: onClose,
               title: T('reader.close'),
               'aria-label': T('reader.closeLabel'),
@@ -4211,7 +4205,7 @@ window.__ModuleLoader__.load({
             h('span', { style: { flex: 1 } }),
             node.cost && (node.cost.ms || node.cost.tokens)
               ? h('span', null, formatCost(node.cost))
-              : null)));
+              : null));
     }
 
     function TreeView(props) {
@@ -4316,14 +4310,22 @@ window.__ModuleLoader__.load({
         // scroll areas use the host's scrollbar tokens.
         '.dsh-tree-root { color-scheme: light; }',
         'body[data-ds-dark-theme] .dsh-tree-root { color-scheme: dark; }',
+        '.dsh-tree-clamp-2, .dsh-tree-clamp-3 {',
+        '  display: -webkit-box; -webkit-box-orient: vertical;',
+        '  -webkit-line-clamp: 2; line-clamp: 2;',
+        '  overflow: hidden; overflow-wrap: break-word;',
+        '}',
+        '.dsh-tree-clamp-3 { -webkit-line-clamp: 3; line-clamp: 3; }',
+        '.dsh-tree-one-line {',
+        '  min-inline-size: 0; overflow: hidden; text-overflow: ellipsis;',
+        '  white-space: nowrap;',
+        '}',
         '.dsh-tree-scroll { scrollbar-width: thin; scrollbar-color: var(--dsw-alias-scrollbar-bg-l1) transparent; }',
         '.dsh-tree-scroll:hover { scrollbar-color: var(--dsw-alias-scrollbar-hover-l1) transparent; }',
         ':has(> .dsh-tree-root--overlay) > header, :has(> .dsh-tree-root--overlay) > [data-slot="conversation.header"] > header { position: relative; z-index: 2; }',
         ':has(> .dsh-tree-root--overlay) > [data-conversation-content] [data-composer-seat]:not(:has([data-conversation-composer-overlay])) { width: min(100%, calc(var(--dsh-composer-card-max-width, 920px) + 2 * var(--dsh-composer-side-clearance, 16px))); align-self: center; background: transparent !important; }',
         '@keyframes dshTreeReveal { from { opacity: 0; transform: translateY(6px) scale(.985); } to { opacity: 1; transform: none; } }',
         '@keyframes dshTreeDismiss { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(3px) scale(.99); } }',
-        '@keyframes dshTreeFadeIn { from { opacity: 0; } to { opacity: 1; } }',
-        '@keyframes dshTreeFadeOut { from { opacity: 1; } to { opacity: 0; } }',
         '.dsh-tree-card { transition: opacity var(--tree-enter) var(--tree-ease), box-shadow var(--tree-enter) var(--tree-ease), border-color var(--tree-fast) ease; }',
         '.dsh-tree-card--enter { animation: dshTreeReveal var(--tree-enter) var(--tree-ease); }',
         '.dsh-tree-presence[data-open="true"] { animation: dshTreeReveal var(--tree-enter) var(--tree-ease); }',
@@ -4331,10 +4333,43 @@ window.__ModuleLoader__.load({
         '.dsh-tree-menu { transform-origin: top right; }',
         '.dsh-tree-menu[data-open="true"] { animation-timing-function: var(--tree-spring); }',
         '.dsh-tree-composer { transform-origin: top center; }',
-        '.dsh-tree-reader[data-open="true"] { animation: dshTreeFadeIn 180ms ease-out; }',
-        '.dsh-tree-reader[data-open="false"] { animation: dshTreeFadeOut var(--tree-exit) ease-in forwards; }',
-        '.dsh-tree-reader[data-open="true"] .dsh-tree-reader-panel { animation: dshTreeReveal var(--tree-enter) var(--tree-ease); }',
-        '.dsh-tree-reader[data-open="false"] .dsh-tree-reader-panel { animation: dshTreeDismiss var(--tree-exit) ease-in forwards; }',
+        // The reader is a native modal dialog; only its surface and its enter/exit
+        // transition belong to the plugin.
+        '.dsh-tree-reader {',
+        '  margin: auto; padding: 0; border: none; margin-block: auto;',
+        '  width: min(820px, calc(100vw - 68px)); max-width: calc(100vw - 68px);',
+        '  max-height: calc(100vh - 56px);',
+        '  background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary);',
+        '  border-radius: 14px; box-shadow: var(--dsh-tree-shadow-3); overflow: hidden;',
+        // MANDATORY: without this, a scroll inside the dialog chains to the page
+        // behind it as soon as the dialog reaches its own scroll boundary.
+        '  overscroll-behavior: contain;',
+        '  opacity: 0;',
+        // MANDATORY for the top layer: display and overlay are discrete, and the
+        // element has to stay in the top layer while it animates out.
+        '  transition-property: opacity, transform, display, overlay;',
+        '  transition-duration: var(--tree-exit);',
+        '  transition-timing-function: ease-out;',
+        '  transition-behavior: allow-discrete;',
+        '}',
+        // display is set only while open: an unconditional display would override
+        // the closed state and leave the dialog permanently on screen.
+        '.dsh-tree-reader[open] {',
+        '  display: flex; flex-direction: column; opacity: 1;',
+        '  transition-duration: var(--tree-enter);',
+        '}',
+        '@media (prefers-reduced-motion: no-preference) {',
+        '  .dsh-tree-reader { transform: translateY(6px) scale(.985); }',
+        '  .dsh-tree-reader[open] { transform: none; }',
+        '}',
+        '@starting-style { .dsh-tree-reader[open] { opacity: 0; } }',
+        // MANDATORY: ::backdrop is not a scroll container by default, so
+        // overscroll-behavior alone would not stop a gesture over the backdrop
+        // from scrolling the page underneath.
+        '.dsh-tree-reader::backdrop {',
+        '  background: var(--dsw-alias-bg-mask-1);',
+        '  overflow: hidden; overscroll-behavior: contain;',
+        '}',
         // Every control shares one geometry so the toolbar reads as one row.
         '.dsh-tree-btn {',
         '  border: 1px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-layer-1);',
