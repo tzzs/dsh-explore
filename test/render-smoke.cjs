@@ -77,7 +77,10 @@ const localeService = {
   bind(ns) {
     return (key, params) => {
       const dicts = localeState.dicts.get(ns) || {};
-      const chain = localeState.active === 'zh' ? ['zh', 'en'] : ['en'];
+      // The host resolves the active language, then falls back to English. The
+      // mock has to do the same or a language other than zh/en silently renders
+      // English and the test proves nothing about the dictionaries.
+      const chain = localeState.active === 'en' ? ['en'] : [localeState.active, 'en'];
       let template = key;
       for (const locale of chain) {
         const value = dicts[locale] && dicts[locale][key];
@@ -224,22 +227,54 @@ if (captured.options.label() !== '无限探索') throw new Error('zh tab label: 
 localeService.setActive('en');
 if (captured.options.label() !== 'Infinite Exploration') throw new Error('en tab label: ' + captured.options.label());
 
+// The six non-English host languages are registered too. Rendering one of them
+// end to end proves the table is wired into the service rather than sitting in
+// the bundle unused — and that the shell's fallback chain is intact.
+for (const [lang, expected] of [
+  ['de', 'Endlose Erkundung'],
+  ['ja', '無限探索'],
+  ['ru', 'Бесконечное исследование'],
+]) {
+  localeService.setActive(lang);
+  const text = renderText();
+  if (text.indexOf(expected) < 0) throw new Error(`missing ${lang} UI text: ${expected}`);
+  if (captured.options.label().indexOf(expected) < 0) {
+    throw new Error(`${lang} tab label: ${captured.options.label()}`);
+  }
+  // A fallback must never be the English key name.
+  if (text.indexOf('view.') >= 0) throw new Error(`${lang} render leaked a raw key`);
+}
+localeService.setActive('en');
+
+// The layout control is a two-way segmented group: both directions are on
+// screen at once and the active one is a pressed state, so the reader never has
+// to infer the current direction from the shape of the canvas.
 renderText();
-if (layoutButtons.length !== 1 || layoutButtons[0]['aria-pressed'] !== false) throw new Error('the default layout must grow down');
-layoutButtons[0].onClick();
+if (layoutButtons.length !== 2) throw new Error('expected two layout segments, got ' + layoutButtons.length);
+if (layoutButtons[0]['aria-pressed'] !== true) throw new Error('the default layout must grow down');
+if (layoutButtons[1]['aria-pressed'] !== false) throw new Error('the horizontal option must start unpressed');
+if (layoutButtons[0]['aria-pressed'] === layoutButtons[1]['aria-pressed']) {
+  throw new Error('exactly one layout segment may be pressed');
+}
+layoutButtons[1].onClick();
 renderText('another-session');
-if (layoutButtons[0]['aria-pressed'] !== true) throw new Error('the horizontal preference must survive another session');
+if (layoutButtons[1]['aria-pressed'] !== true) throw new Error('the horizontal preference must survive another session');
+if (layoutButtons[0]['aria-pressed'] !== false) throw new Error('only one layout segment may be pressed after switching');
 layoutButtons[0].onClick();
 renderText();
-if (layoutButtons[0]['aria-pressed'] !== false) throw new Error('the layout must switch back to vertical');
+if (layoutButtons[0]['aria-pressed'] !== true) throw new Error('the layout must switch back to vertical');
+// Clicking the segment that is already active must not flip the tree.
+layoutButtons[0].onClick();
+renderText();
+if (layoutButtons[0]['aria-pressed'] !== true) throw new Error('re-pressing the active segment must keep the layout');
 storage.set('dsh-explore:layout-direction', 'unexpected');
 renderText();
-if (layoutButtons[0]['aria-pressed'] !== false) throw new Error('an invalid preference must use the default layout');
+if (layoutButtons[0]['aria-pressed'] !== true) throw new Error('an invalid preference must use the default layout');
 const storageApi = window.localStorage;
 window.localStorage = { getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); } };
 renderText();
-if (layoutButtons[0]['aria-pressed'] !== false) throw new Error('blocked storage must use the default layout');
-layoutButtons[0].onClick();
+if (layoutButtons[0]['aria-pressed'] !== true) throw new Error('blocked storage must use the default layout');
+layoutButtons[1].onClick();
 window.localStorage = storageApi;
 
 console.log('zh chars:', zhText.length, '| en chars:', enText.length);

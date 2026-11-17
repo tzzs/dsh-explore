@@ -28,10 +28,11 @@ DSH 探索在每个会话里加一个 **「无限探索」** 页签：把一轮�
 ## 功能
 
 - **无限画布** —— 拖拽平移、滚轮缩放（20%–200%）、适应画布，右下角小地图可点击跳转并显示当前视口。在支持的 DSH 页面布局中，画布延伸到标题和输入框后方。
-- **树的方向** —— 使用工具栏的「左右布局」切换横向或纵向排列。选择保存在当前浏览器中，对其他会话也生效。
-- **跟随宿主外观** —— 界面跟随 DSH 的语言和浅色、深色主题。
+- **两个方向都支持** —— 工具栏上是双向的布局开关：**从上到下** 或 **从左到右**。两个选项同时可见，当前那个是按下态，所以不用靠画布形状去猜现在朝哪个方向。选择保存在当前浏览器中，对其他会话也生效。
+- **跟随宿主外观** —— 界面跟随 DSH 的八种语言（中、英、德、西、法、日、葡、俄）和浅色 / 深色主题：层级阴影、浮层背景、滚动条和原生表单控件都随主题走。
 - **任意回答开新枝** —— 卡片右上角的 `+` 就是追问入口，就地长出一张输入卡，回车发送后新节点立刻出现。
 - **并行分支** —— 几条枝可以同时跑。正在回答的卡片带实时进度行：转圈指示器 +「正在思考… / 正在调用 read / 正在输出…」+ 第 N 步 + 已用秒数，正文按流式 token 边写边渲染，并带「停止」。
+- **看得见在想什么** —— 光有耗时看不出智能体在忙什么。正在跑的卡片下有一条「思考尾巴」，实时显示模型最新写下的一行；停下来之后卡片上留一行「思考过程」，说明有多少字、最后停在哪。两者都点开全屏阅读——整条思考链就放在回答顶部，默认折叠、一点即开。不在卡片里就地展开，是因为那会把 320px 的卡片撑成一条很长的竖条。模型不思考就都不显示。
 - **等你回答** —— 分支停在提问或审批时，卡片改说「等你回答… / 等你授权…」并带一圈强调边框；画布自动展开到它并居中，工具条上的「N 个在等你」可点击跳转。正在跑的节点所在路径不会被默认折叠藏起来。
 - **定位最新** —— 一键展开到最新节点的祖先路径并把那张卡片居中；最新按创建时间判定，并行完成顺序打乱也不会跳错。
 - **折叠与搜索** —— 第三层起默认折叠，但通往「正在跑 / 在等你」节点的路径始终展开；`Ctrl/Cmd+F` 聚焦搜索框，回车逐个跳转命中节点并自动展开祖先路径。
@@ -96,8 +97,17 @@ test/canvas-visibility.cjs       可见性回归：在跑/等你节点必须被�
 test/session-rebind.cjs          重新绑定：换 eventSource 后重订阅、空窗口不剪枝、冷会话要 open
 test/theme-tokens.cjs            主题守卫：色值不写死、关键 token 必须存在、主按钮用反相前景
 test/motion.cjs                  动效：镜头插值、手势中断、导航替换、减少动态效果与清理
+test/wheel-scroll.cjs            滚轮归属：内层能滚就滚，滚到头也不缩放画布
+test/live-clock.cjs              运行中的卡片按墙钟计时，且全插件只有一个定时器
+test/reader-dialog.cjs           阅读层是原生 modal：不再手写焦点陷阱，背景滚动被隔离
+test/markdown-table.cjs          GFM 表格：对齐、转义竖线、横向滚动容器
+test/markdown.cjs                受支持的 Markdown 全集，以及刻意不支持的那些
 test/layout-direction.cjs        双向布局、不等高节点与折叠分支
 test/host-overlay.cjs            宿主覆盖层、区域测量、阅读层与回退
+test/locale-parity.cjs           八套语言表：键集合一致、{占位符} 对齐、不串字符集
+test/reasoning.cjs               思考过程：实时尾巴、折叠区、无思考不显示、重试清空、封顶与真实截断计数
+test/reasoning-persist.cjs       思考不落盘、重开从日志里回来、父子连线不丢
+test/real-log.cjs                真实日志端到端检查（可选，吃一个 session.v4.jsonl.zstd）
 docs/design.md                   设计文档：数据模型、取舍、已知缺口
 docs/releasing.md                CI、Release Please 与 npm 发布
 .github/workflows/               CI、Release Please 与手动的 npm 发布工作流
@@ -111,6 +121,7 @@ docs/releasing.md                CI、Release Please 与 npm 发布
 - **界面文案跟随宿主语言**：所有可见文本都是 `dsh-explore` 命名空间下的键，通过客户端 locale 服务查表；切换语言时页签标题和整个视图一起切换。没有 locale 插件的 profile 会退回内置的中英表（按 `document.documentElement.lang` 选择）。
 - **节点是日志的投影**：读取会话的 `entries`（持久事件 + 暂态 `assistant/live-chunk`），把一个 turn 投影成一张卡片；不额外写记录，所以在 Chat 里继续聊，树上就会自然长节点。
 - **等待态没有专门事件**：宿主里 `ask_user_question` 与审批都只是「工具还没返回」——等回答期间不发 `turn/end`，`running` 也保持 `true`。插件用 `tool/call` 的 `ask_user_question`（`callId` 在 `tool/result` 里结清）和 `approval/asked → approval/decided` 算出「在等你」，把卡片从「正在调用工具」改成「等你回答 / 等你授权」。`user/message` 的 `source.kind` 只有 `user` 与 `user-question-reply` 两种，投影两端都认。
+- **思考过程已经在事件窗口里**：模型把思考写进 `reasoning` 内容块——实时是暂态 `assistant/live-chunk` 上的 `reasoning-delta`，落定后是持久 `assistant/message` 里的 `{ type: 'reasoning', text }`。两者都原样到达插件，所以一次投影同时覆盖「正在想」和「想完了」：在跑时卡片显示最新一行做「思考尾巴」，落定后收进可展开的「思考过程」（折叠时仍写出最后一段，并在被截断时说明）。没有思考的模型不渲染这一节。重试会复用同一个 turn/step，所以先把上一次尝试的思考清掉。每张卡最多保留 12000 字，丢了字数按「每个块送达过的字节 − 保留长度」算出来，而不是累加计数器——同一个块会被裁不止一次。思考**不写进 `localStorage` 快照**：它能从日志重建，而快照里还放着重建不出来的父子连线。
 - **正在跑的路径不折叠**：布局只走「未折叠」的节点，被折叠的节点连位置都没有、根本不会被画。所以通往「正在跑 / 在等你」节点的祖先路径一律不套用默认折叠；节点进入运行态时还会把路径展开并持久化，停在等用户时再把画布移过去。工具条上的运行计数与「在等你」计数都是跳转按钮。
 - **会话会被重新绑定**：离开对话后宿主会释放它的引用，引用归零时 scope 被回收、`Session` 实例连同事件窗口一起丢掉；再进来时 `materializeScope` 会造一个新的 `eventSource`，窗口从空开始。所以订阅跟着 `eventSource` 换（旧的自动退订）、空窗口不当作「会话是空的」去剪枝、冷会话主动 `open()` 一次——否则直接在「无限探索」页签上切回来会得到一张空画布，而先点「回对话」再切回来又正常。`test/session-rebind.cjs` 守住这条。
 - **分叉是真实会话**：`ctx.sessions.fork({ sessionId, atSeq })`，子会话天然继承到该回答为止的前缀上下文；每根枝会出现在会话列表里，插件会把它改名成 `⟂ 父问题 · 新问题` 便于辨认。
@@ -120,7 +131,7 @@ docs/releasing.md                CI、Release Please 与 npm 发布
 ## 开发
 
 ```bash
-npm test                      # 下面八条一起跑（package.json 里的 scripts.test）
+npm test                      # 下面十六条一起跑（package.json 里的 scripts.test）
 
 node --check client.js        # 语法
 node test/render-smoke.cjs    # 渲染冒烟：把整个视图真渲染一遍，并断言中英两套文案
@@ -128,9 +139,19 @@ node test/canvas-visibility.cjs  # 可见性回归：在跑/等你的节点必�
 node test/session-rebind.cjs  # 重新打开会话：scope 重建后换订阅、空窗口不剪枝、冷会话要 open
 node test/theme-tokens.cjs    # 主题守卫：色值不写死、token 必须存在、主按钮用反相前景 token
 node test/motion.cjs          # 动效：画布移动、手势中断、导航替换、减少动态效果与清理
+node test/wheel-scroll.cjs    # 滚轮归属：思考框能滚就滚，滚到头也不缩放画布
+node test/live-clock.cjs      # 耗时按墙钟每秒走，事件之间也不停；只有一个定时器
+node test/reader-dialog.cjs   # 阅读层用原生 <dialog>：showModal、close 回灌、背景滚动隔离
+node test/markdown-table.cjs  # 回答里的 GFM 表格
+node test/markdown.cjs        # 渲染器支持的每一种 Markdown 语法
 node test/layout-direction.cjs # 双向布局、不等高节点和折叠分支
 node test/host-overlay.cjs     # 宿主覆盖层、区域测量、阅读层与回退
+node test/locale-parity.cjs    # 八套语言表的键、占位符与字符集
+node test/reasoning.cjs        # 思考过程：实时尾巴、折叠区、无思考不显示、重试清空、封顶与真实截断计数
+node test/reasoning-persist.cjs # 快照策略：思考不落盘，重开从日志里回来，父子连线不丢
 ```
+
+`node test/real-log.cjs <一个 session.v4.jsonl.zstd>` 可以拿真实日志跑一遍全链路，属于可选检查，不在 `npm test` 里。
 
 `client.js` 是客户端插件（`window.__ModuleLoader__.load` 的惰性工厂），改完客户端热更新立即生效。注意样式表在每次 `apply()` 都会重写同一个 `<style>` 节点——如果只在节点已存在时跳过，热更新后的新规则永远不会生效。
 

@@ -23,15 +23,21 @@ window.__ModuleLoader__.load({
       ink: 'var(--dsw-alias-label-primary)',
       ink2: 'var(--dsw-alias-label-secondary)',
       ink3: 'var(--dsw-alias-label-secondary)',
+      // Reasoning reads as a footnote to the answer, so it sits one step
+      // quieter than the body text.
+      ink4: 'var(--dsw-alias-label-tertiary)',
       line: 'var(--dsw-alias-border-l2)',
       card: 'var(--dsw-alias-bg-layer-1)',
+      // Floating surfaces (menus) take the overlay level: on a dark theme a
+      // menu painted with the card colour would disappear into the card under
+      // it, and this is the level the host reserves for exactly that case.
+      overlay: 'var(--dsw-alias-bg-overlay)',
       cardEdge: 'var(--dsw-alias-border-l1)',
       canvas: 'var(--dsw-alias-bg-base)',
       code: 'var(--dsw-alias-markdown-code-block)',
       // A `label-primary` tint keeps the chip visible on a white card (the
       // markdown inline-code token is nearly white in the light theme).
       codeInline: 'color-mix(in srgb, var(--dsw-alias-label-primary) 7%, transparent)',
-      scrim: 'var(--dsw-alias-bg-mask-1)',
       warn: 'var(--dsw-alias-state-error-primary)',
       ok: 'var(--dsw-alias-state-success-primary)',
     };
@@ -90,6 +96,8 @@ window.__ModuleLoader__.load({
         'view.zoomOut': '缩小画布',
         'view.zoomIn': '放大画布',
         'view.zoomLevel': '当前缩放比例',
+        'view.layoutGroup': '布局方向',
+        'view.layoutVertical': '上下布局',
         'view.layoutHorizontal': '左右布局',
         'view.layoutTitle': '切换左右布局和上下布局',
         'view.fit': '适应画布',
@@ -135,6 +143,12 @@ window.__ModuleLoader__.load({
         'card.cost.elapsed': '耗时 {value}',
         'card.cost.context': '上下文 {value}',
         'card.cost.cached': '缓存 {value}',
+
+        'card.think': '思考过程',
+        'card.thinkExpandTitle': '展开思考过程',
+        'card.thinkCollapseTitle': '收起思考过程',
+        'card.thinkMeta': '思考 {count} 字',
+        'card.thinkTruncated': '（只保留了最新的 {count} 字思考）',
 
         'live.calling': '正在调用 {tool}',
         'live.outputting': '正在输出…',
@@ -189,6 +203,8 @@ window.__ModuleLoader__.load({
         'view.zoomOut': 'Zoom out',
         'view.zoomIn': 'Zoom in',
         'view.zoomLevel': 'Current zoom level',
+        'view.layoutGroup': 'Layout direction',
+        'view.layoutVertical': 'Top to bottom',
         'view.layoutHorizontal': 'Left to right',
         'view.layoutTitle': 'Switch between left-to-right and top-to-bottom layouts',
         'view.fit': 'Fit canvas',
@@ -235,6 +251,12 @@ window.__ModuleLoader__.load({
         'card.cost.context': 'context {value}',
         'card.cost.cached': 'cached {value}',
 
+        'card.think': 'Reasoning',
+        'card.thinkExpandTitle': 'Expand the reasoning',
+        'card.thinkCollapseTitle': 'Collapse the reasoning',
+        'card.thinkMeta': '{count} chars of reasoning',
+        'card.thinkTruncated': '(only the newest {count} chars of reasoning are kept)',
+
         'live.calling': 'Calling {tool}',
         'live.outputting': 'Writing…',
         'live.thinking': 'Thinking…',
@@ -270,17 +292,614 @@ window.__ModuleLoader__.load({
         'error.submitFailed': 'Submit failed: {reason}',
         'error.loadOlderFailed': 'Could not load earlier history: {reason}',
       },
+      de: {
+        'view.tab': 'Endlose Erkundung',
+        'view.heading': 'Endlose Erkundung',
+        'view.nodes': '{count} Knoten',
+        'view.running': '{count} Zweige laufen',
+        'view.runningTitle': 'Zum nächsten laufenden Knoten springen',
+        'view.awaiting': '{count} warten auf dich',
+        'view.awaitingTitle': 'Zum Knoten springen, der auf dich wartet',
+        'view.loadOlder': 'Frühere laden',
+        'view.restoreHidden': '{count} ausgeblendet · Wiederherstellen',
+        'view.restoreHiddenTitle': 'Gelöschte Knoten und Zweige wiederherstellen',
+        'view.searchPlaceholder': 'Knoten suchen',
+        'view.searchLabel': 'Knoten suchen',
+        'view.zoomGroup': 'Leinwand-Zoom',
+        'view.zoomOut': 'Verkleinern',
+        'view.zoomIn': 'Vergrößern',
+        'view.zoomLevel': 'Aktuelle Zoomstufe',
+        'view.layoutHorizontal': 'Links nach rechts',
+        'view.layoutTitle': 'Zwischen Links-nach-rechts und Oben-nach-unten wechseln',
+        'view.fit': 'Leinwand einpassen',
+        'view.fitTitle': 'Herauszoomen, bis der ganze Baum sichtbar ist',
+        'view.latest': 'Zum Neuesten',
+        'view.latestTitle': 'Pfad ausklappen und zum neuesten Knoten springen',
+        'view.latestTitleEmpty': 'Noch keine Knoten',
+        'view.empty.title': 'Dieser Baum ist noch leer',
+        'view.empty.hint': 'Stelle im Chat eine Frage, dann wächst hier der erste Knoten.',
+        'view.empty.report': 'Wenn du schon gefragt hast und es hier noch leer ist, sag mir: {events} Ereignisse · Sitzung {state}.',
+        'card.noQuestion': '(keine Frage)',
+        'card.questionReply': '(Antwort auf die vorherige Frage)',
+        'card.latestBadge': 'Neuestes',
+        'card.latestTitle': 'Der neueste Knoten in diesem Baum',
+        'card.status.thinking': 'Denkt nach',
+        'card.status.streaming': 'Antwortet',
+        'card.status.error': 'Fehler',
+        'card.status.stopped': 'Angehalten',
+        'card.status.done': 'Fertig',
+        'card.status.awaiting': 'Braucht Antwort',
+        'card.status.awaitingApproval': 'Braucht Freigabe',
+        'card.stop': 'Stoppen',
+        'card.stopTitle': 'Diesen Zweig stoppen',
+        'card.ask': 'Auf diesem Zweig nachfragen',
+        'card.more': 'Weitere Aktionen',
+        'card.delete': 'Diesen Knoten löschen',
+        'card.deleteTitle': 'Diesen Knoten und alle Zweige darunter ausblenden',
+        'card.deleteConfirm': 'Diesen Knoten und alle Zweige darunter löschen? (umkehrbar)',
+        'card.readTitle': 'Klicken, um im Vollbild zu lesen',
+        'card.expandTitle': 'Diese Antwort ausklappen',
+        'card.collapseTitle': 'Diese Antwort einklappen',
+        'card.expand': 'Antwort ausklappen',
+        'card.collapse': 'Antwort einklappen',
+        'card.fullscreen': 'Vollbild lesen',
+        'card.fullscreenTitle': 'Die vollständige Antwort im Vollbild lesen',
+        'card.unfoldBranch': 'Diesen Zweig ausklappen',
+        'card.foldBranch': 'Diesen Zweig einklappen',
+        'card.unfoldDescendants': '{count} Nachfolger ausklappen',
+        'card.foldDescendants': '{count} Nachfolger einklappen',
+        'card.descendants': '{count} Nachfolger',
+        'card.truncated': '\n\n… (im Vollbild die vollständige Antwort lesen)',
+        'card.cost.elapsed': 'Dauer {value}',
+        'card.cost.context': 'Kontext {value}',
+        'card.cost.cached': 'Cache {value}',
+        'card.think': 'Gedankengang',
+        'card.thinkExpandTitle': 'Den Gedankengang ausklappen',
+        'card.thinkCollapseTitle': 'Den Gedankengang einklappen',
+        'card.thinkMeta': '{count} Zeichen Gedankengang',
+        'card.thinkTruncated': '(nur die neuesten {count} Zeichen Gedankengang bleiben erhalten)',
+        'live.calling': 'Ruft {tool} auf',
+        'live.outputting': 'Schreibt…',
+        'live.thinking': 'Denkt nach…',
+        'live.starting': 'Startet…',
+        'live.awaiting': 'Wartet auf deine Antwort…',
+        'live.awaitingApproval': 'Wartet auf deine Freigabe…',
+        'live.step': 'Schritt {step}',
+        'composer.placeholder': 'Auf diesem Zweig nachfragen… (Enter senden, Shift+Enter neue Zeile)',
+        'composer.label': 'Nachfrage',
+        'composer.from': 'Ausgehend von „{question}…“',
+        'composer.cancel': 'Abbrechen',
+        'composer.send': 'Senden',
+        'reader.close': 'Schließen (Esc)',
+        'reader.closeLabel': 'Leser schließen',
+        'reader.noAnswer': '(noch keine Antwort)',
+        'reader.hint': 'Esc oder Klick auf den Hintergrund zum Schließen',
+        'reader.branch': 'Zweig',
+        'reader.mainline': 'Hauptlinie',
+        'error.title': 'Die Baumansicht ist abgestürzt',
+        'error.reload': 'Ansicht neu laden',
+        'error.hint': 'Die Leinwand-Daten sind sicher; nur diese Darstellung ist fehlgeschlagen.',
+        'error.sessionNotOpen': 'Die Sitzung ist noch nicht geöffnet und kann daher nicht projiziert werden.',
+        'error.noBinding': 'Die Sitzung hat keine Bindung zurückgegeben.',
+        'error.openFailed': 'Sitzung konnte nicht geöffnet werden: {reason}',
+        'error.forkFailed': 'Fork fehlgeschlagen: {reason}',
+        'error.branchUnopenable': 'Die Zweig-Sitzung konnte nicht geöffnet werden: {reason}',
+        'error.branchNoBinding': 'Die Zweig-Sitzung konnte nicht geöffnet werden: {reason}',
+        'error.branchNoUsableBinding': 'Die Zweig-Sitzung hat keine brauchbare Bindung zurückgegeben.',
+        'error.submitFailed': 'Übermittlung fehlgeschlagen: {reason}',
+        'error.loadOlderFailed': 'Frühere Verlaufsdaten konnten nicht geladen werden: {reason}',
+        'view.layoutGroup': 'Layout-Richtung',
+        'view.layoutVertical': 'Oben nach unten',
+      },
+      es: {
+        'view.tab': 'Exploración infinita',
+        'view.heading': 'Exploración infinita',
+        'view.nodes': '{count} nodos',
+        'view.running': '{count} ramas en curso',
+        'view.runningTitle': 'Ir al siguiente nodo en curso',
+        'view.awaiting': '{count} esperando tu respuesta',
+        'view.awaitingTitle': 'Ir al nodo que espera tu respuesta',
+        'view.loadOlder': 'Cargar anteriores',
+        'view.restoreHidden': '{count} ocultos · Restaurar',
+        'view.restoreHiddenTitle': 'Restaurar los nodos y ramas eliminados',
+        'view.searchPlaceholder': 'Buscar nodos',
+        'view.searchLabel': 'Buscar nodos',
+        'view.zoomGroup': 'Zoom del lienzo',
+        'view.zoomOut': 'Alejar',
+        'view.zoomIn': 'Acercar',
+        'view.zoomLevel': 'Nivel de zoom actual',
+        'view.layoutHorizontal': 'De izquierda a derecha',
+        'view.layoutTitle': 'Alternar entre diseño de izquierda a derecha y de arriba abajo',
+        'view.fit': 'Ajustar lienzo',
+        'view.fitTitle': 'Alejar hasta ver el árbol completo',
+        'view.latest': 'Ir a lo más reciente',
+        'view.latestTitle': 'Expandir la ruta e ir al nodo más reciente',
+        'view.latestTitleEmpty': 'Aún no hay nodos',
+        'view.empty.title': 'Este árbol aún está vacío',
+        'view.empty.hint': 'Pregunta algo en Chat y el primer nodo crecerá aquí.',
+        'view.empty.report': 'Si ya preguntaste y esto sigue vacío, dime: {events} eventos · sesión {state}.',
+        'card.noQuestion': '(sin pregunta)',
+        'card.questionReply': '(respondiendo a la pregunta anterior)',
+        'card.latestBadge': 'Último',
+        'card.latestTitle': 'El nodo más reciente de este árbol',
+        'card.status.thinking': 'Pensando',
+        'card.status.streaming': 'Respondiendo',
+        'card.status.error': 'Error',
+        'card.status.stopped': 'Detenido',
+        'card.status.done': 'Listo',
+        'card.status.awaiting': 'Necesita respuesta',
+        'card.status.awaitingApproval': 'Necesita aprobación',
+        'card.stop': 'Detener',
+        'card.stopTitle': 'Detener esta rama',
+        'card.ask': 'Seguir preguntando en esta rama',
+        'card.more': 'Más acciones',
+        'card.delete': 'Eliminar este nodo',
+        'card.deleteTitle': 'Ocultar este nodo y todas las ramas que cuelgan de él',
+        'card.deleteConfirm': '¿Eliminar este nodo y todas sus ramas? (reversible)',
+        'card.readTitle': 'Haz clic para leer a pantalla completa',
+        'card.expandTitle': 'Expandir esta respuesta',
+        'card.collapseTitle': 'Contraer esta respuesta',
+        'card.expand': 'Expandir respuesta',
+        'card.collapse': 'Contraer respuesta',
+        'card.fullscreen': 'Pantalla completa',
+        'card.fullscreenTitle': 'Leer la respuesta completa a pantalla completa',
+        'card.unfoldBranch': 'Expandir esta rama',
+        'card.foldBranch': 'Contraer esta rama',
+        'card.unfoldDescendants': 'Expandir {count} descendientes',
+        'card.foldDescendants': 'Contraer {count} descendientes',
+        'card.descendants': '{count} descendientes',
+        'card.truncated': '\n\n… (abre a pantalla completa para ver la respuesta completa)',
+        'card.cost.elapsed': 'duró {value}',
+        'card.cost.context': 'contexto {value}',
+        'card.cost.cached': 'caché {value}',
+        'card.think': 'Razonamiento',
+        'card.thinkExpandTitle': 'Expandir el razonamiento',
+        'card.thinkCollapseTitle': 'Contraer el razonamiento',
+        'card.thinkMeta': '{count} caracteres de razonamiento',
+        'card.thinkTruncated': '(solo se conservan los {count} caracteres más recientes del razonamiento)',
+        'live.calling': 'Llamando a {tool}',
+        'live.outputting': 'Escribiendo…',
+        'live.thinking': 'Pensando…',
+        'live.starting': 'Iniciando…',
+        'live.awaiting': 'Esperando tu respuesta…',
+        'live.awaitingApproval': 'Esperando tu aprobación…',
+        'live.step': 'paso {step}',
+        'composer.placeholder': 'Pregunta de nuevo en esta rama… (Enter para enviar, Shift+Enter para nueva línea)',
+        'composer.label': 'Texto de seguimiento',
+        'composer.from': 'A partir de «{question}…»',
+        'composer.cancel': 'Cancelar',
+        'composer.send': 'Enviar',
+        'reader.close': 'Cerrar (Esc)',
+        'reader.closeLabel': 'Cerrar el lector',
+        'reader.noAnswer': '(aún sin respuesta)',
+        'reader.hint': 'Esc o clic en el fondo para cerrar',
+        'reader.branch': 'Rama',
+        'reader.mainline': 'Línea principal',
+        'error.title': 'La vista de árbol falló',
+        'error.reload': 'Recargar la vista',
+        'error.hint': 'Los datos del lienzo están a salvo; solo falló este render.',
+        'error.sessionNotOpen': 'La sesión aún no está abierta, así que no se puede proyectar.',
+        'error.noBinding': 'La sesión no devolvió ninguna vinculación.',
+        'error.openFailed': 'No se pudo abrir la sesión: {reason}',
+        'error.forkFailed': 'Falló la bifurcación: {reason}',
+        'error.branchUnopenable': 'No se pudo abrir la sesión de la rama: {reason}',
+        'error.branchNoBinding': 'No se pudo abrir la sesión de la rama: {reason}',
+        'error.branchNoUsableBinding': 'La sesión de la rama no devolvió una vinculación utilizable.',
+        'error.submitFailed': 'No se pudo enviar: {reason}',
+        'error.loadOlderFailed': 'No se pudo cargar el historial anterior: {reason}',
+        'view.layoutGroup': 'Dirección del diseño',
+        'view.layoutVertical': 'De arriba abajo',
+      },
+      fr: {
+        'view.tab': 'Exploration infinie',
+        'view.heading': 'Exploration infinie',
+        'view.nodes': '{count} nœuds',
+        'view.running': '{count} branches en cours',
+        'view.runningTitle': 'Aller au prochain nœud en cours',
+        'view.awaiting': '{count} en attente de vous',
+        'view.awaitingTitle': 'Aller au nœud qui attend votre réponse',
+        'view.loadOlder': 'Charger les précédents',
+        'view.restoreHidden': '{count} masqués · Restaurer',
+        'view.restoreHiddenTitle': 'Restaurer les nœuds et branches supprimés',
+        'view.searchPlaceholder': 'Rechercher des nœuds',
+        'view.searchLabel': 'Rechercher des nœuds',
+        'view.zoomGroup': 'Zoom du canevas',
+        'view.zoomOut': 'Dézoomer',
+        'view.zoomIn': 'Zoomer',
+        'view.zoomLevel': 'Niveau de zoom actuel',
+        'view.layoutHorizontal': 'De gauche à droite',
+        'view.layoutTitle': 'Basculer entre disposition de gauche à droite et de haut en bas',
+        'view.fit': 'Ajuster le canevas',
+        'view.fitTitle': 'Dézoomer pour afficher tout l’arbre',
+        'view.latest': 'Aller au plus récent',
+        'view.latestTitle': 'Déplier le chemin et aller au nœud le plus récent',
+        'view.latestTitleEmpty': 'Aucun nœud pour l’instant',
+        'view.empty.title': 'Cet arbre est encore vide',
+        'view.empty.hint': 'Posez une question dans Chat et le premier nœud poussera ici.',
+        'view.empty.report': 'Si vous avez déjà posé une question et que c’est toujours vide, dites-moi : {events} événements · session {state}.',
+        'card.noQuestion': '(aucune question)',
+        'card.questionReply': '(réponse à la question précédente)',
+        'card.latestBadge': 'Dernier',
+        'card.latestTitle': 'Le nœud le plus récent de cet arbre',
+        'card.status.thinking': 'Réflexion',
+        'card.status.streaming': 'Réponse en cours',
+        'card.status.error': 'Erreur',
+        'card.status.stopped': 'Arrêté',
+        'card.status.done': 'Terminé',
+        'card.status.awaiting': 'Réponse attendue',
+        'card.status.awaitingApproval': 'Approbation attendue',
+        'card.stop': 'Arrêter',
+        'card.stopTitle': 'Arrêter cette branche',
+        'card.ask': 'Relancer sur cette branche',
+        'card.more': 'Plus d’actions',
+        'card.delete': 'Supprimer ce nœud',
+        'card.deleteTitle': 'Masquer ce nœud et toutes les branches en dessous',
+        'card.deleteConfirm': 'Supprimer ce nœud et toutes les branches en dessous ? (réversible)',
+        'card.readTitle': 'Cliquez pour lire en plein écran',
+        'card.expandTitle': 'Déplier cette réponse',
+        'card.collapseTitle': 'Replier cette réponse',
+        'card.expand': 'Déplier la réponse',
+        'card.collapse': 'Replier la réponse',
+        'card.fullscreen': 'Plein écran',
+        'card.fullscreenTitle': 'Lire la réponse complète en plein écran',
+        'card.unfoldBranch': 'Déplier cette branche',
+        'card.foldBranch': 'Replier cette branche',
+        'card.unfoldDescendants': 'Déplier {count} descendants',
+        'card.foldDescendants': 'Replier {count} descendants',
+        'card.descendants': '{count} descendants',
+        'card.truncated': '\n\n… (ouvrez le plein écran pour la réponse complète)',
+        'card.cost.elapsed': 'durée {value}',
+        'card.cost.context': 'contexte {value}',
+        'card.cost.cached': 'cache {value}',
+        'card.think': 'Raisonnement',
+        'card.thinkExpandTitle': 'Déplier le raisonnement',
+        'card.thinkCollapseTitle': 'Replier le raisonnement',
+        'card.thinkMeta': '{count} caractères de raisonnement',
+        'card.thinkTruncated': '(seuls les {count} derniers caractères du raisonnement sont conservés)',
+        'live.calling': 'Appel de {tool}',
+        'live.outputting': 'Écriture…',
+        'live.thinking': 'En réflexion…',
+        'live.starting': 'Démarrage…',
+        'live.awaiting': 'En attente de votre réponse…',
+        'live.awaitingApproval': 'En attente de votre approbation…',
+        'live.step': 'étape {step}',
+        'composer.placeholder': 'Relancer sur cette branche… (Entrée pour envoyer, Maj+Entrée pour une nouvelle ligne)',
+        'composer.label': 'Texte de suivi',
+        'composer.from': 'À partir de « {question}… »',
+        'composer.cancel': 'Annuler',
+        'composer.send': 'Envoyer',
+        'reader.close': 'Fermer (Échap)',
+        'reader.closeLabel': 'Fermer le lecteur',
+        'reader.noAnswer': '(pas encore de réponse)',
+        'reader.hint': 'Échap ou clic sur l’arrière-plan pour fermer',
+        'reader.branch': 'Branche',
+        'reader.mainline': 'Ligne principale',
+        'error.title': 'La vue arborescente a planté',
+        'error.reload': 'Recharger la vue',
+        'error.hint': 'Les données du canevas sont intactes ; seul ce rendu a échoué.',
+        'error.sessionNotOpen': 'La session n’est pas encore ouverte ; elle ne peut donc pas être projetée.',
+        'error.noBinding': 'La session n’a renvoyé aucune liaison.',
+        'error.openFailed': 'Impossible d’ouvrir la session : {reason}',
+        'error.forkFailed': 'Échec de l’embranchement : {reason}',
+        'error.branchUnopenable': 'Impossible d’ouvrir la session de la branche : {reason}',
+        'error.branchNoBinding': 'Impossible d’ouvrir la session de la branche : {reason}',
+        'error.branchNoUsableBinding': 'La session de la branche n’a renvoyé aucune liaison utilisable.',
+        'error.submitFailed': 'Échec de l’envoi : {reason}',
+        'error.loadOlderFailed': 'Impossible de charger l’historique précédent : {reason}',
+        'view.layoutGroup': 'Sens de la disposition',
+        'view.layoutVertical': 'De haut en bas',
+      },
+      ja: {
+        'view.tab': '無限探索',
+        'view.heading': '無限探索',
+        'view.nodes': '{count} 個のノード',
+        'view.running': '{count} ブランチ実行中',
+        'view.runningTitle': '次に実行中のノードへ移動',
+        'view.awaiting': '{count} 件が対応待ち',
+        'view.awaitingTitle': 'あなたの対応を待つノードへ移動',
+        'view.loadOlder': '以前を読み込む',
+        'view.restoreHidden': '{count} 件非表示 · 復元',
+        'view.restoreHiddenTitle': '削除したノードとブランチを復元',
+        'view.searchPlaceholder': 'ノードを検索',
+        'view.searchLabel': 'ノードを検索',
+        'view.zoomGroup': 'キャンバスのズーム',
+        'view.zoomOut': '縮小',
+        'view.zoomIn': '拡大',
+        'view.zoomLevel': '現在のズーム率',
+        'view.layoutHorizontal': '左右配置',
+        'view.layoutTitle': '左右配置と上下配置を切り替える',
+        'view.fit': 'キャンバスに合わせる',
+        'view.fitTitle': 'ツリー全体が見えるまで縮小',
+        'view.latest': '最新へ移動',
+        'view.latestTitle': '経路を展開して最新のノードへ移動',
+        'view.latestTitleEmpty': 'ノードはまだありません',
+        'view.empty.title': 'このツリーはまだ空です',
+        'view.empty.hint': 'Chat で質問すると、ここに最初のノードが生まれます。',
+        'view.empty.report': 'すでに質問したのに空のままなら、次を伝えてください：イベント {events} · セッション {state}。',
+        'card.noQuestion': '（質問なし）',
+        'card.questionReply': '（前の質問への回答）',
+        'card.latestBadge': '最新',
+        'card.latestTitle': 'このツリーで最新のノード',
+        'card.status.thinking': '思考中',
+        'card.status.streaming': '回答中',
+        'card.status.error': 'エラー',
+        'card.status.stopped': '停止しました',
+        'card.status.done': '完了',
+        'card.status.awaiting': '回答待ち',
+        'card.status.awaitingApproval': '承認待ち',
+        'card.stop': '停止',
+        'card.stopTitle': 'このブランチを停止',
+        'card.ask': 'このブランチで追加質問',
+        'card.more': 'その他の操作',
+        'card.delete': 'このノードを削除',
+        'card.deleteTitle': 'このノードとその下のすべてのブランチを非表示',
+        'card.deleteConfirm': 'このノードとその下のすべてのブランチを削除しますか？（復元できます）',
+        'card.readTitle': 'クリックして全画面で読む',
+        'card.expandTitle': 'この回答を展開',
+        'card.collapseTitle': 'この回答を折りたたむ',
+        'card.expand': '回答を展開',
+        'card.collapse': '回答を折りたたむ',
+        'card.fullscreen': '全画面で読む',
+        'card.fullscreenTitle': '完全な回答を全画面で読む',
+        'card.unfoldBranch': 'このブランチを展開',
+        'card.foldBranch': 'このブランチを折りたたむ',
+        'card.unfoldDescendants': '子孫 {count} 件を展開',
+        'card.foldDescendants': '子孫 {count} 件を折りたたむ',
+        'card.descendants': '子孫 {count} 件',
+        'card.truncated': '\n\n…（全画面で完全な回答を表示）',
+        'card.cost.elapsed': '所要 {value}',
+        'card.cost.context': 'コンテキスト {value}',
+        'card.cost.cached': 'キャッシュ {value}',
+        'card.think': '思考',
+        'card.thinkExpandTitle': '思考を展開',
+        'card.thinkCollapseTitle': '思考を折りたたむ',
+        'card.thinkMeta': '思考 {count} 文字',
+        'card.thinkTruncated': '（最新の思考 {count} 文字のみ保持）',
+        'live.calling': '{tool} を呼び出し中',
+        'live.outputting': '出力中…',
+        'live.thinking': '考えています…',
+        'live.starting': '開始中…',
+        'live.awaiting': '回答をお待ちしています…',
+        'live.awaitingApproval': '承認をお待ちしています…',
+        'live.step': 'ステップ {step}',
+        'composer.placeholder': 'このブランチで追加質問…（Enter で送信、Shift+Enter で改行）',
+        'composer.label': '追加質問の内容',
+        'composer.from': '「{question}…」から開始',
+        'composer.cancel': 'キャンセル',
+        'composer.send': '送信',
+        'reader.close': '閉じる（Esc）',
+        'reader.closeLabel': 'リーダーを閉じる',
+        'reader.noAnswer': '（まだ回答はありません）',
+        'reader.hint': 'Esc または背景をクリックで閉じる',
+        'reader.branch': 'ブランチ',
+        'reader.mainline': '本線',
+        'error.title': 'ツリービューでエラーが発生しました',
+        'error.reload': 'ビューを再読み込み',
+        'error.hint': 'キャンバスのデータは失われていません。描画だけが失敗しました。',
+        'error.sessionNotOpen': 'セッションがまだ開いていないため、投影できません。',
+        'error.noBinding': 'セッションからバインディングが返されませんでした。',
+        'error.openFailed': 'セッションを開けませんでした：{reason}',
+        'error.forkFailed': 'フォークに失敗しました：{reason}',
+        'error.branchUnopenable': 'ブランチセッションを開けませんでした：{reason}',
+        'error.branchNoBinding': 'ブランチセッションを開けませんでした：{reason}',
+        'error.branchNoUsableBinding': 'ブランチセッションから使用可能なバインディングが返されませんでした。',
+        'error.submitFailed': '送信に失敗しました：{reason}',
+        'error.loadOlderFailed': '以前の履歴を読み込めませんでした：{reason}',
+        'view.layoutGroup': 'レイアウト方向',
+        'view.layoutVertical': '上から下',
+      },
+      pt: {
+        'view.tab': 'Exploração infinita',
+        'view.heading': 'Exploração infinita',
+        'view.nodes': '{count} nós',
+        'view.running': '{count} ramos em execução',
+        'view.runningTitle': 'Ir para o próximo nó em execução',
+        'view.awaiting': '{count} aguardando você',
+        'view.awaitingTitle': 'Ir para o nó que aguarda você',
+        'view.loadOlder': 'Carregar anteriores',
+        'view.restoreHidden': '{count} ocultos · Restaurar',
+        'view.restoreHiddenTitle': 'Restaurar nós e ramos excluídos',
+        'view.searchPlaceholder': 'Buscar nós',
+        'view.searchLabel': 'Buscar nós',
+        'view.zoomGroup': 'Zoom do canvas',
+        'view.zoomOut': 'Afastar',
+        'view.zoomIn': 'Aproximar',
+        'view.zoomLevel': 'Nível de zoom atual',
+        'view.layoutHorizontal': 'Da esquerda para a direita',
+        'view.layoutTitle': 'Alternar entre layout da esquerda para a direita e de cima para baixo',
+        'view.fit': 'Ajustar canvas',
+        'view.fitTitle': 'Afastar até mostrar a árvore inteira',
+        'view.latest': 'Ir para o mais recente',
+        'view.latestTitle': 'Expandir o caminho e ir para o nó mais recente',
+        'view.latestTitleEmpty': 'Ainda não há nós',
+        'view.empty.title': 'Esta árvore ainda está vazia',
+        'view.empty.hint': 'Pergunte algo no Chat e o primeiro nó vai crescer aqui.',
+        'view.empty.report': 'Se você já perguntou e isto continua vazio, me diga: {events} eventos · sessão {state}.',
+        'card.noQuestion': '(sem pergunta)',
+        'card.questionReply': '(respondendo à pergunta anterior)',
+        'card.latestBadge': 'Recente',
+        'card.latestTitle': 'O nó mais recente desta árvore',
+        'card.status.thinking': 'Pensando',
+        'card.status.streaming': 'Respondendo',
+        'card.status.error': 'Erro',
+        'card.status.stopped': 'Interrompido',
+        'card.status.done': 'Concluído',
+        'card.status.awaiting': 'Aguardando resposta',
+        'card.status.awaitingApproval': 'Aguardando aprovação',
+        'card.stop': 'Parar',
+        'card.stopTitle': 'Parar este ramo',
+        'card.ask': 'Perguntar novamente neste ramo',
+        'card.more': 'Mais ações',
+        'card.delete': 'Excluir este nó',
+        'card.deleteTitle': 'Ocultar este nó e todos os ramos abaixo dele',
+        'card.deleteConfirm': 'Excluir este nó e todos os ramos abaixo dele? (reversível)',
+        'card.readTitle': 'Clique para ler em tela cheia',
+        'card.expandTitle': 'Expandir esta resposta',
+        'card.collapseTitle': 'Recolher esta resposta',
+        'card.expand': 'Expandir resposta',
+        'card.collapse': 'Recolher resposta',
+        'card.fullscreen': 'Tela cheia',
+        'card.fullscreenTitle': 'Ler a resposta completa em tela cheia',
+        'card.unfoldBranch': 'Expandir este ramo',
+        'card.foldBranch': 'Recolher este ramo',
+        'card.unfoldDescendants': 'Expandir {count} descendentes',
+        'card.foldDescendants': 'Recolher {count} descendentes',
+        'card.descendants': '{count} descendentes',
+        'card.truncated': '\n\n… (abra em tela cheia para ver a resposta completa)',
+        'card.cost.elapsed': 'levou {value}',
+        'card.cost.context': 'contexto {value}',
+        'card.cost.cached': 'cache {value}',
+        'card.think': 'Raciocínio',
+        'card.thinkExpandTitle': 'Expandir o raciocínio',
+        'card.thinkCollapseTitle': 'Recolher o raciocínio',
+        'card.thinkMeta': '{count} caracteres de raciocínio',
+        'card.thinkTruncated': '(apenas os {count} caracteres mais recentes do raciocínio são mantidos)',
+        'live.calling': 'Chamando {tool}',
+        'live.outputting': 'Escrevendo…',
+        'live.thinking': 'Pensando…',
+        'live.starting': 'Iniciando…',
+        'live.awaiting': 'Aguardando sua resposta…',
+        'live.awaitingApproval': 'Aguardando sua aprovação…',
+        'live.step': 'etapa {step}',
+        'composer.placeholder': 'Pergunte novamente neste ramo… (Enter para enviar, Shift+Enter para nova linha)',
+        'composer.label': 'Texto da pergunta',
+        'composer.from': 'A partir de “{question}…”',
+        'composer.cancel': 'Cancelar',
+        'composer.send': 'Enviar',
+        'reader.close': 'Fechar (Esc)',
+        'reader.closeLabel': 'Fechar o leitor',
+        'reader.noAnswer': '(ainda sem resposta)',
+        'reader.hint': 'Esc ou clique no fundo para fechar',
+        'reader.branch': 'Ramo',
+        'reader.mainline': 'Linha principal',
+        'error.title': 'A visualização em árvore falhou',
+        'error.reload': 'Recarregar a visualização',
+        'error.hint': 'Os dados do canvas estão seguros; apenas esta renderização falhou.',
+        'error.sessionNotOpen': 'A sessão ainda não está aberta, então não pode ser projetada.',
+        'error.noBinding': 'A sessão não retornou nenhuma vinculação.',
+        'error.openFailed': 'Não foi possível abrir a sessão: {reason}',
+        'error.forkFailed': 'Falha na bifurcação: {reason}',
+        'error.branchUnopenable': 'Não foi possível abrir a sessão do ramo: {reason}',
+        'error.branchNoBinding': 'Não foi possível abrir a sessão do ramo: {reason}',
+        'error.branchNoUsableBinding': 'A sessão do ramo não retornou uma vinculação utilizável.',
+        'error.submitFailed': 'Falha no envio: {reason}',
+        'error.loadOlderFailed': 'Não foi possível carregar o histórico anterior: {reason}',
+        'view.layoutGroup': 'Direção do layout',
+        'view.layoutVertical': 'De cima para baixo',
+      },
+      ru: {
+        'view.tab': 'Бесконечное исследование',
+        'view.heading': 'Бесконечное исследование',
+        'view.nodes': 'Узлов: {count}',
+        'view.running': 'Ветки в работе: {count}',
+        'view.runningTitle': 'Перейти к следующему работающему узлу',
+        'view.awaiting': 'Ждут вас: {count}',
+        'view.awaitingTitle': 'Перейти к узлу, который ждёт вас',
+        'view.loadOlder': 'Загрузить ранее',
+        'view.restoreHidden': 'Скрыто {count} · Восстановить',
+        'view.restoreHiddenTitle': 'Восстановить удалённые узлы и ветки',
+        'view.searchPlaceholder': 'Поиск узлов',
+        'view.searchLabel': 'Поиск узлов',
+        'view.zoomGroup': 'Масштаб холста',
+        'view.zoomOut': 'Уменьшить',
+        'view.zoomIn': 'Увеличить',
+        'view.zoomLevel': 'Текущий масштаб',
+        'view.layoutHorizontal': 'Слева направо',
+        'view.layoutTitle': 'Переключить раскладку слева направо и сверху вниз',
+        'view.fit': 'Вписать холст',
+        'view.fitTitle': 'Уменьшить, чтобы показать всё дерево',
+        'view.latest': 'К последнему',
+        'view.latestTitle': 'Развернуть путь и перейти к новейшему узлу',
+        'view.latestTitleEmpty': 'Узлов пока нет',
+        'view.empty.title': 'Это дерево пока пустое',
+        'view.empty.hint': 'Спросите что-нибудь в Chat, и здесь появится первый узел.',
+        'view.empty.report': 'Если вы уже спрашивали, а здесь по-прежнему пусто, сообщите: события {events} · сеанс {state}.',
+        'card.noQuestion': '(без вопроса)',
+        'card.questionReply': '(ответ на предыдущий вопрос)',
+        'card.latestBadge': 'Последний',
+        'card.latestTitle': 'Самый новый узел в этом дереве',
+        'card.status.thinking': 'Думает',
+        'card.status.streaming': 'Отвечает',
+        'card.status.error': 'Ошибка',
+        'card.status.stopped': 'Остановлено',
+        'card.status.done': 'Готово',
+        'card.status.awaiting': 'Нужен ответ',
+        'card.status.awaitingApproval': 'Нужно подтверждение',
+        'card.stop': 'Остановить',
+        'card.stopTitle': 'Остановить эту ветку',
+        'card.ask': 'Задать вопрос на этой ветке',
+        'card.more': 'Ещё действия',
+        'card.delete': 'Удалить этот узел',
+        'card.deleteTitle': 'Скрыть этот узел и все ветки под ним',
+        'card.deleteConfirm': 'Удалить этот узел и все ветки под ним? (обратимо)',
+        'card.readTitle': 'Нажмите, чтобы читать на весь экран',
+        'card.expandTitle': 'Развернуть этот ответ',
+        'card.collapseTitle': 'Свернуть этот ответ',
+        'card.expand': 'Развернуть ответ',
+        'card.collapse': 'Свернуть ответ',
+        'card.fullscreen': 'Во весь экран',
+        'card.fullscreenTitle': 'Прочитать полный ответ во весь экран',
+        'card.unfoldBranch': 'Развернуть эту ветку',
+        'card.foldBranch': 'Свернуть эту ветку',
+        'card.unfoldDescendants': 'Развернуть {count} потомков',
+        'card.foldDescendants': 'Свернуть {count} потомков',
+        'card.descendants': 'Потомков: {count}',
+        'card.truncated': '\n\n… (откройте на весь экран, чтобы прочитать полный ответ)',
+        'card.cost.elapsed': 'заняло {value}',
+        'card.cost.context': 'контекст {value}',
+        'card.cost.cached': 'кэш {value}',
+        'card.think': 'Рассуждения',
+        'card.thinkExpandTitle': 'Развернуть рассуждения',
+        'card.thinkCollapseTitle': 'Свернуть рассуждения',
+        'card.thinkMeta': 'Рассуждения: {count} симв.',
+        'card.thinkTruncated': '(сохранены только последние {count} симв. рассуждений)',
+        'live.calling': 'Вызов {tool}',
+        'live.outputting': 'Пишет…',
+        'live.thinking': 'Думает…',
+        'live.starting': 'Запуск…',
+        'live.awaiting': 'Ждёт вашего ответа…',
+        'live.awaitingApproval': 'Ждёт вашего подтверждения…',
+        'live.step': 'шаг {step}',
+        'composer.placeholder': 'Задайте уточнение на этой ветке… (Enter — отправить, Shift+Enter — новая строка)',
+        'composer.label': 'Текст уточнения',
+        'composer.from': 'Начиная с «{question}…»',
+        'composer.cancel': 'Отмена',
+        'composer.send': 'Отправить',
+        'reader.close': 'Закрыть (Esc)',
+        'reader.closeLabel': 'Закрыть режим чтения',
+        'reader.noAnswer': '(ответа пока нет)',
+        'reader.hint': 'Esc или клик по фону, чтобы закрыть',
+        'reader.branch': 'Ветка',
+        'reader.mainline': 'Основная линия',
+        'error.title': 'Древовидное представление упало',
+        'error.reload': 'Перезагрузить представление',
+        'error.hint': 'Данные холста не потеряны; не удалась только эта отрисовка.',
+        'error.sessionNotOpen': 'Сеанс ещё не открыт, поэтому его нельзя спроецировать.',
+        'error.noBinding': 'Сеанс не вернул привязку.',
+        'error.openFailed': 'Не удалось открыть сеанс: {reason}',
+        'error.forkFailed': 'Не удалось создать ответвление: {reason}',
+        'error.branchUnopenable': 'Не удалось открыть сеанс ветки: {reason}',
+        'error.branchNoBinding': 'Не удалось открыть сеанс ветки: {reason}',
+        'error.branchNoUsableBinding': 'Сеанс ветки не вернул пригодную привязку.',
+        'error.submitFailed': 'Не удалось отправить: {reason}',
+        'error.loadOlderFailed': 'Не удалось загрузить более раннюю историю: {reason}',
+        'view.layoutGroup': 'Направление макета',
+        'view.layoutVertical': 'Сверху вниз',
+      },
     };
 
     const localeListeners = new Set();
 
     /** Look a key up in the built-in table when the locale service is absent. */
     function fallbackTranslate(key, params) {
-      const lang = typeof document !== 'undefined' && document.documentElement.lang
-        ? String(document.documentElement.lang).slice(0, 2).toLowerCase()
+      const raw = typeof document !== 'undefined' && document.documentElement.lang
+        ? String(document.documentElement.lang)
         : 'zh';
-      const table = DICT[lang] || DICT.zh;
-      const template = table[key] ?? DICT.zh[key] ?? key;
+      // `pt-BR` and `zh-CN` are the same table as `pt` and `zh`; the region
+      // subtag only matters to the locale service, not to our flat keys.
+      const lang = raw.toLowerCase().split(/[-_]/)[0];
+      const table = DICT[lang] || DICT.en;
+      const template = table[key] ?? DICT.en[key] ?? DICT.zh[key] ?? key;
       if (!params) return template;
       return template.replace(/\{(\w+)\}/g, (match, name) => (name in params ? String(params[name]) : match));
     }
@@ -320,6 +939,291 @@ window.__ModuleLoader__.load({
     function seqOf(entry) {
       const event = entry && entry.event;
       return event && typeof event.seq === 'number' ? event.seq : 0;
+    }
+
+    // ---------------------------------------------------------------- reasoning
+    // The model writes its thinking as `reasoning` content blocks: live as a
+    // `reasoning-delta` chunk, and settled as a `{ type: 'reasoning', text }`
+    // block inside the durable `assistant/message`. Both reach a client plugin
+    // through the same event window, so one accumulator serves the running tail
+    // and the finished transcript.
+    //
+    // A provider that does not think emits no reasoning at all — the card then
+    // simply has nothing to show, which is why the section is hidden rather
+    // than rendered empty.
+
+    /** The reasoning blocks inside one assistant message, in order. */
+    function reasoningBlocksOfMessage(message) {
+      const content = message && message.content;
+      if (!Array.isArray(content)) return [];
+      const blocks = [];
+      for (const block of content) {
+        if (block && block.type === 'reasoning' && typeof block.text === 'string' && block.text.trim()) {
+          blocks.push(block.text);
+        }
+      }
+      return blocks;
+    }
+
+    /**
+     * The key of one reasoning block inside one step.
+     *
+     * The host frames both the live chunks and the settled message with the
+     * same `turn` and `step`, and a step can hold several reasoning blocks
+     * (one per content-block index). The index is part of the key so two
+     * blocks in the same step do not overwrite each other.
+     */
+    function reasoningKey(turn, step, index) {
+      const base = reasoningStepPrefix(turn, step);
+      return typeof index === 'number' ? base + index : base;
+    }
+
+    /**
+     * The prefix every reasoning block of one step shares.
+     *
+     * The trailing separator is what makes the prefix safe: without it, step
+     * `1` of turn `1` would also match step `11` of turn `1`.
+     */
+    function reasoningStepPrefix(turn, step) {
+      const base = typeof turn === 'number' && typeof step === 'number'
+        ? turn + ':' + step + '#'
+        : 'unknown#';
+      return base;
+    }
+
+    /**
+     * The cap on how much reasoning a card keeps.
+     *
+     * A long agent turn can think for hundreds of kilobytes. The card shows
+     * the newest thinking, so the cap keeps the *tail*: the oldest paragraphs
+     * are dropped, and the fact that something was dropped is recorded so the
+     * reader knows the text is not the whole story.
+     *
+     * The cap is enforced inside the accumulator rather than at render time,
+     * so a streaming turn never builds a string larger than this.
+     */
+    const REASONING_LIMIT = 12000;
+
+    /**
+     * A fresh reasoning accumulator: one segment per reasoning block.
+     *
+     * `received` records how many characters each block ever delivered. The
+     * amount dropped is *derived* from it (`received - kept`) rather than
+     * accumulated as a counter: a block is trimmed more than once in normal
+     * use — once while it streams, again when its settled block replaces the
+     * streamed draft — so a running counter would report the same characters
+     * as dropped twice, and would keep claiming a loss after a settled block
+     * replaced a long draft with a short one.
+     */
+    function reasoningState() {
+      return { segments: new Map(), received: new Map() };
+    }
+
+    /**
+     * Count the bytes of a streamed fragment as arrived.
+     *
+     * This must be an addition, not a maximum of the kept length: the trim
+     * cuts the fragment back off immediately, so `kept` plateaus at the cap
+     * and a "max kept" would report one chunk's worth of loss for a turn that
+     * actually dropped tens of kilobytes.
+     */
+    function addReceived(state, key, length) {
+      state.received.set(key, (state.received.get(key) || 0) + length);
+    }
+
+    /**
+     * The two reasoning fields a card needs: the kept text, and how much the
+     * cap dropped. Keeping them separate lets a collapsed row admit that the
+     * text is partial without gluing a notice onto the reasoning itself.
+     */
+    function reasoningFieldsOf(state) {
+      return {
+        reasoning: reasoningTextOf(state),
+        reasoningDropped: droppedReasoningOf(state),
+      };
+    }
+
+    /** Whether a chunk belongs to the model's reasoning. */
+    function isReasoningChunk(chunk) {
+      if (!chunk) return false;
+      if (chunk.type === 'reasoning-delta') return true;
+      if (chunk.type === 'block-end') return Boolean(chunk.block && chunk.block.type === 'reasoning');
+      if (chunk.type === 'block-start') return chunk.blockType === 'reasoning';
+      return false;
+    }
+
+    /**
+     * Fold one live chunk into a reasoning accumulator.
+     *
+     * `reasoning-delta` appends to the block's segment; `block-end` replaces it
+     * with the block the host settled.
+     */
+    function applyReasoningChunk(state, chunk, turn, step) {
+      if (!chunk) return state;
+      const index = typeof chunk.index === 'number' ? chunk.index : undefined;
+      const key = reasoningKey(turn, step, index);
+      if (chunk.type === 'reasoning-delta' && typeof chunk.text === 'string') {
+        const previous = state.segments.get(key);
+        state.segments.set(key, (previous || '') + chunk.text);
+        // Bytes arrived, however much the trim keeps of them.
+        addReceived(state, key, chunk.text.length);
+        trimReasoning(state);
+        return state;
+      }
+      if (chunk.type === 'block-end' && chunk.block && chunk.block.type === 'reasoning'
+        && typeof chunk.block.text === 'string' && chunk.block.text.trim()) {
+        // The settled block is the authoritative full text of this block, so
+        // it replaces both the streamed draft and its arrived-bytes tally.
+        // An empty block says nothing and must not wipe what arrived.
+        state.segments.set(key, chunk.block.text);
+        state.received.set(key, chunk.block.text.length);
+        trimReasoning(state);
+        return state;
+      }
+      if (chunk.type === 'block-start' && chunk.blockType === 'reasoning') {
+        if (!state.segments.has(key)) state.segments.set(key, '');
+      }
+      return state;
+    }
+
+    /**
+     * Merge one settled step's reasoning into the accumulator.
+     *
+     * The settled blocks are that step's complete thinking, so they replace
+     * what was streamed for the step instead of being appended to it.
+     * Transient chunks are retired when the step settles, so the durable
+     * message is the only reliable source once it has landed.
+     */
+    function mergeSettledReasoning(state, blocks, turn, step) {
+      if (!Array.isArray(blocks) || !blocks.length) return state;
+      // Replace the whole step: the settled blocks are the step's final
+      // thinking, and the streamed draft for them is gone by now. The
+      // `received` marks go with them, so a short settled block does not
+      // inherit the draft's dropped-chars claim.
+      const prefix = reasoningStepPrefix(turn, step);
+      for (const key of [...state.segments.keys()]) {
+        if (key.startsWith(prefix)) state.segments.delete(key);
+      }
+      for (const key of [...state.received.keys()]) {
+        if (key.startsWith(prefix)) state.received.delete(key);
+      }
+      blocks.forEach((text, index) => {
+        if (typeof text !== 'string' || !text.trim()) return;
+        const key = reasoningKey(turn, step, index);
+        state.segments.set(key, text);
+        // The settled block is the truth for this block, so it replaces the
+        // streamed tally rather than adding to it.
+        state.received.set(key, text.length);
+      });
+      trimReasoning(state);
+      return state;
+    }
+
+    /**
+     * Drop the reasoning of a retried step.
+     *
+     * A retry reuses the same turn and step, so the failed attempt's thinking
+     * would otherwise be concatenated with the successful one. The attempt
+     * that is about to run starts from a clean slate, which is what the
+     * official Trajectory view does too.
+     */
+    function resetStepReasoning(state, turn, step) {
+      if (!state) return state;
+      const prefix = reasoningStepPrefix(turn, step);
+      for (const key of [...state.segments.keys()]) {
+        if (key.startsWith(prefix)) state.segments.delete(key);
+      }
+      for (const key of [...state.received.keys()]) {
+        if (key.startsWith(prefix)) state.received.delete(key);
+      }
+      return state;
+    }
+
+    /**
+     * Drop the oldest reasoning until the accumulator fits the cap.
+     *
+     * The oldest block goes first: the reader cares about what the agent is
+     * doing now, and the newest blocks are the ones still in play. Trimming
+     * only shortens the kept text — how much was dropped is derived later
+     * from `received`, so trimming twice never double-counts.
+     */
+    function trimReasoning(state) {
+      let total = 0;
+      for (const text of state.segments.values()) total += text.length;
+      if (total <= REASONING_LIMIT) return;
+      for (const [key, text] of state.segments) {
+        if (total <= REASONING_LIMIT) break;
+        const excess = total - REASONING_LIMIT;
+        const cut = Math.min(text.length, excess);
+        if (cut <= 0) continue;
+        state.segments.set(key, text.slice(cut));
+        total -= cut;
+      }
+    }
+
+    /** How many characters the cap has dropped, derived from what arrived. */
+    function droppedReasoningOf(state) {
+      if (!state || !state.segments || !state.received) return 0;
+      let dropped = 0;
+      for (const [key, text] of state.segments) {
+        const received = state.received.get(key) || text.length;
+        if (received > text.length) dropped += received - text.length;
+      }
+      return dropped;
+    }
+
+    /**
+     * The accumulated reasoning, one block's thinking per paragraph group.
+     *
+     * The dropped-chars count is *not* baked into this string: the card needs
+     * it as metadata so a collapsed row can still say the text is partial,
+     * and the reader wants the reasoning itself, not a notice glued to it.
+     */
+    function reasoningTextOf(state) {
+      if (!state || !state.segments) return '';
+      const parts = [];
+      for (const text of state.segments.values()) {
+        if (text && text.trim()) parts.push(text);
+      }
+      return parts.join('\n\n');
+    }
+
+    /**
+     * The one-line summary of a reasoning text: the first line of its last
+     * paragraph.
+     *
+     * A collapsed section shows this so the reader learns what the agent was
+     * up to without opening anything. It is deliberately *not* a copy of the
+     * official Chat row, which picks the last completed paragraph's first line
+     * only while streaming and the first line of the whole text once settled.
+     */
+    function reasoningPreview(text) {
+      if (!text) return '';
+      const source = String(text);
+      // The last paragraph is the freshest thought; take its first line.
+      const paragraphs = source.split(/\r?\n[\t ]*\r?\n/);
+      const last = paragraphs[paragraphs.length - 1] || '';
+      const firstLine = last.split(/\r?\n/).find((line) => line.trim());
+      const chosen = firstLine ? firstLine.trim() : '';
+      return chosen.replace(/\*\*/g, '').slice(0, 200);
+    }
+
+    /**
+     * The newest thing the model wrote, in one line.
+     *
+     * While a branch runs this is the only honest answer to "what is it
+     * doing right now": the most recent line of its thinking, not a summary
+     * of a paragraph it started a while ago.
+     */
+    function reasoningTail(text) {
+      if (!text) return '';
+      const lines = String(text).split(/\r?\n/);
+      for (let index = lines.length - 1; index >= 0; index -= 1) {
+        const trimmed = lines[index].trim();
+        if (!trimmed) continue;
+        return trimmed.replace(/\*\*/g, '').slice(0, 200);
+      }
+      return '';
     }
 
     function maxDurableSeq(entries) {
@@ -437,6 +1341,9 @@ window.__ModuleLoader__.load({
     function projectTurns(entries, sessionRunning) {
       const turns = [];
       let current = null;
+      // Reasoning is accumulated across the whole turn: a turn is one user
+      // question and the model may think in several steps before answering.
+      let reasoning = reasoningState();
       for (let index = 0; index < entries.length; index += 1) {
         const entry = entries[index];
         if (!entry || !entry.event) continue;
@@ -450,6 +1357,13 @@ window.__ModuleLoader__.load({
             if (chunk && chunk.type === 'text-delta' && typeof chunk.text === 'string') {
               current.streamText = (current.streamText || '') + chunk.text;
               current.answer = current.streamText;
+            } else if (chunk && isReasoningChunk(chunk)) {
+              // Only reasoning chunks touch the reasoning text: a text or
+              // tool-call token must not rebuild a multi-kilobyte string.
+              // The host frames a chunk with the same turn/step as the
+              // message that will settle it.
+              applyReasoningChunk(reasoning, chunk, data.turn, data.step);
+              Object.assign(current, reasoningFieldsOf(reasoning));
             }
           }
           continue;
@@ -461,10 +1375,17 @@ window.__ModuleLoader__.load({
             real: false, kind: '', costFrom: index, streamText: '',
             step: 0, tool: '', startedAt: typeof event.time === 'number' ? event.time : 0,
             awaiting: '', pendingQuestions: new Set(), pendingApprovals: new Set(),
+            reasoning: '',
           };
+          reasoning = reasoningState();
           turns.push(current);
         } else if (event.type === 'step/start') {
           if (current) current.step = typeof data.step === 'number' ? data.step : current.step + 1;
+        } else if (event.type === 'llm/retry' || event.type === 'llm/retry-started') {
+          // A retry reuses the same turn and step, so the failed attempt's
+          // thinking has to go before the new attempt's arrives.
+          resetStepReasoning(reasoning, data.turn, data.step);
+          if (current) Object.assign(current, reasoningFieldsOf(reasoning));
         } else if (event.type === 'tool/call') {
           if (current) {
             if (data.name) current.tool = String(data.name);
@@ -509,6 +1430,12 @@ window.__ModuleLoader__.load({
             if (text.trim()) {
               target.answer = text;
               target.streamText = text;
+            }
+            // The settled message carries the step's reasoning blocks.
+            const settled = reasoningBlocksOfMessage(data.message);
+            if (settled.length) {
+              mergeSettledReasoning(reasoning, settled, data.turn, data.step);
+              Object.assign(target, reasoningFieldsOf(reasoning));
             }
             target.answerSeq = typeof event.seq === 'number' ? event.seq : target.answerSeq;
           }
@@ -561,14 +1488,18 @@ window.__ModuleLoader__.load({
       let startedAt = 0;
       const pendingQuestions = new Set();
       const pendingApprovals = new Set();
+      // A branch reasons over its own steps, exactly like the mainline.
+      const reasoning = reasoningState();
       const cost = turnCost(entries, baseline);
       for (const entry of entries) {
         const event = entry && entry.event;
         if (!event) continue;
         if (entry.type === 'transient') {
           if (event.type === 'assistant/live-chunk' && seqOf(entry) > baseline) {
-            const chunk = event.data && event.data.chunk;
+            const data = event.data || {};
+            const chunk = data.chunk;
             if (chunk && chunk.type === 'text-delta' && typeof chunk.text === 'string') text += chunk.text;
+            else if (isReasoningChunk(chunk)) applyReasoningChunk(reasoning, chunk, data.turn, data.step);
           }
           continue;
         }
@@ -584,6 +1515,11 @@ window.__ModuleLoader__.load({
         } else if (event.type === 'step/start') {
           const data = event.data || {};
           step = typeof data.step === 'number' ? data.step : step + 1;
+        } else if (event.type === 'llm/retry' || event.type === 'llm/retry-started') {
+          // A retry reuses the same turn and step, so the failed attempt's
+          // thinking has to go before the new attempt's arrives.
+          const data = event.data || {};
+          resetStepReasoning(reasoning, data.turn, data.step);
         } else if (event.type === 'tool/call') {
           const data = event.data || {};
           if (data.name) tool = String(data.name);
@@ -608,6 +1544,8 @@ window.__ModuleLoader__.load({
               answer = finalText;
               text = finalText;
             }
+            const settled = reasoningBlocksOfMessage(data.message);
+            if (settled.length) mergeSettledReasoning(reasoning, settled, data.turn, data.step);
           }
           answerSeq = seq;
         } else if (event.type === 'turn/end') {
@@ -618,7 +1556,10 @@ window.__ModuleLoader__.load({
         }
       }
       const awaiting = ended ? '' : (pendingQuestions.size ? 'question' : pendingApprovals.size ? 'approval' : '');
-      return { text, answer, answerSeq, ended, cost, step, tool, startedAt, awaiting };
+      return {
+        text, answer, answerSeq, ended, cost, step, tool, startedAt, awaiting,
+        ...reasoningFieldsOf(reasoning),
+      };
     }
 
     // ----------------------------------------------------------------- layout
@@ -1023,6 +1964,15 @@ window.__ModuleLoader__.load({
       function writeNow() {
         try {
           const payload = {
+            // Reasoning is deliberately NOT persisted here.
+            //
+            // Two reasons. It is re-derived from the session log on every
+            // projection, so a copy here only duplicates bytes. And it is the
+            // one field that can reach tens of kilobytes per node, which is
+            // exactly what would push this snapshot into the localStorage
+            // quota — and this snapshot also holds the parent links, which
+            // are the only thing here that *cannot* be rebuilt. Losing those
+            // flattens the tree, so the large derivable field gives way.
             nodes: state.nodes.map((node) => ({
               id: node.id,
               parentId: node.parentId,
@@ -1113,6 +2063,8 @@ window.__ModuleLoader__.load({
               sessionId: rootId,
               question: turn.question,
               answer: turn.answer,
+              reasoning: turn.reasoning || '',
+              reasoningDropped: turn.reasoningDropped || 0,
               status: turn.status,
               answerSeq: turn.answerSeq,
               kind: 'root',
@@ -1130,6 +2082,8 @@ window.__ModuleLoader__.load({
               existing.parentId !== next.parentId ||
               existing.question !== next.question ||
               existing.answer !== next.answer ||
+              (existing.reasoning || '') !== next.reasoning ||
+              (existing.reasoningDropped || 0) !== next.reasoningDropped ||
               existing.answerSeq !== next.answerSeq ||
               existing.status !== next.status ||
               (existing.awaiting || '') !== next.awaiting ||
@@ -1519,6 +2473,10 @@ window.__ModuleLoader__.load({
           if (read2.answerSeq) changes.answerSeq = read2.answerSeq;
           if (read2.step !== (current.step || 0)) changes.step = read2.step;
           if (read2.tool !== (current.tool || '')) changes.tool = read2.tool;
+          if ((read2.reasoning || '') !== (current.reasoning || '')) changes.reasoning = read2.reasoning || '';
+          if ((read2.reasoningDropped || 0) !== (current.reasoningDropped || 0)) {
+            changes.reasoningDropped = read2.reasoningDropped || 0;
+          }
           const awaiting = read2.awaiting || '';
           if (awaiting !== (current.awaiting || '')) changes.awaiting = awaiting;
           if (read2.startedAt && read2.startedAt !== current.startedAt) changes.startedAt = read2.startedAt;
@@ -1649,6 +2607,15 @@ window.__ModuleLoader__.load({
             const awaiting = read.awaiting || '';
             const node = store.getNode(nodeId);
             if (node && awaiting !== (node.awaiting || '')) store.patch(nodeId, { awaiting });
+            // The branch's reasoning arrives with the same events as its answer,
+            // so it is patched in the same breath.
+            if (node && ((read.reasoning || '') !== (node.reasoning || '')
+              || (read.reasoningDropped || 0) !== (node.reasoningDropped || 0))) {
+              store.patch(nodeId, {
+                reasoning: read.reasoning || '',
+                reasoningDropped: read.reasoningDropped || 0,
+              });
+            }
             if (read.ended) {
               unsubscribe();
               try {
@@ -1688,67 +2655,302 @@ window.__ModuleLoader__.load({
     // -------------------------------------------------------------- markdown
     const MD = {
       body: { fontSize: 12, lineHeight: 1.72, color: C.ink2, wordBreak: 'break-word' },
-      h1: { fontSize: '1.14em', fontWeight: 700, color: C.ink, margin: '0.62em 0 0.28em', lineHeight: 1.4 },
-      h2: { fontSize: '1.08em', fontWeight: 700, color: C.ink, margin: '0.58em 0 0.24em', lineHeight: 1.4 },
-      h3: { fontSize: '1.02em', fontWeight: 600, color: C.ink, margin: '0.52em 0 0.22em', lineHeight: 1.4 },
+      h1: { fontSize: '1.3em', fontWeight: 700, color: C.ink, margin: '0.7em 0 0.3em', lineHeight: 1.35 },
+      h2: { fontSize: '1.16em', fontWeight: 700, color: C.ink, margin: '0.65em 0 0.28em', lineHeight: 1.38 },
+      h3: { fontSize: '1.06em', fontWeight: 600, color: C.ink, margin: '0.58em 0 0.24em', lineHeight: 1.4 },
+      h4: { fontSize: '1.01em', fontWeight: 600, color: C.ink, margin: '0.52em 0 0.22em', lineHeight: 1.42 },
+      h5: { fontSize: '0.98em', fontWeight: 600, color: C.ink3, margin: '0.48em 0 0.2em', lineHeight: 1.42 },
+      h6: { fontSize: '0.96em', fontWeight: 600, color: C.ink3, margin: '0.44em 0 0.18em', lineHeight: 1.42 },
       p: { margin: '0 0 0.5em' },
-      ul: { margin: '0 0 0.5em', paddingLeft: '1.5em' },
+      ul: { margin: '0 0 0.5em', paddingLeft: '1.4em' },
       ol: { margin: '0 0 0.5em', paddingLeft: '1.5em' },
       li: { margin: '0 0 0.16em' },
+      checkbox: { marginRight: '0.4em', verticalAlign: 'middle' },
       quote: {
         margin: '0 0 0.5em', paddingLeft: '0.75em', borderLeft: '2px solid ' + C.line,
         color: C.ink3,
       },
       hr: { border: 'none', borderTop: '1px solid ' + C.line, margin: '0.75em 0' },
       codeBlock: {
-        margin: '0 0 0.6em', padding: '0.55em 0.75em', borderRadius: 6, background: C.code,
+        margin: 0, padding: '0.55em 0.75em', borderRadius: 6, background: C.code,
         border: '1px solid ' + C.line, fontFamily: MONO,
         fontSize: '0.9em', lineHeight: 1.6, whiteSpace: 'pre-wrap', overflowX: 'auto', color: C.ink,
+      },
+      codeLang: {
+        margin: '0 0 0.3em', fontSize: '0.78em', letterSpacing: '0.04em',
+        color: C.ink4, fontFamily: MONO, textTransform: 'uppercase',
       },
       inlineCode: {
         fontFamily: MONO, fontSize: '0.92em',
         background: C.codeInline, borderRadius: 3, padding: '0 0.28em', color: C.ink,
       },
       link: { color: C.accent, textDecoration: 'none' },
+      image: {
+        display: 'block', maxWidth: '100%', height: 'auto',
+        margin: '0.4em 0', borderRadius: 6,
+      },
       strong: { fontWeight: 700, color: C.ink },
     };
 
+    /*
+     * Why this is a renderer and not a Markdown library.
+     *
+     * The view has no dependencies and ships as one file the host loads, so it
+     * cannot pull in a parser. What it can do is cover the subset an answer
+     * actually uses and be explicit about the rest: reference links, footnotes
+     * and raw HTML blocks are passed through as text rather than half-rendered.
+     *
+     * Raw HTML is never injected — every string here becomes a React text node,
+     * so a model that writes a script tag gets the characters, not an element.
+     * That is also why this is safe to run on model output.
+     */
+
+    /** Only these schemes may become a live link. */
+    function safeHref(raw) {
+      const url = String(raw || '').trim();
+      if (!url) return null;
+      if (/^(https?:|mailto:)/i.test(url)) return url;
+      // Relative links and fragment anchors are fine. Anything else — notably
+      // javascript: and data: — would turn model output into script execution.
+      if (/^(\/|\.{1,2}\/|#)/.test(url)) return url;
+      return null;
+    }
+
+    /** Strip the angle brackets or quotes a URL may be wrapped in. */
+    function cleanUrl(raw) {
+      return String(raw || '').trim().replace(/^<|>$/g, '').replace(/^["']|["']$/g, '');
+    }
+
+    /** Index of the closing `marker` at or after `from`, or -1 when unclosed. */
+    function closeOf(text, from, marker) {
+      let found = text.indexOf(marker, from);
+      while (found >= 0) {
+        if (text[found - 1] !== '\\') return found;
+        found = text.indexOf(marker, found + marker.length);
+      }
+      return -1;
+    }
+
+    /**
+     * Inline Markdown: escapes, code spans, emphasis, strikethrough, images,
+     * links, autolinks and hard breaks.
+     */
     function inlineNodes(text, keyBase) {
       const out = [];
-      const pattern = /(\*\*[^*\n]+\*\*|__[^_\n]+__|`[^`\n]+`|\[[^\]\n]+\]\([^)\s]+\)|\*[^*\n]+\*)/g;
-      let last = 0;
-      let match;
+      const source = String(text === undefined || text === null ? '' : text);
+      let buffer = '';
       let index = 0;
-      while ((match = pattern.exec(text)) !== null) {
-        if (match.index > last) out.push(text.slice(last, match.index));
-        const token = match[0];
-        const key = keyBase + '-' + index;
-        index += 1;
-        if (token.startsWith('**') || token.startsWith('__')) {
-          out.push(h('strong', { key, style: MD.strong }, token.slice(2, -2)));
-        } else if (token.startsWith('`')) {
-          out.push(h('code', { key, style: MD.inlineCode }, token.slice(1, -1)));
-        } else if (token.startsWith('[')) {
-          const link = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(token);
-          out.push(h('a', {
-            key,
-            href: link ? link[2] : '#',
-            target: '_blank',
-            rel: 'noreferrer noopener',
-            style: MD.link,
-          }, link ? link[1] : token));
-        } else {
-          out.push(h('em', { key }, token.slice(1, -1)));
+      const nextKey = () => keyBase + '-' + (index++);
+      const flush = () => { if (buffer) { out.push(buffer); buffer = ''; } };
+      let i = 0;
+      while (i < source.length) {
+        const ch = source[i];
+        // Backslash escape: the next character is literal.
+        if (ch === '\\' && i + 1 < source.length && /[\\`*_{}[\]()#+\-.!>~|]/.test(source[i + 1])) {
+          buffer += source[i + 1];
+          i += 2;
+          continue;
         }
-        last = match.index + token.length;
+        // A backslash at the end of a line is a hard break.
+        if (ch === '\\' && source[i + 1] === '\n') {
+          flush();
+          out.push(h('br', { key: nextKey() }));
+          i += 2;
+          continue;
+        }
+        if (ch === '\n') {
+          // Two trailing spaces are a hard break; any other newline is a space,
+          // since a card is a narrow column where a stray newline reads as a
+          // broken word.
+          if (/  $/.test(buffer)) {
+            buffer = buffer.replace(/ +$/, '');
+            flush();
+            out.push(h('br', { key: nextKey() }));
+          } else {
+            buffer += ' ';
+          }
+          i += 1;
+          continue;
+        }
+        // Code span: a run of N backticks closed by the same run.
+        if (ch === '`') {
+          const run = /^`+/.exec(source.slice(i))[0];
+          const close = source.indexOf(run, i + run.length);
+          if (close > i) {
+            flush();
+            const inner = source.slice(i + run.length, close).replace(/^ | $/g, '');
+            out.push(h('code', { key: nextKey(), style: MD.inlineCode }, inner));
+            i = close + run.length;
+            continue;
+          }
+        }
+        // Image: ![alt](src "title")
+        if (ch === '!' && source[i + 1] === '[') {
+          const match = /^!\[([^\]]*)\]\(\s*((?:[^()\s]|\([^()]*\))+)(?:\s+"([^"]*)")?\s*\)/.exec(source.slice(i));
+          if (match) {
+            flush();
+            const href = safeHref(cleanUrl(match[2]));
+            if (href) {
+              out.push(h('img', {
+                key: nextKey(), src: href, alt: match[1] || '',
+                title: match[3] || undefined, loading: 'lazy', style: MD.image,
+              }));
+            } else {
+              out.push(match[1] || match[2]);
+            }
+            i += match[0].length;
+            continue;
+          }
+        }
+        // Link: [text](href "title")
+        if (ch === '[') {
+          const match = /^\[([^\]]*)\]\(\s*((?:[^()\s]|\([^()]*\))+)(?:\s+"([^"]*)")?\s*\)/.exec(source.slice(i));
+          if (match) {
+            flush();
+            const href = safeHref(cleanUrl(match[2]));
+            const label = match[1] || match[2];
+            if (href) {
+              out.push(h('a', {
+                key: nextKey(), href, target: '_blank', rel: 'noreferrer noopener',
+                title: match[3] || undefined, style: MD.link,
+              }, inlineNodes(label, nextKey())));
+            } else {
+              out.push(label);
+            }
+            i += match[0].length;
+            continue;
+          }
+        }
+        // Autolink: <https://example.com>
+        if (ch === '<') {
+          const match = /^<((?:https?:|mailto:)[^>\s]+)>/.exec(source.slice(i));
+          if (match) {
+            flush();
+            out.push(h('a', {
+              key: nextKey(), href: match[1], target: '_blank',
+              rel: 'noreferrer noopener', style: MD.link,
+            }, match[1].replace(/^mailto:/, '')));
+            i += match[0].length;
+            continue;
+          }
+        }
+        // A bare URL outside a link is still a link.
+        if ((ch === 'h' || ch === 'H') && /^https?:\/\//i.test(source.slice(i, i + 8))) {
+          const match = /^https?:\/\/[^\s<>()]+/i.exec(source.slice(i));
+          if (match) {
+            const url = match[0].replace(/[.,;:!?'"]+$/, '');
+            flush();
+            out.push(h('a', {
+              key: nextKey(), href: url, target: '_blank',
+              rel: 'noreferrer noopener', style: MD.link,
+            }, url));
+            i += url.length;
+            continue;
+          }
+        }
+        // Strikethrough, strong and emphasis. The inner text is parsed again so
+        // that strong-wrapping-code and nested emphasis come out right.
+        if (ch === '~' && source[i + 1] === '~') {
+          const close = closeOf(source, i + 2, '~~');
+          if (close > i) {
+            flush();
+            out.push(h('del', { key: nextKey() }, inlineNodes(source.slice(i + 2, close), nextKey())));
+            i = close + 2;
+            continue;
+          }
+        }
+        if ((ch === '*' && source[i + 1] === '*') || (ch === '_' && source[i + 1] === '_')) {
+          const marker = ch + ch;
+          const close = closeOf(source, i + 2, marker);
+          if (close > i) {
+            flush();
+            out.push(h('strong', { key: nextKey(), style: MD.strong },
+              inlineNodes(source.slice(i + 2, close), nextKey())));
+            i = close + 2;
+            continue;
+          }
+        }
+        if (ch === '*' || ch === '_') {
+          const close = closeOf(source, i + 1, ch);
+          if (close > i) {
+            flush();
+            out.push(h('em', { key: nextKey() }, inlineNodes(source.slice(i + 1, close), nextKey())));
+            i = close + 1;
+            continue;
+          }
+        }
+        buffer += ch;
+        i += 1;
       }
-      if (last < text.length) out.push(text.slice(last));
+      flush();
       return out;
     }
 
-    /** Small block-level Markdown renderer: headings, lists, quotes, fences, rules, paragraphs. */
+    /** Leading indentation of a line, with tabs counted as four spaces. */
+    function indentOf(line) {
+      const lead = /^[ \t]*/.exec(line)[0];
+      return lead.replace(/\t/g, '    ').length;
+    }
+
+    /**
+     * Read one list block, including nesting.
+     *
+     * The walk is indentation-based: an item at the list's own indent starts a
+     * new entry, and anything deeper belongs to the entry above and is rendered
+     * as nested blocks — which is what makes a sub-bullet read as a child
+     * instead of a second flat item, the single most common shape in an answer.
+     */
+    function parseListBlock(lines, start) {
+      const ordered = /^\s*\d+[.)]\s+/.test(lines[start]);
+      const baseIndent = indentOf(lines[start]);
+      const itemRe = ordered ? /^(\s*)(\d+)[.)]\s+(.*)$/ : /^(\s*)[-*+]\s+(.*)$/;
+      const items = [];
+      let startNumber = 1;
+      let i = start;
+      while (i < lines.length) {
+        const line = lines[i];
+        if (/^\s*$/.test(line)) {
+          // A blank line only ends the list when the next non-blank line is not
+          // another item of this list.
+          let j = i + 1;
+          while (j < lines.length && /^\s*$/.test(lines[j])) j += 1;
+          if (j < lines.length && indentOf(lines[j]) === baseIndent && itemRe.test(lines[j])) {
+            i = j;
+            continue;
+          }
+          break;
+        }
+        const match = itemRe.exec(line);
+        const indent = indentOf(line);
+        if (match && indent === baseIndent) {
+          if (ordered && items.length === 0) startNumber = parseInt(match[2], 10) || 1;
+          items.push({ text: ordered ? match[3] : match[2], rest: [] });
+          i += 1;
+          continue;
+        }
+        if (!items.length) break;
+        if (indent > baseIndent) {
+          items[items.length - 1].rest.push(line.slice(Math.min(indent, baseIndent + 2)));
+          i += 1;
+          continue;
+        }
+        break;
+      }
+      return { items, ordered, startNumber, next: i };
+    }
+
+    /** A fenced code block, with its info string kept as a visible label. */
+    function renderCodeBlock(language, body, key) {
+      const lang = String(language || '').trim().split(/\s+/)[0];
+      const label = lang ? h('div', { style: MD.codeLang }, lang) : null;
+      return h('div', { key, style: { margin: '0 0 0.6em' } },
+        label,
+        h('pre', { style: MD.codeBlock }, body.join('\n')));
+    }
+
+    /** Small block-level Markdown renderer. */
     function renderMarkdown(text) {
-      const source = String(text || '').replace(/\r\n/g, '\n');
+      const source = String(text || '').replace(/\r\n?/g, '\n');
       if (!source.trim()) return null;
       const lines = source.split('\n');
       const blocks = [];
@@ -1757,80 +2959,199 @@ window.__ModuleLoader__.load({
 
       while (i < lines.length) {
         const line = lines[i];
-        const fence = /^\s*```(.*)$/.exec(line);
+        if (/^\s*$/.test(line)) { i += 1; continue; }
+
+        // Fenced code: three or more backticks or tildes, closed by at least as
+        // many of the same character.
+        const fence = /^\s*(`{3,}|~{3,})(.*)$/.exec(line);
         if (fence) {
+          const marker = fence[1];
+          const closer = new RegExp('^\\s*' + (marker[0] === '`' ? '`' : '~') + '{' + marker.length + ',}\\s*$');
           const body = [];
           i += 1;
-          while (i < lines.length && !/^\s*```/.test(lines[i])) {
+          while (i < lines.length && !closer.test(lines[i])) {
             body.push(lines[i]);
             i += 1;
           }
           i += 1;
-          blocks.push(h('pre', { key: 'b' + blockKey, style: MD.codeBlock }, body.join('\n')));
+          blocks.push(renderCodeBlock(fence[2], body, 'b' + blockKey));
           blockKey += 1;
           continue;
         }
-        if (/^\s*$/.test(line)) { i += 1; continue; }
-        if (/^#{1,6}\s+/.test(line)) {
-          const level = line.match(/^#+/)[0].length;
-          const content = line.replace(/^#+\s+/, '');
-          const style = level === 1 ? MD.h1 : level === 2 ? MD.h2 : MD.h3;
-          blocks.push(h('div', { key: 'b' + blockKey, style }, inlineNodes(content, 'h' + blockKey)));
+
+        // Indented code block: four spaces. A list continuation never reaches
+        // here, because the list branch above consumes it.
+        if (/^ {4}\S/.test(line)) {
+          const body = [];
+          while (i < lines.length && (/^ {4}/.test(lines[i]) || /^\s*$/.test(lines[i]))) {
+            body.push(lines[i].replace(/^ {4}/, ''));
+            i += 1;
+          }
+          while (body.length && /^\s*$/.test(body[body.length - 1])) body.pop();
+          blocks.push(renderCodeBlock('', body, 'b' + blockKey));
+          blockKey += 1;
+          continue;
+        }
+
+        // ATX heading -> a real heading element, so the reader has a document
+        // structure and a screen reader announces it as one.
+        const atx = /^(#{1,6})\s+(.*?)\s*#*\s*$/.exec(line);
+        if (atx) {
+          const level = atx[1].length;
+          blocks.push(h('h' + level, { key: 'b' + blockKey, style: MD['h' + level] },
+            inlineNodes(atx[2], 'h' + blockKey)));
           blockKey += 1;
           i += 1;
           continue;
         }
-        if (/^\s*([-*_])\s*\1\s*\1[\s\-*_]*$/.test(line) || /^\s*---+\s*$/.test(line)) {
+
+        // Setext heading: a text line underlined by === or ---.
+        if (i + 1 < lines.length && /^\s*(=+|-{2,})\s*$/.test(lines[i + 1])
+          && !/^\s*([-*+]|\d+[.)])\s+/.test(line) && !/^\s*\|/.test(line)) {
+          const level = /^\s*=/.test(lines[i + 1]) ? 1 : 2;
+          blocks.push(h('h' + level, { key: 'b' + blockKey, style: MD['h' + level] },
+            inlineNodes(line.trim(), 'h' + blockKey)));
+          blockKey += 1;
+          i += 2;
+          continue;
+        }
+
+        if (/^\s*([-*_])\s*\1\s*\1[\s\-*_]*$/.test(line)) {
           blocks.push(h('hr', { key: 'b' + blockKey, style: MD.hr }));
           blockKey += 1;
           i += 1;
           continue;
         }
-        if (/^\s*[-*+]\s+/.test(line)) {
-          const items = [];
-          while (i < lines.length && /^\s*[-*+]\s+/.test(lines[i])) {
-            items.push(lines[i].replace(/^\s*[-*+]\s+/, ''));
-            i += 1;
-          }
-          blocks.push(h('ul', { key: 'b' + blockKey, style: MD.ul },
-            items.map((item, n) => h('li', { key: 'l' + n, style: MD.li }, inlineNodes(item, 'b' + blockKey + '-' + n)))));
+
+        if (/^\s*[-*+]\s+/.test(line) || /^\s*\d+[.)]\s+/.test(line)) {
+          const parsed = parseListBlock(lines, i);
+          i = parsed.next;
+          const tag = parsed.ordered ? 'ol' : 'ul';
+          blocks.push(h(tag, {
+            key: 'b' + blockKey,
+            style: parsed.ordered ? MD.ol : MD.ul,
+            start: parsed.ordered && parsed.startNumber !== 1 ? parsed.startNumber : undefined,
+          }, parsed.items.map((item, n) => {
+            const task = /^\[([ xX])\]\s+/.exec(item.text);
+            const content = task ? item.text.slice(task[0].length) : item.text;
+            const children = [];
+            if (task) {
+              children.push(h('input', {
+                key: 't' + n, type: 'checkbox', checked: task[1] !== ' ',
+                disabled: true, readOnly: true, style: MD.checkbox,
+              }));
+            }
+            children.push(...inlineNodes(content, 'b' + blockKey + '-' + n));
+            if (item.rest.length) children.push(...(renderMarkdown(item.rest.join('\n')) || []));
+            return h('li', { key: 'l' + n, style: MD.li }, children);
+          })));
           blockKey += 1;
           continue;
         }
-        if (/^\s*\d+[.)]\s+/.test(line)) {
-          const items = [];
-          while (i < lines.length && /^\s*\d+[.)]\s+/.test(lines[i])) {
-            items.push(lines[i].replace(/^\s*\d+[.)]\s+/, ''));
-            i += 1;
-          }
-          blocks.push(h('ol', { key: 'b' + blockKey, style: MD.ol },
-            items.map((item, n) => h('li', { key: 'l' + n, style: MD.li }, inlineNodes(item, 'b' + blockKey + '-' + n)))));
-          blockKey += 1;
-          continue;
-        }
-        if (/^\s*>\s?/.test(line)) {
+
+        // Block quote: recurse, so a list or a fence inside a quote renders.
+        if (/^\s*>/.test(line)) {
           const quoted = [];
-          while (i < lines.length && /^\s*>\s?/.test(lines[i])) {
+          while (i < lines.length && (/^\s*>/.test(lines[i]) || /^\s*$/.test(lines[i]))) {
+            if (/^\s*$/.test(lines[i])) {
+              const next = lines[i + 1];
+              if (next === undefined || !/^\s*>/.test(next)) break;
+              quoted.push('');
+              i += 1;
+              continue;
+            }
             quoted.push(lines[i].replace(/^\s*>\s?/, ''));
             i += 1;
           }
-          blocks.push(h('div', { key: 'b' + blockKey, style: MD.quote },
-            inlineNodes(quoted.join(' '), 'q' + blockKey)));
+          blocks.push(h('blockquote', { key: 'b' + blockKey, style: MD.quote },
+            renderMarkdown(quoted.join('\n')) || null));
           blockKey += 1;
           continue;
         }
+
+        // A GFM table: a pipe row whose next line is the delimiter row. The
+        // delimiter is what separates a table from prose containing pipes.
+        if (/\|/.test(line) && i + 1 < lines.length && isTableDelimiter(lines[i + 1])) {
+          const aligns = splitTableRow(lines[i + 1]).map((cell) => {
+            const left = cell.startsWith(':');
+            const right = cell.endsWith(':');
+            return left && right ? 'center' : right ? 'right' : 'left';
+          });
+          const header = splitTableRow(line);
+          i += 2;
+          const rows = [];
+          while (i < lines.length && /\|/.test(lines[i]) && !/^\s*$/.test(lines[i])) {
+            rows.push(splitTableRow(lines[i]));
+            i += 1;
+          }
+          const cellStyle = (index) => ({ textAlign: aligns[index] || 'left' });
+          blocks.push(h('div', { key: 'b' + blockKey, className: 'dsh-tree-table-wrap' },
+            h('table', { className: 'dsh-tree-table' },
+              h('thead', null,
+                h('tr', null, header.map((cell, index) => h('th', {
+                  key: 'h' + index,
+                  style: cellStyle(index),
+                }, inlineNodes(cell, 'th' + blockKey + '-' + index))))),
+              h('tbody', null, rows.map((row, rowIndex) => h('tr', { key: 'r' + rowIndex },
+                row.map((cell, index) => h('td', {
+                  key: 'c' + index,
+                  style: cellStyle(index),
+                }, inlineNodes(cell, 'td' + blockKey + '-' + rowIndex + '-' + index)))))))));
+          blockKey += 1;
+          continue;
+        }
+
+        // Paragraph: runs to the next block start.
         const paragraph = [];
         while (i < lines.length && !/^\s*$/.test(lines[i])
-          && !/^\s*```/.test(lines[i]) && !/^#{1,6}\s+/.test(lines[i])
-          && !/^\s*([-*+]|\d+[.)])\s+/.test(lines[i]) && !/^\s*>\s?/.test(lines[i])) {
+          && !/^\s*(`{3,}|~{3,})/.test(lines[i]) && !/^#{1,6}\s+/.test(lines[i])
+          && !/^\s*[-*+]\s+/.test(lines[i]) && !/^\s*\d+[.)]\s+/.test(lines[i])
+          && !/^\s*>/.test(lines[i]) && !/^ {4}\S/.test(lines[i])
+          && !(/^\s*\|/.test(lines[i]) && i + 1 < lines.length && isTableDelimiter(lines[i + 1]))
+          && !(i + 1 < lines.length && /^\s*(=+|-{2,})\s*$/.test(lines[i + 1]))) {
           paragraph.push(lines[i]);
           i += 1;
         }
-        blocks.push(h('div', { key: 'b' + blockKey, style: MD.p },
+        if (!paragraph.length) { i += 1; continue; }
+        blocks.push(h('p', { key: 'b' + blockKey, style: MD.p },
           inlineNodes(paragraph.join('\n'), 'p' + blockKey)));
         blockKey += 1;
       }
       return blocks;
+    }
+
+    /** Whether a line is a GFM table delimiter row (`| --- | :---: |`). */
+    function isTableDelimiter(line) {
+      if (!line || line.indexOf('-') < 0) return false;
+      const cells = splitTableRow(line);
+      return cells.length > 0 && cells.every((cell) => /^:?-{1,}:?$/.test(cell));
+    }
+
+    /**
+     * Split one table row into cells.
+     *
+     * The outer pipes are optional in GFM, and `\|` is a literal pipe inside a
+     * cell, so it is swapped for a placeholder before splitting and restored
+     * afterwards.
+     */
+    function splitTableRow(line) {
+      const source = String(line).trim().replace(/^\|/, '').replace(/\|$/, '');
+      const cells = [];
+      let cell = '';
+      for (let index = 0; index < source.length; index += 1) {
+        const ch = source[index];
+        if (ch === '\\' && source[index + 1] === '|') {
+          cell += '\u0000';
+          index += 1;
+        } else if (ch === '|') {
+          cells.push(cell.trim().replace(/\u0000/g, '|'));
+          cell = '';
+        } else {
+          cell += ch;
+        }
+      }
+      cells.push(cell.trim().replace(/\u0000/g, '|'));
+      return cells;
     }
 
     function Chevron({ dir, size, color }) {
@@ -1952,21 +3273,41 @@ window.__ModuleLoader__.load({
       });
     }
 
+    /**
+     * How long the turn has been open, in milliseconds of wall clock.
+     *
+     * This is deliberately not `cost.ms`: `turnCost` can only measure between
+     * durable events, so during one long thinking step it stops moving and then
+     * jumps by minutes when the step settles. An open turn has to be measured
+     * against the clock, clamped at zero so a skewed clock cannot print "-3s".
+     */
+    function liveElapsedMs(node, now) {
+      if (!node || !node.startedAt || !now) return 0;
+      return Math.max(0, now - node.startedAt);
+    }
+
+    /** Re-render the caller once a second while `active`. */
+    function useTicker(active) {
+      const [, setTick] = useState(0);
+      useEffect(() => {
+        if (!active) return undefined;
+        const timer = setInterval(() => setTick((n) => n + 1), 1000);
+        return () => clearInterval(timer);
+      }, [active]);
+      return Date.now();
+    }
+
     /** What the model is doing right now: thinking, calling a tool, or writing. */
-    function LiveProgress({ node }) {
+    function LiveProgress({ node, now }) {
       useLocale();
       const awaiting = node.awaiting === 'question' || node.awaiting === 'approval';
       const running = awaiting || node.status === 'thinking' || node.status === 'streaming' || node.status === 'running';
-      const [, tick] = useState(0);
-      useEffect(() => {
-        if (!running) return undefined;
-        const timer = setInterval(() => tick((n) => n + 1), 1000);
-        return () => clearInterval(timer);
-      }, [running]);
       if (!running) return null;
       const tool = node.tool || '';
       const step = node.step || 0;
-      const elapsed = node.startedAt ? Math.max(0, Math.round((Date.now() - node.startedAt) / 1000)) : 0;
+      // The clock lives in the card (one timer for the whole card); this row
+      // only reads it, so the live row and the header can never disagree.
+      const elapsed = Math.round(liveElapsedMs(node, now) / 1000);
       // A pending question/approval is not "calling the tool": name the wait so
       // the card says the ball is in the user's court.
       const label = awaiting
@@ -2005,6 +3346,142 @@ window.__ModuleLoader__.load({
         elapsed > 0 ? h('span', { style: { fontVariantNumeric: 'tabular-nums', opacity: 0.6 } }, elapsed + 's') : null);
     }
 
+    /**
+     * The agent's current thought, in one line.
+     *
+     * An elapsed time says the agent is busy; it does not say what it is
+     * doing. This row carries the newest reasoning the model has written, so
+     * the reader can tell a search from a refactor without opening anything.
+     * Clicking it opens the reader, where the whole chain is readable while the
+     * answer is still streaming.
+     */
+    function ReasoningTail({ node, onOpen }) {
+      useLocale();
+      const awaiting = node.awaiting === 'question' || node.awaiting === 'approval';
+      const running = awaiting || node.status === 'thinking' || node.status === 'streaming' || node.status === 'running';
+      const text = node.reasoning || '';
+      if (!running || !text.trim()) return null;
+      const preview = reasoningTail(text);
+      if (!preview) return null;
+      return h('button', {
+        onClick: (event) => {
+          event.stopPropagation();
+          onOpen();
+        },
+        title: T('card.thinkExpandTitle'),
+        className: 'dsh-tree-reasoning-tail dsh-tree-clamp-2',
+        style: {
+          display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer',
+          fontFamily: 'inherit',
+          marginTop: 5, padding: '4px 7px', borderRadius: 6,
+          border: 'none', borderLeft: '2px solid ' + C.accentEdge,
+          background: 'color-mix(in srgb, var(--dsw-alias-label-primary) 4%, transparent)',
+          fontSize: 10.5, color: C.ink4, lineHeight: 1.45,
+        },
+      }, preview);
+    }
+
+    /**
+     * The card's reasoning row.
+     *
+     * It is a pointer, not a panel. Expanding the thinking inside a 320px card
+     * stretched the card into a very long strip, which is exactly what made it
+     * awkward to use; the reader is where a long answer — and the thinking
+     * behind it — is actually read. So the row says how much there is and opens
+     * the reader, where the chain sits at the top and folds away.
+     */
+    function ReasoningRow({ node, onOpen }) {
+      useLocale();
+      const text = node.reasoning || '';
+      if (!text.trim()) return null;
+      const preview = reasoningPreview(text);
+      const dropped = node.reasoningDropped || 0;
+      return h('div', {
+        className: 'dsh-tree-reasoning',
+        style: { marginTop: 6 },
+      },
+        h('button', {
+          onClick: (event) => {
+            event.stopPropagation();
+            onOpen();
+          },
+          title: T('card.thinkExpandTitle'),
+          className: LINK,
+          style: { color: C.accent, gap: 5, maxWidth: '100%' },
+        },
+          h(Chevron, { dir: 'right', size: 9 }),
+          h('span', { style: { flex: '0 0 auto' } }, T('card.think')),
+          h('span', { style: { color: C.ink4, fontVariantNumeric: 'tabular-nums', flex: '0 0 auto' } },
+            T('card.thinkMeta', { count: text.length }))),
+        // The truncation notice is metadata, not part of the reasoning, so the
+        // collapsed row can still say the text is partial.
+        dropped > 0
+          ? h('div', {
+            style: {
+              marginTop: 3, paddingLeft: 13, fontSize: 10.2,
+              color: C.ink4, fontVariantNumeric: 'tabular-nums',
+            },
+          }, T('card.thinkTruncated', { count: dropped }))
+          : null,
+        preview
+          ? h('div', {
+            className: 'dsh-tree-reasoning-preview dsh-tree-clamp-2',
+            style: {
+              marginTop: 4, paddingLeft: 13, fontSize: 10.8, lineHeight: 1.5,
+              color: C.ink4,
+            },
+          }, preview)
+          : null);
+    }
+
+    /**
+     * The reader's reasoning block: first thing in the answer, folded away.
+     *
+     * It lives in the reader's own scroll container rather than a nested one:
+     * a second scroll area inside the reader is what made the wheel ambiguous,
+     * and a long chain is easier to read in the flow than in a 260px box.
+     */
+    function ReasoningDisclosure({ node }) {
+      useLocale();
+      const [open, setOpen] = useState(false);
+      const text = node.reasoning || '';
+      if (!text.trim()) return null;
+      const dropped = node.reasoningDropped || 0;
+      return h('div', {
+        className: 'dsh-tree-reasoning',
+        style: { marginBottom: 18 },
+      },
+        h('button', {
+          onClick: () => setOpen((value) => !value),
+          'aria-expanded': open,
+          title: open ? T('card.thinkCollapseTitle') : T('card.thinkExpandTitle'),
+          className: LINK,
+          style: { color: C.accent, gap: 5 },
+        },
+          h(Chevron, { dir: open ? 'down' : 'right', size: 9 }),
+          h('span', null, T('card.think')),
+          h('span', { style: { color: C.ink4, fontVariantNumeric: 'tabular-nums' } },
+            T('card.thinkMeta', { count: text.length }))),
+        dropped > 0
+          ? h('div', {
+            style: {
+              marginTop: 4, paddingLeft: 13, fontSize: 10.8,
+              color: C.ink4, fontVariantNumeric: 'tabular-nums',
+            },
+          }, T('card.thinkTruncated', { count: dropped }))
+          : null,
+        open
+          ? h('div', {
+            style: {
+              marginTop: 8, padding: '10px 13px', borderRadius: 9,
+              border: '1px solid ' + C.cardEdge,
+              background: 'color-mix(in srgb, var(--dsw-alias-label-primary) 3%, transparent)',
+              fontSize: 12.4, lineHeight: 1.78, color: C.ink4,
+            },
+          }, renderMarkdown(text))
+          : null);
+    }
+
     function NodeCard({ node, selected, dimmed, index, store, api, rootId, match, collapsed, childCount, descendants, isLatest, entering }) {
       useLocale();
       const snapshot = store.getSnapshot();
@@ -2016,6 +3493,10 @@ window.__ModuleLoader__.load({
       const animateEntry = useRef(entering);
       const isRunning = isInProgressNode(node);
       const awaiting = node.awaiting === 'question' || node.awaiting === 'approval';
+      // A running card has a clock. Without it the elapsed time only moved when
+      // a durable event landed, so a long thinking step left the number frozen
+      // for minutes and then jumped — the label looked broken rather than busy.
+      const now = useTicker(isRunning && Boolean(node.startedAt));
       const answer = node.answer || '';
       const answerText = answer.length > 1400 ? answer.slice(0, 1400) + T('card.truncated') : answer;
 
@@ -2067,10 +3548,10 @@ window.__ModuleLoader__.load({
           borderLeft: '3px solid ' + (selected || isRunning ? C.accent : dimmed ? C.cardEdge : C.line),
           borderRadius: 10,
           boxShadow: awaiting || selected
-            ? '0 0 0 4px ' + C.accentSoft + ', 0 6px 18px rgba(0,0,0,0.08)'
+            ? '0 0 0 4px ' + C.accentSoft + ', var(--dsh-tree-shadow-2)'
             : match
-              ? '0 0 0 3px ' + C.accentSoft + ', 0 2px 8px rgba(0,0,0,0.05)'
-              : '0 2px 8px rgba(0,0,0,0.05)',
+              ? '0 0 0 3px ' + C.accentSoft + ', var(--dsh-tree-shadow-1)'
+              : 'var(--dsh-tree-shadow-1)',
           padding: '10px 12px 9px',
           opacity: dimmed ? 0.72 : 1,
           boxSizing: 'border-box',
@@ -2090,19 +3571,31 @@ window.__ModuleLoader__.load({
             }, T('card.latestBadge'))
             : null,
           h(Badge, { label: statusLabel }),
-          node.cost && (node.cost.ms || node.cost.tokens)
-            ? h('span', {
-              title: [
-                node.cost.ms ? T('card.cost.elapsed', { value: formatCost({ ms: node.cost.ms, tokens: 0 }) }) : '',
-                node.cost.tokens ? T('card.cost.context', { value: formatCost({ ms: 0, tokens: node.cost.tokens }) }) : '',
-                node.cost.cached ? T('card.cost.cached', { value: formatCost({ ms: 0, tokens: node.cost.cached }) }) : '',
-              ].filter(Boolean).join(' · '),
-              style: {
-                fontSize: 10.5, color: C.ink3, fontVariantNumeric: 'tabular-nums',
-                whiteSpace: 'nowrap', letterSpacing: '0.02em',
-              },
-            }, formatCost(node.cost))
-            : null,
+          // While the turn is open the header clock is wall clock, not the span
+          // between the first and last durable event: the latter is what
+          // `turnCost` can know from the log, and it stops moving the moment the
+          // model thinks for a while without emitting anything durable.
+          (function () {
+            const live = isRunning && node.startedAt && now
+              ? {
+                ms: liveElapsedMs(node, now),
+                tokens: node.cost ? node.cost.tokens : 0,
+                cached: node.cost ? node.cost.cached : 0,
+              }
+              : node.cost;
+            if (!live || !(live.ms || live.tokens)) return null;
+            return h('span', {
+            title: [
+              live.ms ? T('card.cost.elapsed', { value: formatCost({ ms: live.ms, tokens: 0 }) }) : '',
+              live.tokens ? T('card.cost.context', { value: formatCost({ ms: 0, tokens: live.tokens }) }) : '',
+              live.cached ? T('card.cost.cached', { value: formatCost({ ms: 0, tokens: live.cached }) }) : '',
+            ].filter(Boolean).join(' · '),
+            style: {
+              fontSize: 10.5, color: C.ink3, fontVariantNumeric: 'tabular-nums',
+              whiteSpace: 'nowrap', letterSpacing: '0.02em',
+            },
+          }, formatCost(live));
+          })(),
           h('span', { style: { flex: 1 } }),
           isRunning
             ? h('button', {
@@ -2153,9 +3646,9 @@ window.__ModuleLoader__.load({
                   onMouseDown: (event) => event.stopPropagation(),
                   onClick: (event) => event.stopPropagation(),
                   style: {
-                    position: 'absolute', top: 28, right: 0, zIndex: 5, background: C.card,
+                    position: 'absolute', top: 28, right: 0, zIndex: 5, background: C.overlay,
                     border: '1px solid ' + C.cardEdge, borderRadius: 9, padding: 4,
-                    boxShadow: '0 8px 22px rgba(0,0,0,0.12)', minWidth: 132,
+                    boxShadow: 'var(--dsh-tree-shadow-2)', minWidth: 132,
                   },
                 }, h('button', {
                   onClick: () => {
@@ -2168,9 +3661,9 @@ window.__ModuleLoader__.load({
                 }, T('card.delete'))))
             : null),
         h('div', {
+          className: 'dsh-tree-clamp-3',
           style: {
             fontSize: 12.5, fontWeight: 600, lineHeight: 1.45, color: C.ink,
-            display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
           },
         }, node.question || T('card.noQuestion')),
         h('div', {
@@ -2190,7 +3683,9 @@ window.__ModuleLoader__.load({
             WebkitMaskImage: (!expanded && answer.length > 320) ? 'linear-gradient(#000 82%, transparent 100%)' : 'none',
           },
         }, answer ? renderMarkdown(answerText) : null),
-        h(LiveProgress, { node }),
+        h(LiveProgress, { node, now }),
+        h(ReasoningTail, { node, onOpen: () => store.openReader(node.id) }),
+        h(ReasoningRow, { node, onOpen: () => store.openReader(node.id) }),
         h(Presence, { show: composing, className: 'dsh-tree-composer' },
           h(Composer, { store, api, rootId, node, active: composing })),
         answer.length > 260 || childCount > 0
@@ -2288,7 +3783,7 @@ window.__ModuleLoader__.load({
           },
         }),
         h('div', { style: { display: 'flex', gap: 6, marginTop: 8, alignItems: 'center' } },
-          h('span', { style: { fontSize: 10.5, color: C.ink3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
+          h('span', { className: 'dsh-tree-one-line', style: { fontSize: 10.5, color: C.ink3 } },
             T('composer.from', { question: (node.question || '').slice(0, 12) })),
           h('span', { style: { flex: 1 } }),
           h('button', {
@@ -2476,8 +3971,45 @@ window.__ModuleLoader__.load({
         focusNode(hitIds[nextIndex]);
       }, [matches, liveNodes, snapshot.selectedId, focusNode]);
 
+      /**
+       * Whether a wheel event belongs to something that scrolls on its own.
+       *
+       * The canvas claims every wheel event to zoom, so without this guard a
+       * reader scrolling the expanded reasoning text (or the composer) zoomed
+       * the whole canvas instead of scrolling the box under the pointer.
+       *
+       * `overflow-y` comes from the computed style rather than from our own
+       * class names, so a native scrollable — the composer's textarea — is
+       * covered by the same rule. The result distinguishes the two cases that
+       * need different handling:
+       *
+       *   'scroll' — the box can move further in this direction, so the browser
+       *              must handle the event natively and the canvas must stay out
+       *              of it entirely;
+       *   'edge'   — the box is already at that end. The wheel must do nothing
+       *              at all: falling through to the zoom is what made the canvas
+       *              jump under a reader who had simply reached the bottom.
+       */
+      function wheelOwner(target, stopAt, deltaY) {
+        if (!target || !stopAt || typeof window === 'undefined') return false;
+        for (let el = target; el && el !== stopAt; el = el.parentElement) {
+          const style = window.getComputedStyle(el);
+          const overflowY = style && style.overflowY;
+          if (overflowY !== 'auto' && overflowY !== 'scroll') continue;
+          const range = el.scrollHeight - el.clientHeight;
+          if (range <= 1) continue;
+          const atTop = el.scrollTop <= 0;
+          const atBottom = el.scrollTop >= range - 1;
+          return deltaY < 0 ? (atTop ? 'edge' : 'scroll') : (atBottom ? 'edge' : 'scroll');
+        }
+        return false;
+      }
+
       const onWheel = (event) => {
+        const owned = wheelOwner(event.target, wrapRef.current, event.deltaY);
+        if (owned === 'scroll') return;
         event.preventDefault();
+        if (owned === 'edge') return;
         const rect = wrapRef.current ? wrapRef.current.getBoundingClientRect() : { left: 0, top: 0 };
         const px = event.clientX - rect.left;
         const py = event.clientY - rect.top;
@@ -2651,7 +4183,7 @@ window.__ModuleLoader__.load({
           style: {
             position: 'absolute', top: size.top + 10, left: 12, right: 12, display: 'flex', gap: 8,
             flexWrap: 'wrap', padding: 8, borderRadius: 12, background: C.card,
-            border: '1px solid ' + C.cardEdge, boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            border: '1px solid ' + C.cardEdge, boxShadow: 'var(--dsh-tree-shadow-1)',
             alignItems: 'center', fontSize: 12, color: C.ink3,
           },
         },
@@ -2729,16 +4261,41 @@ window.__ModuleLoader__.load({
               onClick: () => zoomBy(1.15),
               className: BTN_ICON,
             }, h(Icon, { name: 'plus' }))),
-          h('button', {
-            className: BTN,
+          // Both directions are visible at once, so the current one is a pressed
+          // state rather than something the reader has to infer from the shape of
+          // the canvas. A single toggle whose label never changes cannot say
+          // which way the tree is running.
+          h('div', {
+            role: 'group',
+            'aria-label': T('view.layoutGroup'),
             title: T('view.layoutTitle'),
-            'aria-pressed': direction === 'horizontal',
-            onClick: () => {
-              const next = direction === 'horizontal' ? 'vertical' : 'horizontal';
-              saveLayoutDirection(next);
-              setDirection(next);
+            style: {
+              display: 'flex', alignItems: 'center', gap: 2, padding: 2,
+              border: '1px solid ' + C.cardEdge, borderRadius: 9, background: C.canvas,
             },
-          }, T('view.layoutHorizontal')),
+          },
+            h('button', {
+              className: BTN_SEGMENT,
+              title: T('view.layoutVertical'),
+              'aria-label': T('view.layoutVertical'),
+              'aria-pressed': direction === 'vertical',
+              onClick: () => {
+                if (direction === 'vertical') return;
+                saveLayoutDirection('vertical');
+                setDirection('vertical');
+              },
+            }, h(Icon, { name: 'layoutVertical' })),
+            h('button', {
+              className: BTN_SEGMENT,
+              title: T('view.layoutHorizontal'),
+              'aria-label': T('view.layoutHorizontal'),
+              'aria-pressed': direction === 'horizontal',
+              onClick: () => {
+                if (direction === 'horizontal') return;
+                saveLayoutDirection('horizontal');
+                setDirection('horizontal');
+              },
+            }, h(Icon, { name: 'layoutHorizontal' }))),
           h('button', { onClick: fit, className: BTN, title: T('view.fitTitle') }, h(Icon, { name: 'fit' }), T('view.fit')),
           h('button', {
             disabled: !latest,
@@ -2754,7 +4311,7 @@ window.__ModuleLoader__.load({
             style: {
               position: 'absolute', right: 12, bottom: 12 + Math.min(size.bottom, Math.max(0, size.h - size.top - 160)), width: 168, height: 112,
               border: '1px solid ' + C.cardEdge, borderRadius: 8, background: C.card,
-              boxShadow: '0 2px 10px rgba(0,0,0,0.06)', overflow: 'hidden', cursor: 'pointer',
+              boxShadow: 'var(--dsh-tree-shadow-1)', overflow: 'hidden', cursor: 'pointer',
             },
             onClick: (event) => {
               const rect = event.currentTarget.getBoundingClientRect();
@@ -2841,6 +4398,10 @@ window.__ModuleLoader__.load({
         latest: 'M8 1v3M8 12v3M1 8h3M12 8h3M12 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
         more: 'M3 8h.01M8 8h.01M13 8h.01',
         close: 'M4 4l8 8M12 4l-8 8',
+        // The two layout directions: one parent, two children, drawn the way
+        // the tree reads in that direction.
+        layoutVertical: 'M8 2v3M4 5h8M4 5v4M12 5v4M4 11h.01M12 11h.01',
+        layoutHorizontal: 'M2 8h3M5 4v8M5 4h4M5 12h4M11 4h.01M11 12h.01',
       };
       return h('svg', { width: 16, height: 16, viewBox: '0 0 16 16', 'aria-hidden': true,
         style: { display: 'block', flexShrink: 0 } }, h('path', {
@@ -2853,6 +4414,9 @@ window.__ModuleLoader__.load({
     // Inline styles only carry layout that varies per call site.
     const BTN = 'dsh-tree-btn';
     const BTN_ICON = 'dsh-tree-btn dsh-tree-btn--icon';
+    // A segment inside the layout group: same hit area as an icon button, but
+    // it borrows the group's border instead of drawing its own.
+    const BTN_SEGMENT = 'dsh-tree-btn dsh-tree-btn--icon dsh-tree-btn--segment';
     const BTN_PRIMARY = 'dsh-tree-btn dsh-tree-btn--primary';
     const CHIP = 'dsh-tree-chip';
     const LINK = 'dsh-tree-link';
@@ -2907,63 +4471,62 @@ window.__ModuleLoader__.load({
       }
     }
 
+    /**
+     * The full-screen reader.
+     *
+     * A native <dialog> opened with `showModal()`, not a hand-built overlay.
+     * The browser then owns everything that is easy to get wrong here: focus is
+     * contained, the page behind is inert, Esc and the back gesture close it,
+     * and it renders in the top layer — which matters here because a card lives
+     * inside the transformed canvas, so a positioned child of it would be
+     * clipped and scaled along with the canvas.
+     *
+     * The plugin therefore writes no focus trap, no Tab handler, no Esc handler
+     * and no focus restoration; it only mirrors the element's `close` event back
+     * into React state.
+     */
     function Reader({ node, open, onClose }) {
       useLocale();
-      const panelRef = useRef(null);
-      const closeRef = useRef(null);
+      const dialogRef = useRef(null);
       const close = useRef(onClose);
       close.current = onClose;
+
+      // `show()` would leave the page interactive; the reader is blocking.
       useEffect(() => {
-        if (!open) return undefined;
-        const previousFocus = document.activeElement;
-        if (closeRef.current) closeRef.current.focus();
-        const onKey = (event) => {
-          if (event.key === 'Escape') {
-            event.stopPropagation();
-            close.current();
-          } else if (event.key === 'Tab' && panelRef.current) {
-            const controls = panelRef.current.querySelectorAll('button, a[href], input, textarea, [tabindex="0"]');
-            const first = controls[0];
-            const last = controls[controls.length - 1];
-            if (event.shiftKey && document.activeElement === first) {
-              event.preventDefault();
-              if (last) last.focus();
-            } else if (!event.shiftKey && document.activeElement === last) {
-              event.preventDefault();
-              if (first) first.focus();
-            }
+        const dialog = dialogRef.current;
+        if (!dialog) return undefined;
+        if (open) {
+          if (!dialog.open) {
+            if (typeof dialog.showModal === 'function') dialog.showModal();
+            else dialog.setAttribute('open', '');
           }
-        };
-        window.addEventListener('keydown', onKey, true);
-        return () => {
-          window.removeEventListener('keydown', onKey, true);
-          if (previousFocus && previousFocus.isConnected) previousFocus.focus();
-        };
-      }, [open]);
+        } else if (dialog.open) {
+          dialog.close();
+        }
+        return undefined;
+      }, [open, node && node.id]);
+
+      // Esc, the back gesture and light dismiss all end in a `close` event.
+      useEffect(() => {
+        const dialog = dialogRef.current;
+        if (!dialog) return undefined;
+        const onDismiss = () => close.current();
+        dialog.addEventListener('close', onDismiss);
+        return () => dialog.removeEventListener('close', onDismiss);
+      }, []);
 
       if (!node) return null;
-      return h(Presence, {
-        show: open,
+      const titleId = 'dsh-tree-reader-title-' + (node.id || 'node');
+      return h('dialog', {
+        ref: dialogRef,
         className: 'dsh-tree-reader',
-        onClick: onClose,
-        style: {
-          position: 'absolute', inset: 0, zIndex: 40, background: C.scrim,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '28px 34px',
-        },
+        // The modal already carries role="dialog" and aria-modal: adding them
+        // here would announce the overlay twice.
+        'aria-labelledby': titleId,
+        // Click-outside dismissal. Where `closedby` is unsupported the dialog
+        // still closes on Esc and the back gesture, so this only degrades.
+        closedby: 'any',
       },
-        h('div', {
-          ref: panelRef,
-          className: 'dsh-tree-reader-panel',
-          role: 'dialog',
-          'aria-modal': true,
-          'aria-label': node.question || T('card.noQuestion'),
-          onClick: (event) => event.stopPropagation(),
-          style: {
-            width: '100%', maxWidth: 820, maxHeight: '100%', background: C.card,
-            borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.28)',
-            display: 'flex', flexDirection: 'column', overflow: 'hidden',
-          },
-        },
           h('div', {
             style: {
               padding: '14px 20px 11px', borderBottom: '1px solid ' + C.line,
@@ -2975,10 +4538,10 @@ window.__ModuleLoader__.load({
                 style: { fontSize: 10.5, color: C.ink3, letterSpacing: '0.05em', marginBottom: 4 },
               }, (node.kind === 'branch' ? T('reader.branch') : T('reader.mainline')) + ' · ' + (node.id || '')),
               h('div', {
+                id: titleId,
                 style: { fontSize: 15, fontWeight: 600, lineHeight: 1.5, color: C.ink },
               }, node.question || T('card.noQuestion'))),
             h('button', {
-              ref: closeRef,
               onClick: onClose,
               title: T('reader.close'),
               'aria-label': T('reader.closeLabel'),
@@ -2986,11 +4549,18 @@ window.__ModuleLoader__.load({
               style: { width: 30, height: 30, minWidth: 30, minHeight: 30 },
             }, h(Icon, { name: 'close' }))),
           h('div', {
+            className: 'dsh-tree-scroll',
             style: {
               padding: '18px 22px 22px', overflow: 'auto', flex: 1,
               ...MD.body, fontSize: 13.4, lineHeight: 1.85,
             },
-          }, node.answer ? renderMarkdown(node.answer) : T('reader.noAnswer')),
+          },
+            // The thinking comes first: it is what the reader opened the
+            // card for, and folding it keeps the answer itself at the top
+            // of the eye.
+            h(ReasoningDisclosure, { node }),
+            node.answer ? renderMarkdown(node.answer) : T('reader.noAnswer')),
+
           h('div', {
             style: {
               padding: '8px 20px', borderTop: '1px solid ' + C.cardEdge, fontSize: 10.5,
@@ -3001,7 +4571,7 @@ window.__ModuleLoader__.load({
             h('span', { style: { flex: 1 } }),
             node.cost && (node.cost.ms || node.cost.tokens)
               ? h('span', null, formatCost(node.cost))
-              : null)));
+              : null));
     }
 
     function TreeView(props) {
@@ -3095,12 +4665,55 @@ window.__ModuleLoader__.load({
         '@keyframes dshTreeSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }',
         '@keyframes dshTreePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }',
         '.dsh-tree-root { --tree-fast: 120ms; --tree-enter: 240ms; --tree-exit: ' + MOTION_EXIT_MS + 'ms; --tree-ease: cubic-bezier(.2,.8,.2,1); --tree-spring: cubic-bezier(.16,1.3,.3,1); }',
+        // Elevation in two themes. A black-alpha shadow is what gives a card depth
+        // on a white canvas, and on a dark canvas it is invisible — the surface
+        // has to separate by a heavier shadow instead. The three levels are
+        // declared once and read by both themes.
+        '.dsh-tree-root { --dsh-tree-shadow-1: 0 2px 8px rgba(0,0,0,0.05); --dsh-tree-shadow-2: 0 8px 22px rgba(0,0,0,0.12); --dsh-tree-shadow-3: 0 20px 60px rgba(0,0,0,0.28); }',
+        'body[data-ds-dark-theme] .dsh-tree-root { --dsh-tree-shadow-1: 0 2px 10px rgba(0,0,0,0.45); --dsh-tree-shadow-2: 0 10px 28px rgba(0,0,0,0.55); --dsh-tree-shadow-3: 0 22px 64px rgba(0,0,0,0.65); }',
+        // Native affordances follow the host theme too: form controls and
+        // scrollbars take their colour from `color-scheme`, and the plugin's own
+        // scroll areas use the host's scrollbar tokens.
+        '.dsh-tree-root { color-scheme: light; }',
+        'body[data-ds-dark-theme] .dsh-tree-root { color-scheme: dark; }',
+        '.dsh-tree-clamp-2, .dsh-tree-clamp-3 {',
+        '  display: -webkit-box; -webkit-box-orient: vertical;',
+        '  -webkit-line-clamp: 2; line-clamp: 2;',
+        '  overflow: hidden; overflow-wrap: break-word;',
+        '}',
+        '.dsh-tree-clamp-3 { -webkit-line-clamp: 3; line-clamp: 3; }',
+        '.dsh-tree-one-line {',
+        '  min-inline-size: 0; overflow: hidden; text-overflow: ellipsis;',
+        '  white-space: nowrap;',
+        '}',
+        '.dsh-tree-scroll { scrollbar-width: thin; scrollbar-color: var(--dsw-alias-scrollbar-bg-l1) transparent; }',
+        '.dsh-tree-scroll:hover { scrollbar-color: var(--dsw-alias-scrollbar-hover-l1) transparent; }',
+        // Tables: a wide one scrolls sideways inside its own wrapper instead of
+        // widening the card or the reader. The wrapper is the scroll container,
+        // so the table keeps its natural width and cells stay on one line.
+        '.dsh-tree-table-wrap {',
+        '  max-width: 100%; margin: 0.7em 0; overflow-x: auto;',
+        '  scrollbar-width: thin; scrollbar-color: var(--dsw-alias-scrollbar-bg-l1) transparent;',
+        '}',
+        '.dsh-tree-table {',
+        '  border-collapse: collapse; font-size: 0.93em; line-height: 1.5;',
+        '  width: max-content; min-width: 100%;',
+        '}',
+        '.dsh-tree-table th, .dsh-tree-table td {',
+        '  border: 1px solid var(--dsw-alias-border-l1); padding: 6px 10px;',
+        '  vertical-align: top; overflow-wrap: break-word;',
+        '}',
+        '.dsh-tree-table th {',
+        '  font-weight: 600; white-space: nowrap;',
+        '  background: color-mix(in srgb, var(--dsw-alias-label-primary) 5%, transparent);',
+        '}',
+        '.dsh-tree-table tbody tr:nth-child(even) td {',
+        '  background: color-mix(in srgb, var(--dsw-alias-label-primary) 2%, transparent);',
+        '}',
         ':has(> .dsh-tree-root--overlay) > header, :has(> .dsh-tree-root--overlay) > [data-slot="conversation.header"] > header { position: relative; z-index: 2; }',
         ':has(> .dsh-tree-root--overlay) > [data-conversation-content] [data-composer-seat]:not(:has([data-conversation-composer-overlay])) { width: min(100%, calc(var(--dsh-composer-card-max-width, 920px) + 2 * var(--dsh-composer-side-clearance, 16px))); align-self: center; background: transparent !important; }',
         '@keyframes dshTreeReveal { from { opacity: 0; transform: translateY(6px) scale(.985); } to { opacity: 1; transform: none; } }',
         '@keyframes dshTreeDismiss { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(3px) scale(.99); } }',
-        '@keyframes dshTreeFadeIn { from { opacity: 0; } to { opacity: 1; } }',
-        '@keyframes dshTreeFadeOut { from { opacity: 1; } to { opacity: 0; } }',
         '.dsh-tree-card { transition: opacity var(--tree-enter) var(--tree-ease), box-shadow var(--tree-enter) var(--tree-ease), border-color var(--tree-fast) ease; }',
         '.dsh-tree-card--enter { animation: dshTreeReveal var(--tree-enter) var(--tree-ease); }',
         '.dsh-tree-presence[data-open="true"] { animation: dshTreeReveal var(--tree-enter) var(--tree-ease); }',
@@ -3108,10 +4721,43 @@ window.__ModuleLoader__.load({
         '.dsh-tree-menu { transform-origin: top right; }',
         '.dsh-tree-menu[data-open="true"] { animation-timing-function: var(--tree-spring); }',
         '.dsh-tree-composer { transform-origin: top center; }',
-        '.dsh-tree-reader[data-open="true"] { animation: dshTreeFadeIn 180ms ease-out; }',
-        '.dsh-tree-reader[data-open="false"] { animation: dshTreeFadeOut var(--tree-exit) ease-in forwards; }',
-        '.dsh-tree-reader[data-open="true"] .dsh-tree-reader-panel { animation: dshTreeReveal var(--tree-enter) var(--tree-ease); }',
-        '.dsh-tree-reader[data-open="false"] .dsh-tree-reader-panel { animation: dshTreeDismiss var(--tree-exit) ease-in forwards; }',
+        // The reader is a native modal dialog; only its surface and its enter/exit
+        // transition belong to the plugin.
+        '.dsh-tree-reader {',
+        '  margin: auto; padding: 0; border: none; margin-block: auto;',
+        '  width: min(820px, calc(100vw - 68px)); max-width: calc(100vw - 68px);',
+        '  max-height: calc(100vh - 56px);',
+        '  background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary);',
+        '  border-radius: 14px; box-shadow: var(--dsh-tree-shadow-3); overflow: hidden;',
+        // MANDATORY: without this, a scroll inside the dialog chains to the page
+        // behind it as soon as the dialog reaches its own scroll boundary.
+        '  overscroll-behavior: contain;',
+        '  opacity: 0;',
+        // MANDATORY for the top layer: display and overlay are discrete, and the
+        // element has to stay in the top layer while it animates out.
+        '  transition-property: opacity, transform, display, overlay;',
+        '  transition-duration: var(--tree-exit);',
+        '  transition-timing-function: ease-out;',
+        '  transition-behavior: allow-discrete;',
+        '}',
+        // display is set only while open: an unconditional display would override
+        // the closed state and leave the dialog permanently on screen.
+        '.dsh-tree-reader[open] {',
+        '  display: flex; flex-direction: column; opacity: 1;',
+        '  transition-duration: var(--tree-enter);',
+        '}',
+        '@media (prefers-reduced-motion: no-preference) {',
+        '  .dsh-tree-reader { transform: translateY(6px) scale(.985); }',
+        '  .dsh-tree-reader[open] { transform: none; }',
+        '}',
+        '@starting-style { .dsh-tree-reader[open] { opacity: 0; } }',
+        // MANDATORY: ::backdrop is not a scroll container by default, so
+        // overscroll-behavior alone would not stop a gesture over the backdrop
+        // from scrolling the page underneath.
+        '.dsh-tree-reader::backdrop {',
+        '  background: var(--dsw-alias-bg-mask-1);',
+        '  overflow: hidden; overscroll-behavior: contain;',
+        '}',
         // Every control shares one geometry so the toolbar reads as one row.
         '.dsh-tree-btn {',
         '  border: 1px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-layer-1);',
@@ -3136,6 +4782,17 @@ window.__ModuleLoader__.load({
         '.dsh-tree-btn[disabled] { opacity: 0.45; cursor: default; }',
         '.dsh-tree-btn[aria-pressed="true"] { color: var(--dsw-alias-brand-primary); border-color: var(--dsw-alias-brand-primary); background: color-mix(in srgb, var(--dsw-alias-brand-primary) 8%, transparent); }',
         '.dsh-tree-btn--icon { padding: 0; min-width: 30px; min-height: 30px; }',
+        '.dsh-tree-btn--segment {',
+        '  border-color: transparent; background: transparent;',
+        '  min-width: 28px; min-height: 26px; border-radius: 7px; color: var(--dsw-alias-label-tertiary);',
+        '}',
+        '.dsh-tree-btn--segment:hover:not([disabled]) {',
+        '  border-color: transparent; background: color-mix(in srgb, var(--dsw-alias-label-primary) 7%, transparent);',
+        '}',
+        '.dsh-tree-btn--segment[aria-pressed="true"], .dsh-tree-btn--segment[aria-pressed="true"]:hover {',
+        '  border-color: transparent; color: var(--dsw-alias-brand-primary);',
+        '  background: color-mix(in srgb, var(--dsw-alias-brand-primary) 10%, transparent);',
+        '}',
         '.dsh-tree-btn--primary {',
         '  background: var(--dsw-alias-button-primary-fill); border-color: var(--dsw-alias-button-primary-fill);',
         '  color: var(--dsw-alias-label-primary-foreground);',
@@ -3201,10 +4858,7 @@ window.__ModuleLoader__.load({
         // the shared "common" namespace, and the service's fallback chain
         // serves English to any language we did not translate.
         try {
-          ctx.effect(() => ctx.locale.register(NS, {
-            zh: DICT.zh,
-            en: DICT.en,
-          }), 'dsh-explore: locale dictionaries');
+          ctx.effect(() => ctx.locale.register(NS, DICT), 'dsh-explore: locale dictionaries');
         } catch (error) {
           // A profile without the locale plugin still gets the built-in table.
         }
