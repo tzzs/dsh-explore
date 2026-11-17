@@ -36,6 +36,7 @@ const ALLOWED_ALIAS_TOKENS = new Set([
   '--dsw-alias-label-primary',
   '--dsw-alias-label-primary-foreground',
   '--dsw-alias-label-secondary',
+  '--dsw-alias-label-tertiary',
   '--dsw-alias-markdown-code-block',
   '--dsw-alias-state-business-primary',
   '--dsw-alias-state-error-primary',

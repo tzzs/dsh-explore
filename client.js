@@ -23,6 +23,9 @@ window.__ModuleLoader__.load({
       ink: 'var(--dsw-alias-label-primary)',
       ink2: 'var(--dsw-alias-label-secondary)',
       ink3: 'var(--dsw-alias-label-secondary)',
+      // Reasoning reads as a footnote to the answer, so it sits one step
+      // quieter than the body text.
+      ink4: 'var(--dsw-alias-label-tertiary)',
       line: 'var(--dsw-alias-border-l2)',
       card: 'var(--dsw-alias-bg-layer-1)',
       cardEdge: 'var(--dsw-alias-border-l1)',
@@ -136,6 +139,12 @@ window.__ModuleLoader__.load({
         'card.cost.context': '上下文 {value}',
         'card.cost.cached': '缓存 {value}',
 
+        'card.think': '思考过程',
+        'card.thinkExpandTitle': '展开思考过程',
+        'card.thinkCollapseTitle': '收起思考过程',
+        'card.thinkMeta': '思考 {count} 字',
+        'card.thinkTruncated': '（只保留了最新的 {count} 字思考）',
+
         'live.calling': '正在调用 {tool}',
         'live.outputting': '正在输出…',
         'live.thinking': '正在思考…',
@@ -235,6 +244,12 @@ window.__ModuleLoader__.load({
         'card.cost.context': 'context {value}',
         'card.cost.cached': 'cached {value}',
 
+        'card.think': 'Reasoning',
+        'card.thinkExpandTitle': 'Expand the reasoning',
+        'card.thinkCollapseTitle': 'Collapse the reasoning',
+        'card.thinkMeta': '{count} chars of reasoning',
+        'card.thinkTruncated': '(only the newest {count} chars of reasoning are kept)',
+
         'live.calling': 'Calling {tool}',
         'live.outputting': 'Writing…',
         'live.thinking': 'Thinking…',
@@ -320,6 +335,291 @@ window.__ModuleLoader__.load({
     function seqOf(entry) {
       const event = entry && entry.event;
       return event && typeof event.seq === 'number' ? event.seq : 0;
+    }
+
+    // ---------------------------------------------------------------- reasoning
+    // The model writes its thinking as `reasoning` content blocks: live as a
+    // `reasoning-delta` chunk, and settled as a `{ type: 'reasoning', text }`
+    // block inside the durable `assistant/message`. Both reach a client plugin
+    // through the same event window, so one accumulator serves the running tail
+    // and the finished transcript.
+    //
+    // A provider that does not think emits no reasoning at all — the card then
+    // simply has nothing to show, which is why the section is hidden rather
+    // than rendered empty.
+
+    /** The reasoning blocks inside one assistant message, in order. */
+    function reasoningBlocksOfMessage(message) {
+      const content = message && message.content;
+      if (!Array.isArray(content)) return [];
+      const blocks = [];
+      for (const block of content) {
+        if (block && block.type === 'reasoning' && typeof block.text === 'string' && block.text.trim()) {
+          blocks.push(block.text);
+        }
+      }
+      return blocks;
+    }
+
+    /**
+     * The key of one reasoning block inside one step.
+     *
+     * The host frames both the live chunks and the settled message with the
+     * same `turn` and `step`, and a step can hold several reasoning blocks
+     * (one per content-block index). The index is part of the key so two
+     * blocks in the same step do not overwrite each other.
+     */
+    function reasoningKey(turn, step, index) {
+      const base = reasoningStepPrefix(turn, step);
+      return typeof index === 'number' ? base + index : base;
+    }
+
+    /**
+     * The prefix every reasoning block of one step shares.
+     *
+     * The trailing separator is what makes the prefix safe: without it, step
+     * `1` of turn `1` would also match step `11` of turn `1`.
+     */
+    function reasoningStepPrefix(turn, step) {
+      const base = typeof turn === 'number' && typeof step === 'number'
+        ? turn + ':' + step + '#'
+        : 'unknown#';
+      return base;
+    }
+
+    /**
+     * The cap on how much reasoning a card keeps.
+     *
+     * A long agent turn can think for hundreds of kilobytes. The card shows
+     * the newest thinking, so the cap keeps the *tail*: the oldest paragraphs
+     * are dropped, and the fact that something was dropped is recorded so the
+     * reader knows the text is not the whole story.
+     *
+     * The cap is enforced inside the accumulator rather than at render time,
+     * so a streaming turn never builds a string larger than this.
+     */
+    const REASONING_LIMIT = 12000;
+
+    /**
+     * A fresh reasoning accumulator: one segment per reasoning block.
+     *
+     * `received` records how many characters each block ever delivered. The
+     * amount dropped is *derived* from it (`received - kept`) rather than
+     * accumulated as a counter: a block is trimmed more than once in normal
+     * use — once while it streams, again when its settled block replaces the
+     * streamed draft — so a running counter would report the same characters
+     * as dropped twice, and would keep claiming a loss after a settled block
+     * replaced a long draft with a short one.
+     */
+    function reasoningState() {
+      return { segments: new Map(), received: new Map() };
+    }
+
+    /**
+     * Count the bytes of a streamed fragment as arrived.
+     *
+     * This must be an addition, not a maximum of the kept length: the trim
+     * cuts the fragment back off immediately, so `kept` plateaus at the cap
+     * and a "max kept" would report one chunk's worth of loss for a turn that
+     * actually dropped tens of kilobytes.
+     */
+    function addReceived(state, key, length) {
+      state.received.set(key, (state.received.get(key) || 0) + length);
+    }
+
+    /**
+     * The two reasoning fields a card needs: the kept text, and how much the
+     * cap dropped. Keeping them separate lets a collapsed row admit that the
+     * text is partial without gluing a notice onto the reasoning itself.
+     */
+    function reasoningFieldsOf(state) {
+      return {
+        reasoning: reasoningTextOf(state),
+        reasoningDropped: droppedReasoningOf(state),
+      };
+    }
+
+    /** Whether a chunk belongs to the model's reasoning. */
+    function isReasoningChunk(chunk) {
+      if (!chunk) return false;
+      if (chunk.type === 'reasoning-delta') return true;
+      if (chunk.type === 'block-end') return Boolean(chunk.block && chunk.block.type === 'reasoning');
+      if (chunk.type === 'block-start') return chunk.blockType === 'reasoning';
+      return false;
+    }
+
+    /**
+     * Fold one live chunk into a reasoning accumulator.
+     *
+     * `reasoning-delta` appends to the block's segment; `block-end` replaces it
+     * with the block the host settled.
+     */
+    function applyReasoningChunk(state, chunk, turn, step) {
+      if (!chunk) return state;
+      const index = typeof chunk.index === 'number' ? chunk.index : undefined;
+      const key = reasoningKey(turn, step, index);
+      if (chunk.type === 'reasoning-delta' && typeof chunk.text === 'string') {
+        const previous = state.segments.get(key);
+        state.segments.set(key, (previous || '') + chunk.text);
+        // Bytes arrived, however much the trim keeps of them.
+        addReceived(state, key, chunk.text.length);
+        trimReasoning(state);
+        return state;
+      }
+      if (chunk.type === 'block-end' && chunk.block && chunk.block.type === 'reasoning'
+        && typeof chunk.block.text === 'string' && chunk.block.text.trim()) {
+        // The settled block is the authoritative full text of this block, so
+        // it replaces both the streamed draft and its arrived-bytes tally.
+        // An empty block says nothing and must not wipe what arrived.
+        state.segments.set(key, chunk.block.text);
+        state.received.set(key, chunk.block.text.length);
+        trimReasoning(state);
+        return state;
+      }
+      if (chunk.type === 'block-start' && chunk.blockType === 'reasoning') {
+        if (!state.segments.has(key)) state.segments.set(key, '');
+      }
+      return state;
+    }
+
+    /**
+     * Merge one settled step's reasoning into the accumulator.
+     *
+     * The settled blocks are that step's complete thinking, so they replace
+     * what was streamed for the step instead of being appended to it.
+     * Transient chunks are retired when the step settles, so the durable
+     * message is the only reliable source once it has landed.
+     */
+    function mergeSettledReasoning(state, blocks, turn, step) {
+      if (!Array.isArray(blocks) || !blocks.length) return state;
+      // Replace the whole step: the settled blocks are the step's final
+      // thinking, and the streamed draft for them is gone by now. The
+      // `received` marks go with them, so a short settled block does not
+      // inherit the draft's dropped-chars claim.
+      const prefix = reasoningStepPrefix(turn, step);
+      for (const key of [...state.segments.keys()]) {
+        if (key.startsWith(prefix)) state.segments.delete(key);
+      }
+      for (const key of [...state.received.keys()]) {
+        if (key.startsWith(prefix)) state.received.delete(key);
+      }
+      blocks.forEach((text, index) => {
+        if (typeof text !== 'string' || !text.trim()) return;
+        const key = reasoningKey(turn, step, index);
+        state.segments.set(key, text);
+        // The settled block is the truth for this block, so it replaces the
+        // streamed tally rather than adding to it.
+        state.received.set(key, text.length);
+      });
+      trimReasoning(state);
+      return state;
+    }
+
+    /**
+     * Drop the reasoning of a retried step.
+     *
+     * A retry reuses the same turn and step, so the failed attempt's thinking
+     * would otherwise be concatenated with the successful one. The attempt
+     * that is about to run starts from a clean slate, which is what the
+     * official Trajectory view does too.
+     */
+    function resetStepReasoning(state, turn, step) {
+      if (!state) return state;
+      const prefix = reasoningStepPrefix(turn, step);
+      for (const key of [...state.segments.keys()]) {
+        if (key.startsWith(prefix)) state.segments.delete(key);
+      }
+      for (const key of [...state.received.keys()]) {
+        if (key.startsWith(prefix)) state.received.delete(key);
+      }
+      return state;
+    }
+
+    /**
+     * Drop the oldest reasoning until the accumulator fits the cap.
+     *
+     * The oldest block goes first: the reader cares about what the agent is
+     * doing now, and the newest blocks are the ones still in play. Trimming
+     * only shortens the kept text — how much was dropped is derived later
+     * from `received`, so trimming twice never double-counts.
+     */
+    function trimReasoning(state) {
+      let total = 0;
+      for (const text of state.segments.values()) total += text.length;
+      if (total <= REASONING_LIMIT) return;
+      for (const [key, text] of state.segments) {
+        if (total <= REASONING_LIMIT) break;
+        const excess = total - REASONING_LIMIT;
+        const cut = Math.min(text.length, excess);
+        if (cut <= 0) continue;
+        state.segments.set(key, text.slice(cut));
+        total -= cut;
+      }
+    }
+
+    /** How many characters the cap has dropped, derived from what arrived. */
+    function droppedReasoningOf(state) {
+      if (!state || !state.segments || !state.received) return 0;
+      let dropped = 0;
+      for (const [key, text] of state.segments) {
+        const received = state.received.get(key) || text.length;
+        if (received > text.length) dropped += received - text.length;
+      }
+      return dropped;
+    }
+
+    /**
+     * The accumulated reasoning, one block's thinking per paragraph group.
+     *
+     * The dropped-chars count is *not* baked into this string: the card needs
+     * it as metadata so a collapsed row can still say the text is partial,
+     * and the reader wants the reasoning itself, not a notice glued to it.
+     */
+    function reasoningTextOf(state) {
+      if (!state || !state.segments) return '';
+      const parts = [];
+      for (const text of state.segments.values()) {
+        if (text && text.trim()) parts.push(text);
+      }
+      return parts.join('\n\n');
+    }
+
+    /**
+     * The one-line summary of a reasoning text: the first line of its last
+     * paragraph.
+     *
+     * A collapsed section shows this so the reader learns what the agent was
+     * up to without opening anything. It is deliberately *not* a copy of the
+     * official Chat row, which picks the last completed paragraph's first line
+     * only while streaming and the first line of the whole text once settled.
+     */
+    function reasoningPreview(text) {
+      if (!text) return '';
+      const source = String(text);
+      // The last paragraph is the freshest thought; take its first line.
+      const paragraphs = source.split(/\r?\n[\t ]*\r?\n/);
+      const last = paragraphs[paragraphs.length - 1] || '';
+      const firstLine = last.split(/\r?\n/).find((line) => line.trim());
+      const chosen = firstLine ? firstLine.trim() : '';
+      return chosen.replace(/\*\*/g, '').slice(0, 200);
+    }
+
+    /**
+     * The newest thing the model wrote, in one line.
+     *
+     * While a branch runs this is the only honest answer to "what is it
+     * doing right now": the most recent line of its thinking, not a summary
+     * of a paragraph it started a while ago.
+     */
+    function reasoningTail(text) {
+      if (!text) return '';
+      const lines = String(text).split(/\r?\n/);
+      for (let index = lines.length - 1; index >= 0; index -= 1) {
+        const trimmed = lines[index].trim();
+        if (!trimmed) continue;
+        return trimmed.replace(/\*\*/g, '').slice(0, 200);
+      }
+      return '';
     }
 
     function maxDurableSeq(entries) {
@@ -437,6 +737,9 @@ window.__ModuleLoader__.load({
     function projectTurns(entries, sessionRunning) {
       const turns = [];
       let current = null;
+      // Reasoning is accumulated across the whole turn: a turn is one user
+      // question and the model may think in several steps before answering.
+      let reasoning = reasoningState();
       for (let index = 0; index < entries.length; index += 1) {
         const entry = entries[index];
         if (!entry || !entry.event) continue;
@@ -450,6 +753,13 @@ window.__ModuleLoader__.load({
             if (chunk && chunk.type === 'text-delta' && typeof chunk.text === 'string') {
               current.streamText = (current.streamText || '') + chunk.text;
               current.answer = current.streamText;
+            } else if (chunk && isReasoningChunk(chunk)) {
+              // Only reasoning chunks touch the reasoning text: a text or
+              // tool-call token must not rebuild a multi-kilobyte string.
+              // The host frames a chunk with the same turn/step as the
+              // message that will settle it.
+              applyReasoningChunk(reasoning, chunk, data.turn, data.step);
+              Object.assign(current, reasoningFieldsOf(reasoning));
             }
           }
           continue;
@@ -461,10 +771,17 @@ window.__ModuleLoader__.load({
             real: false, kind: '', costFrom: index, streamText: '',
             step: 0, tool: '', startedAt: typeof event.time === 'number' ? event.time : 0,
             awaiting: '', pendingQuestions: new Set(), pendingApprovals: new Set(),
+            reasoning: '',
           };
+          reasoning = reasoningState();
           turns.push(current);
         } else if (event.type === 'step/start') {
           if (current) current.step = typeof data.step === 'number' ? data.step : current.step + 1;
+        } else if (event.type === 'llm/retry' || event.type === 'llm/retry-started') {
+          // A retry reuses the same turn and step, so the failed attempt's
+          // thinking has to go before the new attempt's arrives.
+          resetStepReasoning(reasoning, data.turn, data.step);
+          if (current) Object.assign(current, reasoningFieldsOf(reasoning));
         } else if (event.type === 'tool/call') {
           if (current) {
             if (data.name) current.tool = String(data.name);
@@ -509,6 +826,12 @@ window.__ModuleLoader__.load({
             if (text.trim()) {
               target.answer = text;
               target.streamText = text;
+            }
+            // The settled message carries the step's reasoning blocks.
+            const settled = reasoningBlocksOfMessage(data.message);
+            if (settled.length) {
+              mergeSettledReasoning(reasoning, settled, data.turn, data.step);
+              Object.assign(target, reasoningFieldsOf(reasoning));
             }
             target.answerSeq = typeof event.seq === 'number' ? event.seq : target.answerSeq;
           }
@@ -561,14 +884,18 @@ window.__ModuleLoader__.load({
       let startedAt = 0;
       const pendingQuestions = new Set();
       const pendingApprovals = new Set();
+      // A branch reasons over its own steps, exactly like the mainline.
+      const reasoning = reasoningState();
       const cost = turnCost(entries, baseline);
       for (const entry of entries) {
         const event = entry && entry.event;
         if (!event) continue;
         if (entry.type === 'transient') {
           if (event.type === 'assistant/live-chunk' && seqOf(entry) > baseline) {
-            const chunk = event.data && event.data.chunk;
+            const data = event.data || {};
+            const chunk = data.chunk;
             if (chunk && chunk.type === 'text-delta' && typeof chunk.text === 'string') text += chunk.text;
+            else if (isReasoningChunk(chunk)) applyReasoningChunk(reasoning, chunk, data.turn, data.step);
           }
           continue;
         }
@@ -584,6 +911,11 @@ window.__ModuleLoader__.load({
         } else if (event.type === 'step/start') {
           const data = event.data || {};
           step = typeof data.step === 'number' ? data.step : step + 1;
+        } else if (event.type === 'llm/retry' || event.type === 'llm/retry-started') {
+          // A retry reuses the same turn and step, so the failed attempt's
+          // thinking has to go before the new attempt's arrives.
+          const data = event.data || {};
+          resetStepReasoning(reasoning, data.turn, data.step);
         } else if (event.type === 'tool/call') {
           const data = event.data || {};
           if (data.name) tool = String(data.name);
@@ -608,6 +940,8 @@ window.__ModuleLoader__.load({
               answer = finalText;
               text = finalText;
             }
+            const settled = reasoningBlocksOfMessage(data.message);
+            if (settled.length) mergeSettledReasoning(reasoning, settled, data.turn, data.step);
           }
           answerSeq = seq;
         } else if (event.type === 'turn/end') {
@@ -618,7 +952,10 @@ window.__ModuleLoader__.load({
         }
       }
       const awaiting = ended ? '' : (pendingQuestions.size ? 'question' : pendingApprovals.size ? 'approval' : '');
-      return { text, answer, answerSeq, ended, cost, step, tool, startedAt, awaiting };
+      return {
+        text, answer, answerSeq, ended, cost, step, tool, startedAt, awaiting,
+        ...reasoningFieldsOf(reasoning),
+      };
     }
 
     // ----------------------------------------------------------------- layout
@@ -1023,6 +1360,15 @@ window.__ModuleLoader__.load({
       function writeNow() {
         try {
           const payload = {
+            // Reasoning is deliberately NOT persisted here.
+            //
+            // Two reasons. It is re-derived from the session log on every
+            // projection, so a copy here only duplicates bytes. And it is the
+            // one field that can reach tens of kilobytes per node, which is
+            // exactly what would push this snapshot into the localStorage
+            // quota — and this snapshot also holds the parent links, which
+            // are the only thing here that *cannot* be rebuilt. Losing those
+            // flattens the tree, so the large derivable field gives way.
             nodes: state.nodes.map((node) => ({
               id: node.id,
               parentId: node.parentId,
@@ -1113,6 +1459,8 @@ window.__ModuleLoader__.load({
               sessionId: rootId,
               question: turn.question,
               answer: turn.answer,
+              reasoning: turn.reasoning || '',
+              reasoningDropped: turn.reasoningDropped || 0,
               status: turn.status,
               answerSeq: turn.answerSeq,
               kind: 'root',
@@ -1130,6 +1478,8 @@ window.__ModuleLoader__.load({
               existing.parentId !== next.parentId ||
               existing.question !== next.question ||
               existing.answer !== next.answer ||
+              (existing.reasoning || '') !== next.reasoning ||
+              (existing.reasoningDropped || 0) !== next.reasoningDropped ||
               existing.answerSeq !== next.answerSeq ||
               existing.status !== next.status ||
               (existing.awaiting || '') !== next.awaiting ||
@@ -1519,6 +1869,10 @@ window.__ModuleLoader__.load({
           if (read2.answerSeq) changes.answerSeq = read2.answerSeq;
           if (read2.step !== (current.step || 0)) changes.step = read2.step;
           if (read2.tool !== (current.tool || '')) changes.tool = read2.tool;
+          if ((read2.reasoning || '') !== (current.reasoning || '')) changes.reasoning = read2.reasoning || '';
+          if ((read2.reasoningDropped || 0) !== (current.reasoningDropped || 0)) {
+            changes.reasoningDropped = read2.reasoningDropped || 0;
+          }
           const awaiting = read2.awaiting || '';
           if (awaiting !== (current.awaiting || '')) changes.awaiting = awaiting;
           if (read2.startedAt && read2.startedAt !== current.startedAt) changes.startedAt = read2.startedAt;
@@ -1649,6 +2003,15 @@ window.__ModuleLoader__.load({
             const awaiting = read.awaiting || '';
             const node = store.getNode(nodeId);
             if (node && awaiting !== (node.awaiting || '')) store.patch(nodeId, { awaiting });
+            // The branch's reasoning arrives with the same events as its answer,
+            // so it is patched in the same breath.
+            if (node && ((read.reasoning || '') !== (node.reasoning || '')
+              || (read.reasoningDropped || 0) !== (node.reasoningDropped || 0))) {
+              store.patch(nodeId, {
+                reasoning: read.reasoning || '',
+                reasoningDropped: read.reasoningDropped || 0,
+              });
+            }
             if (read.ended) {
               unsubscribe();
               try {
@@ -2005,6 +2368,109 @@ window.__ModuleLoader__.load({
         elapsed > 0 ? h('span', { style: { fontVariantNumeric: 'tabular-nums', opacity: 0.6 } }, elapsed + 's') : null);
     }
 
+    /**
+     * The agent's current thought, in one line.
+     *
+     * An elapsed time says the agent is busy; it does not say what it is
+     * doing. This row carries the newest reasoning the model has written, so
+     * the reader can tell a search from a refactor without opening anything.
+     * It is only rendered while the branch is running — a settled turn shows
+     * its reasoning in the card's own section instead.
+     */
+    function ReasoningTail({ node }) {
+      useLocale();
+      const awaiting = node.awaiting === 'question' || node.awaiting === 'approval';
+      const running = awaiting || node.status === 'thinking' || node.status === 'streaming' || node.status === 'running';
+      const text = node.reasoning || '';
+      if (!running || !text.trim()) return null;
+      const preview = reasoningTail(text);
+      if (!preview) return null;
+      return h('div', {
+        className: 'dsh-tree-reasoning-tail',
+        // The title is the preview, not the whole reasoning: this row re-renders
+        // on every reasoning token, and a multi-kilobyte attribute would be
+        // rebuilt each time for a tooltip nobody reads at that size.
+        title: preview,
+        style: {
+          marginTop: 5, padding: '4px 7px', borderRadius: 6,
+          borderLeft: '2px solid ' + C.accentEdge,
+          background: 'color-mix(in srgb, var(--dsw-alias-label-primary) 4%, transparent)',
+          fontSize: 10.5, color: C.ink4, lineHeight: 1.45,
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+          wordBreak: 'break-word',
+        },
+      }, preview);
+    }
+
+    /**
+     * The settled reasoning of a turn, behind a disclosure.
+     *
+     * It is a footnote to the answer: collapsed by default, and only present
+     * at all when the model actually wrote something down. The collapsed row
+     * carries the first line of the thinking, so a reader learns what the
+     * agent was up to without opening anything — the same shape the official
+     * Chat view uses for its reasoning rows.
+     */
+    function ReasoningSection({ node, defaultOpen }) {
+      useLocale();
+      const [open, setOpen] = useState(Boolean(defaultOpen));
+      const text = node.reasoning || '';
+      if (!text.trim()) return null;
+      const preview = reasoningPreview(text);
+      const dropped = node.reasoningDropped || 0;
+      return h('div', {
+        className: 'dsh-tree-reasoning',
+        style: { marginTop: 8 },
+      },
+        h('button', {
+          onClick: (event) => {
+            event.stopPropagation();
+            setOpen((value) => !value);
+          },
+          title: open ? T('card.thinkCollapseTitle') : T('card.thinkExpandTitle'),
+          'aria-expanded': open,
+          className: LINK,
+          style: { color: C.accent, gap: 5, maxWidth: '100%' },
+        },
+          h(Chevron, { dir: open ? 'down' : 'right', size: 9 }),
+          h('span', { style: { flex: '0 0 auto' } }, T('card.think')),
+          h('span', { style: { color: C.ink4, fontVariantNumeric: 'tabular-nums', flex: '0 0 auto' } },
+            T('card.thinkMeta', { count: text.length }))),
+        // The truncation notice is metadata, not part of the reasoning, so a
+        // collapsed row can still say the text is partial.
+        dropped > 0
+          ? h('div', {
+            style: {
+              marginTop: 3, paddingLeft: 13, fontSize: 10.2,
+              color: C.ink4, fontVariantNumeric: 'tabular-nums',
+            },
+          }, T('card.thinkTruncated', { count: dropped }))
+          : null,
+        !open && preview
+          ? h('div', {
+            className: 'dsh-tree-reasoning-preview',
+            style: {
+              marginTop: 4, paddingLeft: 13, fontSize: 10.8, lineHeight: 1.5,
+              color: C.ink4,
+              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+              wordBreak: 'break-word',
+            },
+          }, preview)
+          : null,
+        open
+          ? h('div', {
+            onClick: (event) => event.stopPropagation(),
+            style: {
+              marginTop: 5, padding: '7px 9px', borderRadius: 7,
+              border: '1px solid ' + C.cardEdge,
+              background: 'color-mix(in srgb, var(--dsw-alias-label-primary) 3%, transparent)',
+              maxHeight: 260, overflow: 'auto',
+              fontSize: 11.5, lineHeight: 1.68, color: C.ink4,
+            },
+          }, renderMarkdown(text))
+          : null);
+    }
+
     function NodeCard({ node, selected, dimmed, index, store, api, rootId, match, collapsed, childCount, descendants, isLatest, entering }) {
       useLocale();
       const snapshot = store.getSnapshot();
@@ -2191,6 +2657,8 @@ window.__ModuleLoader__.load({
           },
         }, answer ? renderMarkdown(answerText) : null),
         h(LiveProgress, { node }),
+        h(ReasoningTail, { node }),
+        h(ReasoningSection, { node }),
         h(Presence, { show: composing, className: 'dsh-tree-composer' },
           h(Composer, { store, api, rootId, node, active: composing })),
         answer.length > 260 || childCount > 0
@@ -2990,7 +3458,33 @@ window.__ModuleLoader__.load({
               padding: '18px 22px 22px', overflow: 'auto', flex: 1,
               ...MD.body, fontSize: 13.4, lineHeight: 1.85,
             },
-          }, node.answer ? renderMarkdown(node.answer) : T('reader.noAnswer')),
+          },
+            node.answer ? renderMarkdown(node.answer) : T('reader.noAnswer'),
+            // The reader is where a long answer is actually read, so the
+            // reasoning that produced it belongs here too.
+            node.reasoning && node.reasoning.trim()
+              ? h('div', { style: { marginTop: 22 } },
+                h('div', {
+                  style: {
+                    fontSize: 10.5, letterSpacing: '0.05em', color: C.ink4,
+                    marginBottom: 6, display: 'flex', alignItems: 'center', gap: 7,
+                  },
+                }, T('card.think'),
+                  h('span', { style: { color: C.ink4, fontVariantNumeric: 'tabular-nums' } },
+                    T('card.thinkMeta', { count: node.reasoning.length })),
+                  node.reasoningDropped
+                    ? h('span', { style: { color: C.ink4, fontVariantNumeric: 'tabular-nums' } },
+                      T('card.thinkTruncated', { count: node.reasoningDropped }))
+                    : null),
+                h('div', {
+                  style: {
+                    padding: '10px 13px', borderRadius: 9,
+                    border: '1px solid ' + C.cardEdge,
+                    background: 'color-mix(in srgb, var(--dsw-alias-label-primary) 3%, transparent)',
+                    fontSize: 12.4, lineHeight: 1.78, color: C.ink4,
+                  },
+                }, renderMarkdown(node.reasoning)))
+              : null),
           h('div', {
             style: {
               padding: '8px 20px', borderTop: '1px solid ' + C.cardEdge, fontSize: 10.5,

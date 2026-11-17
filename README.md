@@ -32,6 +32,7 @@ A branch is not a prompt with history pasted into it. It is a real DSH session c
 - **Host appearance** — the interface follows DSH's language and light or dark theme.
 - **Fork from any answer** — the `+` in the corner of a finished card opens an inline composer; press Enter and the new node appears immediately.
 - **Concurrent branches** — several branches can run at once. A running card carries a live progress row (spinner, "Thinking… / Calling read / Writing…", step N, elapsed seconds), renders streamed tokens as Markdown while they arrive, and offers Stop.
+- **You can see what it is thinking** — an elapsed time says the agent is busy, not what it is doing. A running card carries a live "reasoning tail" with the model's newest line, and a settled card keeps a collapsible "Reasoning" section (also in the full-screen reader). A model that does not think shows neither.
 - **Waiting on you** — a branch parked on a question or an approval says so on its card ("Waiting for your answer…" / "Waiting for your approval…") with an accent ring; the canvas expands the path to it and centres it, and the toolbar chip "N waiting on you" jumps there. The path to a running or waiting node is never hidden by the default fold.
 - **Jump to latest** — expands the ancestor path of the newest node and centres that card; newest is judged by creation time, so out-of-order completions cannot send you to a stale card.
 - **Fold and search** — branches at depth 3 and deeper start folded, except on the path to a running or waiting node; `Ctrl/Cmd+F` focuses the search box, and Enter steps through matches, revealing their ancestor paths.
@@ -98,6 +99,9 @@ test/theme-tokens.cjs            no literal colours, required tokens exist, inve
 test/motion.cjs                  camera interpolation, gesture interruption, navigation replacement, reduced motion
 test/layout-direction.cjs        horizontal and vertical geometry, unequal heights, collapsed branches
 test/host-overlay.cjs            conversation overlay, chrome measurement, reader and fallback
+test/reasoning.cjs               the reasoning card: live tail, disclosure, no-reasoning, retry, cap, truthful count
+test/reasoning-persist.cjs       reasoning stays out of the snapshot and is re-derived after a reload
+test/real-log.cjs                end-to-end harness over a real session.v4.jsonl.zstd
 docs/design.md                   design doc: data model, trade-offs, known gaps
 docs/releasing.md                CI, Release Please and npm publishing
 .github/workflows/               CI, Release Please and the manual npm publish workflow
@@ -111,6 +115,7 @@ The view is a single client plugin; the full design — data model, trade-offs, 
 - **Copy follows the host language.** Every visible string is a key in the `dsh-explore` namespace resolved through the client locale service, so switching language swaps the tab title and the whole view. A profile without the locale plugin falls back to the built-in Chinese/English tables, chosen by `document.documentElement.lang`.
 - **Nodes are projections.** The view reads a session's `entries` (durable events plus the transient `assistant/live-chunk`) and projects one turn onto one card. Nothing extra is recorded, so continuing the chat in Chat simply grows the tree.
 - **"Waiting on you" has no event of its own.** In the host, `ask_user_question` and approvals are just "a tool that has not returned yet": no `turn/end` is emitted while waiting and `running` stays `true`. The plugin derives the state from `tool/call` (`ask_user_question`, settled by `callId` in `tool/result`) and `approval/asked → approval/decided`, and relabels the card from calling a tool to waiting. `user/message` only ever carries `source.kind: 'user'` or `'user-question-reply'`, and both are projected.
+- **Reasoning is visible, and it is already in the event window.** The model writes its thinking as `reasoning` content blocks — live as a `reasoning-delta` chunk on the transient `assistant/live-chunk`, settled as `{ type: 'reasoning', text }` inside the durable `assistant/message`. Both reach the plugin unchanged, so one projection covers "thinking now" and "done thinking": while a branch runs the card shows the newest line as a tail, and once it settles the thinking moves into a collapsible section (whose collapsed state still names the last paragraph and admits when the text was capped). A model that does not think renders nothing. A retry reuses the same turn/step, so the failed attempt's thinking is dropped first. Each card keeps at most 12000 characters, and the dropped count is derived from the bytes each block delivered (`received − kept`) rather than accumulated, because a block is trimmed more than once. Reasoning is **not** persisted to `localStorage`: it is re-derived from the log, and that snapshot also holds the parent links, which cannot be rebuilt.
 - **The path to an active node is never folded.** Layout only walks unfolded nodes, and a folded node has no position and is never drawn — that was the root cause of "the canvas does not show the node that is running". So the ancestor path of a running or waiting node skips the default fold; a node entering the running state also expands and persists that path, and a node that starts waiting moves the canvas onto itself. The toolbar's running count and "waiting on you" count are both jump buttons.
 - **Sessions get re-bound.** Leaving a conversation drops the host's reference; at zero the scope is collected and the `Session` instance is discarded together with its event window. On the way back, `materializeScope` mints a new `eventSource` and the window starts empty. Subscriptions therefore follow `eventSource` (the old one unsubscribes), an empty window is never treated as "the session is empty" and pruned, and a cold session is `open()`ed once — otherwise returning straight to the tab gives a blank canvas while Chat-then-tab works. `test/session-rebind.cjs` pins this.
 - **Forks are real sessions.** `ctx.sessions.fork({ sessionId, atSeq })` gives the child the prefix context up to that answer. Each branch also lands in the session list, so it is renamed `⟂ parent question · new question` to stay recognisable.
@@ -120,7 +125,7 @@ The view is a single client plugin; the full design — data model, trade-offs, 
 ## Development
 
 ```bash
-npm test                      # all eight commands below (scripts.test in package.json)
+npm test                      # all ten commands below (scripts.test in package.json)
 
 node --check client.js        # syntax
 node test/render-smoke.cjs    # render the whole view with a fake React; assert both language tables
@@ -130,7 +135,11 @@ node test/theme-tokens.cjs    # no literal colours, tokens exist, primary button
 node test/motion.cjs          # camera moves, gesture interruption, navigation replacement, reduced motion, cleanup
 node test/layout-direction.cjs # geometry in both directions, unequal heights, collapsed branches
 node test/host-overlay.cjs     # host overlay, chrome measurement, reader, fallback
+node test/reasoning.cjs       # reasoning: live tail, disclosure, no-reasoning, retry, cap, truthful count
+node test/reasoning-persist.cjs  # reasoning stays out of the snapshot; re-derived after reload; parent links survive
 ```
+
+`node test/real-log.cjs <a session.v4.jsonl.zstd>` replays a real session end to end; it is optional and not part of `npm test`.
 
 `client.js` is a client plugin — the lazy factory behind `window.__ModuleLoader__.load` — and edits hot-swap into the running host without a page reload. Note that the stylesheet rewrites the same `<style>` node on every `apply()`: skipping the rewrite when the node already exists means new rules never take effect after a hot reload.
 
@@ -158,6 +167,8 @@ See [SECURITY.md](SECURITY.md) for how to report a vulnerability privately. Plea
 - **Forks made outside the plugin are invisible.** A session forked in DSH by other means is opened as the root of a new tree.
 
 ## License
+
+[MIT](LICENSE) © 2026 tzzs
 
 [MIT](LICENSE) © 2026 tzzs
 
