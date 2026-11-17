@@ -28,8 +28,8 @@ A branch is not a prompt with history pasted into it. It is a real DSH session c
 ## Features
 
 - **Infinite canvas** — drag to pan, scroll to zoom (20%–200%), fit to canvas; the minimap in the bottom-right corner shows the current viewport and jumps on click. On supported DSH layouts, the canvas extends behind the title and composer.
-- **Tree direction** — use **Left to right** in the toolbar to switch between horizontal and vertical layouts. The choice is saved in this browser and applies to other conversations.
-- **Host appearance** — the interface follows DSH's language and light or dark theme.
+- **Both tree directions** — the toolbar carries a two-way layout switch: **top to bottom** or **left to right**. Both options are visible at once and the active one is pressed, so the current direction never has to be guessed from the shape of the canvas. The choice is saved in this browser and applies to other conversations.
+- **Host appearance** — the interface follows DSH in eight languages (Chinese, English, German, Spanish, French, Japanese, Portuguese, Russian) and in both the light and the dark theme: elevation, overlay surfaces, scrollbars and native form controls are all theme-aware.
 - **Fork from any answer** — the `+` in the corner of a finished card opens an inline composer; press Enter and the new node appears immediately.
 - **Concurrent branches** — several branches can run at once. A running card carries a live progress row (spinner, "Thinking… / Calling read / Writing…", step N, elapsed seconds), renders streamed tokens as Markdown while they arrive, and offers Stop.
 - **You can see what it is thinking** — an elapsed time says the agent is busy, not what it is doing. A running card carries a live "reasoning tail" with the model's newest line, and a settled card keeps a collapsible "Reasoning" section (also in the full-screen reader). A model that does not think shows neither.
@@ -99,6 +99,7 @@ test/theme-tokens.cjs            no literal colours, required tokens exist, inve
 test/motion.cjs                  camera interpolation, gesture interruption, navigation replacement, reduced motion
 test/layout-direction.cjs        horizontal and vertical geometry, unequal heights, collapsed branches
 test/host-overlay.cjs            conversation overlay, chrome measurement, reader and fallback
+test/locale-parity.cjs           all eight dictionaries: same key set, aligned {placeholders}, no cross-script leakage
 test/reasoning.cjs               the reasoning card: live tail, disclosure, no-reasoning, retry, cap, truthful count
 test/reasoning-persist.cjs       reasoning stays out of the snapshot and is re-derived after a reload
 test/real-log.cjs                end-to-end harness over a real session.v4.jsonl.zstd
@@ -125,7 +126,7 @@ The view is a single client plugin; the full design — data model, trade-offs, 
 ## Development
 
 ```bash
-npm test                      # all ten commands below (scripts.test in package.json)
+npm test                      # all eleven commands below (scripts.test in package.json)
 
 node --check client.js        # syntax
 node test/render-smoke.cjs    # render the whole view with a fake React; assert both language tables
@@ -135,6 +136,7 @@ node test/theme-tokens.cjs    # no literal colours, tokens exist, primary button
 node test/motion.cjs          # camera moves, gesture interruption, navigation replacement, reduced motion, cleanup
 node test/layout-direction.cjs # geometry in both directions, unequal heights, collapsed branches
 node test/host-overlay.cjs     # host overlay, chrome measurement, reader, fallback
+node test/locale-parity.cjs   # all eight dictionaries agree on keys, placeholders and script
 node test/reasoning.cjs       # reasoning: live tail, disclosure, no-reasoning, retry, cap, truthful count
 node test/reasoning-persist.cjs  # reasoning stays out of the snapshot; re-derived after reload; parent links survive
 ```
