@@ -3554,8 +3554,45 @@ window.__ModuleLoader__.load({
         focusNode(hitIds[nextIndex]);
       }, [matches, liveNodes, snapshot.selectedId, focusNode]);
 
+      /**
+       * Whether a wheel event belongs to something that scrolls on its own.
+       *
+       * The canvas claims every wheel event to zoom, so without this guard a
+       * reader scrolling the expanded reasoning text (or the composer) zoomed
+       * the whole canvas instead of scrolling the box under the pointer.
+       *
+       * `overflow-y` comes from the computed style rather than from our own
+       * class names, so a native scrollable — the composer's textarea — is
+       * covered by the same rule. The result distinguishes the two cases that
+       * need different handling:
+       *
+       *   'scroll' — the box can move further in this direction, so the browser
+       *              must handle the event natively and the canvas must stay out
+       *              of it entirely;
+       *   'edge'   — the box is already at that end. The wheel must do nothing
+       *              at all: falling through to the zoom is what made the canvas
+       *              jump under a reader who had simply reached the bottom.
+       */
+      function wheelOwner(target, stopAt, deltaY) {
+        if (!target || !stopAt || typeof window === 'undefined') return false;
+        for (let el = target; el && el !== stopAt; el = el.parentElement) {
+          const style = window.getComputedStyle(el);
+          const overflowY = style && style.overflowY;
+          if (overflowY !== 'auto' && overflowY !== 'scroll') continue;
+          const range = el.scrollHeight - el.clientHeight;
+          if (range <= 1) continue;
+          const atTop = el.scrollTop <= 0;
+          const atBottom = el.scrollTop >= range - 1;
+          return deltaY < 0 ? (atTop ? 'edge' : 'scroll') : (atBottom ? 'edge' : 'scroll');
+        }
+        return false;
+      }
+
       const onWheel = (event) => {
+        const owned = wheelOwner(event.target, wrapRef.current, event.deltaY);
+        if (owned === 'scroll') return;
         event.preventDefault();
+        if (owned === 'edge') return;
         const rect = wrapRef.current ? wrapRef.current.getBoundingClientRect() : { left: 0, top: 0 };
         const px = event.clientX - rect.left;
         const py = event.clientY - rect.top;

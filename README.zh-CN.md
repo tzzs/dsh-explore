@@ -97,6 +97,7 @@ test/canvas-visibility.cjs       可见性回归：在跑/等你节点必须被�
 test/session-rebind.cjs          重新绑定：换 eventSource 后重订阅、空窗口不剪枝、冷会话要 open
 test/theme-tokens.cjs            主题守卫：色值不写死、关键 token 必须存在、主按钮用反相前景
 test/motion.cjs                  动效：镜头插值、手势中断、导航替换、减少动态效果与清理
+test/wheel-scroll.cjs            滚轮归属：内层能滚就滚，滚到头也不缩放画布
 test/layout-direction.cjs        双向布局、不等高节点与折叠分支
 test/host-overlay.cjs            宿主覆盖层、区域测量、阅读层与回退
 test/locale-parity.cjs           八套语言表：键集合一致、{占位符} 对齐、不串字符集
@@ -126,7 +127,7 @@ docs/releasing.md                CI、Release Please 与 npm 发布
 ## 开发
 
 ```bash
-npm test                      # 下面十一条一起跑（package.json 里的 scripts.test）
+npm test                      # 下面十二条一起跑（package.json 里的 scripts.test）
 
 node --check client.js        # 语法
 node test/render-smoke.cjs    # 渲染冒烟：把整个视图真渲染一遍，并断言中英两套文案
@@ -134,6 +135,7 @@ node test/canvas-visibility.cjs  # 可见性回归：在跑/等你的节点必�
 node test/session-rebind.cjs  # 重新打开会话：scope 重建后换订阅、空窗口不剪枝、冷会话要 open
 node test/theme-tokens.cjs    # 主题守卫：色值不写死、token 必须存在、主按钮用反相前景 token
 node test/motion.cjs          # 动效：画布移动、手势中断、导航替换、减少动态效果与清理
+node test/wheel-scroll.cjs    # 滚轮归属：思考框能滚就滚，滚到头也不缩放画布
 node test/layout-direction.cjs # 双向布局、不等高节点和折叠分支
 node test/host-overlay.cjs     # 宿主覆盖层、区域测量、阅读层与回退
 node test/locale-parity.cjs    # 八套语言表的键、占位符与字符集
