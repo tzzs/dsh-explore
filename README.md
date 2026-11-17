@@ -101,6 +101,7 @@ test/wheel-scroll.cjs            the canvas yields the wheel to inner scroll are
 test/live-clock.cjs              the running card counts wall clock, and only one timer exists
 test/reader-dialog.cjs           the reader is a native modal: no hand-built focus trap, contained scroll
 test/markdown-table.cjs          GFM tables: alignment, escaped pipes, scrollable wrapper
+test/markdown.cjs                the whole supported Markdown surface, plus what it refuses
 test/layout-direction.cjs        horizontal and vertical geometry, unequal heights, collapsed branches
 test/host-overlay.cjs            conversation overlay, chrome measurement, reader and fallback
 test/locale-parity.cjs           all eight dictionaries: same key set, aligned {placeholders}, no cross-script leakage
@@ -130,7 +131,7 @@ The view is a single client plugin; the full design — data model, trade-offs, 
 ## Development
 
 ```bash
-npm test                      # all fifteen commands below (scripts.test in package.json)
+npm test                      # all sixteen commands below (scripts.test in package.json)
 
 node --check client.js        # syntax
 node test/render-smoke.cjs    # render the whole view with a fake React; assert both language tables
@@ -142,6 +143,7 @@ node test/wheel-scroll.cjs    # the wheel belongs to the reasoning box, not the 
 node test/live-clock.cjs      # the elapsed time advances between events, from one timer
 node test/reader-dialog.cjs   # the reader is a native <dialog>: showModal, close mirroring, backdrop scroll containment
 node test/markdown-table.cjs  # GFM tables in answers
+node test/markdown.cjs        # every Markdown construct the renderer supports
 node test/layout-direction.cjs # geometry in both directions, unequal heights, collapsed branches
 node test/host-overlay.cjs     # host overlay, chrome measurement, reader, fallback
 node test/locale-parity.cjs   # all eight dictionaries agree on keys, placeholders and script

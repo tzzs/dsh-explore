@@ -93,14 +93,14 @@ check('prose is not a delimiter row', md.isTableDelimiter('just some text'), fal
 {
   const tree = md.renderMarkdown('a | b | c');
   check('no table is invented', findAll(tree, (node) => node.type === 'table').length, 0);
-  check('the line stays a paragraph', findAll(tree, (node) => node.type === 'div').length, 1);
+  check('the line stays a paragraph', findAll(tree, (node) => node.type === 'p').length, 1);
   check('the text is kept', textOf(tree).indexOf('a | b | c') >= 0, true);
 }
 
 // --- a table between other blocks ---------------------------------------
 {
   const tree = md.renderMarkdown(['### Before', '', '| a | b |', '| --- | --- |', '| 1 | 2 |', '', 'After'].join('\n'));
-  check('the heading survives', findAll(tree, (node) => node.type === 'div').length >= 2, true);
+  check('the heading survives as a heading element', findAll(tree, (node) => node.type === 'h3').length, 1);
   check('the text after the table is still rendered', textOf(tree).indexOf('After') >= 0, true);
   check('one table', findAll(tree, (node) => node.type === 'table').length, 1);
 }

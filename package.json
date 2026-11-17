@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "test": "node --check client.js && node test/render-smoke.cjs && node test/canvas-visibility.cjs && node test/session-rebind.cjs && node test/theme-tokens.cjs && node test/motion.cjs && node test/wheel-scroll.cjs && node test/live-clock.cjs && node test/layout-direction.cjs && node test/host-overlay.cjs && node test/reader-dialog.cjs && node test/markdown-table.cjs && node test/locale-parity.cjs && node test/reasoning.cjs && node test/reasoning-persist.cjs"
+    "test": "node --check client.js && node test/render-smoke.cjs && node test/canvas-visibility.cjs && node test/session-rebind.cjs && node test/theme-tokens.cjs && node test/motion.cjs && node test/wheel-scroll.cjs && node test/live-clock.cjs && node test/layout-direction.cjs && node test/host-overlay.cjs && node test/reader-dialog.cjs && node test/markdown-table.cjs && node test/markdown.cjs && node test/locale-parity.cjs && node test/reasoning.cjs && node test/reasoning-persist.cjs"
   },
   "description": "DSH Explore — a branching-conversation canvas for DeepSeek Harness: ask a follow-up on any answer and grow a new branch.",
   "keywords": [

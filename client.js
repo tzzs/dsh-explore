@@ -2655,67 +2655,302 @@ window.__ModuleLoader__.load({
     // -------------------------------------------------------------- markdown
     const MD = {
       body: { fontSize: 12, lineHeight: 1.72, color: C.ink2, wordBreak: 'break-word' },
-      h1: { fontSize: '1.14em', fontWeight: 700, color: C.ink, margin: '0.62em 0 0.28em', lineHeight: 1.4 },
-      h2: { fontSize: '1.08em', fontWeight: 700, color: C.ink, margin: '0.58em 0 0.24em', lineHeight: 1.4 },
-      h3: { fontSize: '1.02em', fontWeight: 600, color: C.ink, margin: '0.52em 0 0.22em', lineHeight: 1.4 },
+      h1: { fontSize: '1.3em', fontWeight: 700, color: C.ink, margin: '0.7em 0 0.3em', lineHeight: 1.35 },
+      h2: { fontSize: '1.16em', fontWeight: 700, color: C.ink, margin: '0.65em 0 0.28em', lineHeight: 1.38 },
+      h3: { fontSize: '1.06em', fontWeight: 600, color: C.ink, margin: '0.58em 0 0.24em', lineHeight: 1.4 },
+      h4: { fontSize: '1.01em', fontWeight: 600, color: C.ink, margin: '0.52em 0 0.22em', lineHeight: 1.42 },
+      h5: { fontSize: '0.98em', fontWeight: 600, color: C.ink3, margin: '0.48em 0 0.2em', lineHeight: 1.42 },
+      h6: { fontSize: '0.96em', fontWeight: 600, color: C.ink3, margin: '0.44em 0 0.18em', lineHeight: 1.42 },
       p: { margin: '0 0 0.5em' },
-      ul: { margin: '0 0 0.5em', paddingLeft: '1.5em' },
+      ul: { margin: '0 0 0.5em', paddingLeft: '1.4em' },
       ol: { margin: '0 0 0.5em', paddingLeft: '1.5em' },
       li: { margin: '0 0 0.16em' },
+      checkbox: { marginRight: '0.4em', verticalAlign: 'middle' },
       quote: {
         margin: '0 0 0.5em', paddingLeft: '0.75em', borderLeft: '2px solid ' + C.line,
         color: C.ink3,
       },
       hr: { border: 'none', borderTop: '1px solid ' + C.line, margin: '0.75em 0' },
       codeBlock: {
-        margin: '0 0 0.6em', padding: '0.55em 0.75em', borderRadius: 6, background: C.code,
+        margin: 0, padding: '0.55em 0.75em', borderRadius: 6, background: C.code,
         border: '1px solid ' + C.line, fontFamily: MONO,
         fontSize: '0.9em', lineHeight: 1.6, whiteSpace: 'pre-wrap', overflowX: 'auto', color: C.ink,
+      },
+      codeLang: {
+        margin: '0 0 0.3em', fontSize: '0.78em', letterSpacing: '0.04em',
+        color: C.ink4, fontFamily: MONO, textTransform: 'uppercase',
       },
       inlineCode: {
         fontFamily: MONO, fontSize: '0.92em',
         background: C.codeInline, borderRadius: 3, padding: '0 0.28em', color: C.ink,
       },
       link: { color: C.accent, textDecoration: 'none' },
+      image: {
+        display: 'block', maxWidth: '100%', height: 'auto',
+        margin: '0.4em 0', borderRadius: 6,
+      },
       strong: { fontWeight: 700, color: C.ink },
     };
 
+    /*
+     * Why this is a renderer and not a Markdown library.
+     *
+     * The view has no dependencies and ships as one file the host loads, so it
+     * cannot pull in a parser. What it can do is cover the subset an answer
+     * actually uses and be explicit about the rest: reference links, footnotes
+     * and raw HTML blocks are passed through as text rather than half-rendered.
+     *
+     * Raw HTML is never injected — every string here becomes a React text node,
+     * so a model that writes a script tag gets the characters, not an element.
+     * That is also why this is safe to run on model output.
+     */
+
+    /** Only these schemes may become a live link. */
+    function safeHref(raw) {
+      const url = String(raw || '').trim();
+      if (!url) return null;
+      if (/^(https?:|mailto:)/i.test(url)) return url;
+      // Relative links and fragment anchors are fine. Anything else — notably
+      // javascript: and data: — would turn model output into script execution.
+      if (/^(\/|\.{1,2}\/|#)/.test(url)) return url;
+      return null;
+    }
+
+    /** Strip the angle brackets or quotes a URL may be wrapped in. */
+    function cleanUrl(raw) {
+      return String(raw || '').trim().replace(/^<|>$/g, '').replace(/^["']|["']$/g, '');
+    }
+
+    /** Index of the closing `marker` at or after `from`, or -1 when unclosed. */
+    function closeOf(text, from, marker) {
+      let found = text.indexOf(marker, from);
+      while (found >= 0) {
+        if (text[found - 1] !== '\\') return found;
+        found = text.indexOf(marker, found + marker.length);
+      }
+      return -1;
+    }
+
+    /**
+     * Inline Markdown: escapes, code spans, emphasis, strikethrough, images,
+     * links, autolinks and hard breaks.
+     */
     function inlineNodes(text, keyBase) {
       const out = [];
-      const pattern = /(\*\*[^*\n]+\*\*|__[^_\n]+__|`[^`\n]+`|\[[^\]\n]+\]\([^)\s]+\)|\*[^*\n]+\*)/g;
-      let last = 0;
-      let match;
+      const source = String(text === undefined || text === null ? '' : text);
+      let buffer = '';
       let index = 0;
-      while ((match = pattern.exec(text)) !== null) {
-        if (match.index > last) out.push(text.slice(last, match.index));
-        const token = match[0];
-        const key = keyBase + '-' + index;
-        index += 1;
-        if (token.startsWith('**') || token.startsWith('__')) {
-          out.push(h('strong', { key, style: MD.strong }, token.slice(2, -2)));
-        } else if (token.startsWith('`')) {
-          out.push(h('code', { key, style: MD.inlineCode }, token.slice(1, -1)));
-        } else if (token.startsWith('[')) {
-          const link = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(token);
-          out.push(h('a', {
-            key,
-            href: link ? link[2] : '#',
-            target: '_blank',
-            rel: 'noreferrer noopener',
-            style: MD.link,
-          }, link ? link[1] : token));
-        } else {
-          out.push(h('em', { key }, token.slice(1, -1)));
+      const nextKey = () => keyBase + '-' + (index++);
+      const flush = () => { if (buffer) { out.push(buffer); buffer = ''; } };
+      let i = 0;
+      while (i < source.length) {
+        const ch = source[i];
+        // Backslash escape: the next character is literal.
+        if (ch === '\\' && i + 1 < source.length && /[\\`*_{}[\]()#+\-.!>~|]/.test(source[i + 1])) {
+          buffer += source[i + 1];
+          i += 2;
+          continue;
         }
-        last = match.index + token.length;
+        // A backslash at the end of a line is a hard break.
+        if (ch === '\\' && source[i + 1] === '\n') {
+          flush();
+          out.push(h('br', { key: nextKey() }));
+          i += 2;
+          continue;
+        }
+        if (ch === '\n') {
+          // Two trailing spaces are a hard break; any other newline is a space,
+          // since a card is a narrow column where a stray newline reads as a
+          // broken word.
+          if (/  $/.test(buffer)) {
+            buffer = buffer.replace(/ +$/, '');
+            flush();
+            out.push(h('br', { key: nextKey() }));
+          } else {
+            buffer += ' ';
+          }
+          i += 1;
+          continue;
+        }
+        // Code span: a run of N backticks closed by the same run.
+        if (ch === '`') {
+          const run = /^`+/.exec(source.slice(i))[0];
+          const close = source.indexOf(run, i + run.length);
+          if (close > i) {
+            flush();
+            const inner = source.slice(i + run.length, close).replace(/^ | $/g, '');
+            out.push(h('code', { key: nextKey(), style: MD.inlineCode }, inner));
+            i = close + run.length;
+            continue;
+          }
+        }
+        // Image: ![alt](src "title")
+        if (ch === '!' && source[i + 1] === '[') {
+          const match = /^!\[([^\]]*)\]\(\s*((?:[^()\s]|\([^()]*\))+)(?:\s+"([^"]*)")?\s*\)/.exec(source.slice(i));
+          if (match) {
+            flush();
+            const href = safeHref(cleanUrl(match[2]));
+            if (href) {
+              out.push(h('img', {
+                key: nextKey(), src: href, alt: match[1] || '',
+                title: match[3] || undefined, loading: 'lazy', style: MD.image,
+              }));
+            } else {
+              out.push(match[1] || match[2]);
+            }
+            i += match[0].length;
+            continue;
+          }
+        }
+        // Link: [text](href "title")
+        if (ch === '[') {
+          const match = /^\[([^\]]*)\]\(\s*((?:[^()\s]|\([^()]*\))+)(?:\s+"([^"]*)")?\s*\)/.exec(source.slice(i));
+          if (match) {
+            flush();
+            const href = safeHref(cleanUrl(match[2]));
+            const label = match[1] || match[2];
+            if (href) {
+              out.push(h('a', {
+                key: nextKey(), href, target: '_blank', rel: 'noreferrer noopener',
+                title: match[3] || undefined, style: MD.link,
+              }, inlineNodes(label, nextKey())));
+            } else {
+              out.push(label);
+            }
+            i += match[0].length;
+            continue;
+          }
+        }
+        // Autolink: <https://example.com>
+        if (ch === '<') {
+          const match = /^<((?:https?:|mailto:)[^>\s]+)>/.exec(source.slice(i));
+          if (match) {
+            flush();
+            out.push(h('a', {
+              key: nextKey(), href: match[1], target: '_blank',
+              rel: 'noreferrer noopener', style: MD.link,
+            }, match[1].replace(/^mailto:/, '')));
+            i += match[0].length;
+            continue;
+          }
+        }
+        // A bare URL outside a link is still a link.
+        if ((ch === 'h' || ch === 'H') && /^https?:\/\//i.test(source.slice(i, i + 8))) {
+          const match = /^https?:\/\/[^\s<>()]+/i.exec(source.slice(i));
+          if (match) {
+            const url = match[0].replace(/[.,;:!?'"]+$/, '');
+            flush();
+            out.push(h('a', {
+              key: nextKey(), href: url, target: '_blank',
+              rel: 'noreferrer noopener', style: MD.link,
+            }, url));
+            i += url.length;
+            continue;
+          }
+        }
+        // Strikethrough, strong and emphasis. The inner text is parsed again so
+        // that strong-wrapping-code and nested emphasis come out right.
+        if (ch === '~' && source[i + 1] === '~') {
+          const close = closeOf(source, i + 2, '~~');
+          if (close > i) {
+            flush();
+            out.push(h('del', { key: nextKey() }, inlineNodes(source.slice(i + 2, close), nextKey())));
+            i = close + 2;
+            continue;
+          }
+        }
+        if ((ch === '*' && source[i + 1] === '*') || (ch === '_' && source[i + 1] === '_')) {
+          const marker = ch + ch;
+          const close = closeOf(source, i + 2, marker);
+          if (close > i) {
+            flush();
+            out.push(h('strong', { key: nextKey(), style: MD.strong },
+              inlineNodes(source.slice(i + 2, close), nextKey())));
+            i = close + 2;
+            continue;
+          }
+        }
+        if (ch === '*' || ch === '_') {
+          const close = closeOf(source, i + 1, ch);
+          if (close > i) {
+            flush();
+            out.push(h('em', { key: nextKey() }, inlineNodes(source.slice(i + 1, close), nextKey())));
+            i = close + 1;
+            continue;
+          }
+        }
+        buffer += ch;
+        i += 1;
       }
-      if (last < text.length) out.push(text.slice(last));
+      flush();
       return out;
     }
 
-    /** Small block-level Markdown renderer: headings, lists, quotes, fences, rules, paragraphs. */
+    /** Leading indentation of a line, with tabs counted as four spaces. */
+    function indentOf(line) {
+      const lead = /^[ \t]*/.exec(line)[0];
+      return lead.replace(/\t/g, '    ').length;
+    }
+
+    /**
+     * Read one list block, including nesting.
+     *
+     * The walk is indentation-based: an item at the list's own indent starts a
+     * new entry, and anything deeper belongs to the entry above and is rendered
+     * as nested blocks — which is what makes a sub-bullet read as a child
+     * instead of a second flat item, the single most common shape in an answer.
+     */
+    function parseListBlock(lines, start) {
+      const ordered = /^\s*\d+[.)]\s+/.test(lines[start]);
+      const baseIndent = indentOf(lines[start]);
+      const itemRe = ordered ? /^(\s*)(\d+)[.)]\s+(.*)$/ : /^(\s*)[-*+]\s+(.*)$/;
+      const items = [];
+      let startNumber = 1;
+      let i = start;
+      while (i < lines.length) {
+        const line = lines[i];
+        if (/^\s*$/.test(line)) {
+          // A blank line only ends the list when the next non-blank line is not
+          // another item of this list.
+          let j = i + 1;
+          while (j < lines.length && /^\s*$/.test(lines[j])) j += 1;
+          if (j < lines.length && indentOf(lines[j]) === baseIndent && itemRe.test(lines[j])) {
+            i = j;
+            continue;
+          }
+          break;
+        }
+        const match = itemRe.exec(line);
+        const indent = indentOf(line);
+        if (match && indent === baseIndent) {
+          if (ordered && items.length === 0) startNumber = parseInt(match[2], 10) || 1;
+          items.push({ text: ordered ? match[3] : match[2], rest: [] });
+          i += 1;
+          continue;
+        }
+        if (!items.length) break;
+        if (indent > baseIndent) {
+          items[items.length - 1].rest.push(line.slice(Math.min(indent, baseIndent + 2)));
+          i += 1;
+          continue;
+        }
+        break;
+      }
+      return { items, ordered, startNumber, next: i };
+    }
+
+    /** A fenced code block, with its info string kept as a visible label. */
+    function renderCodeBlock(language, body, key) {
+      const lang = String(language || '').trim().split(/\s+/)[0];
+      const label = lang ? h('div', { style: MD.codeLang }, lang) : null;
+      return h('div', { key, style: { margin: '0 0 0.6em' } },
+        label,
+        h('pre', { style: MD.codeBlock }, body.join('\n')));
+    }
+
+    /** Small block-level Markdown renderer. */
     function renderMarkdown(text) {
-      const source = String(text || '').replace(/\r\n/g, '\n');
+      const source = String(text || '').replace(/\r\n?/g, '\n');
       if (!source.trim()) return null;
       const lines = source.split('\n');
       const blocks = [];
@@ -2724,71 +2959,118 @@ window.__ModuleLoader__.load({
 
       while (i < lines.length) {
         const line = lines[i];
-        const fence = /^\s*```(.*)$/.exec(line);
+        if (/^\s*$/.test(line)) { i += 1; continue; }
+
+        // Fenced code: three or more backticks or tildes, closed by at least as
+        // many of the same character.
+        const fence = /^\s*(`{3,}|~{3,})(.*)$/.exec(line);
         if (fence) {
+          const marker = fence[1];
+          const closer = new RegExp('^\\s*' + (marker[0] === '`' ? '`' : '~') + '{' + marker.length + ',}\\s*$');
           const body = [];
           i += 1;
-          while (i < lines.length && !/^\s*```/.test(lines[i])) {
+          while (i < lines.length && !closer.test(lines[i])) {
             body.push(lines[i]);
             i += 1;
           }
           i += 1;
-          blocks.push(h('pre', { key: 'b' + blockKey, style: MD.codeBlock }, body.join('\n')));
+          blocks.push(renderCodeBlock(fence[2], body, 'b' + blockKey));
           blockKey += 1;
           continue;
         }
-        if (/^\s*$/.test(line)) { i += 1; continue; }
-        if (/^#{1,6}\s+/.test(line)) {
-          const level = line.match(/^#+/)[0].length;
-          const content = line.replace(/^#+\s+/, '');
-          const style = level === 1 ? MD.h1 : level === 2 ? MD.h2 : MD.h3;
-          blocks.push(h('div', { key: 'b' + blockKey, style }, inlineNodes(content, 'h' + blockKey)));
+
+        // Indented code block: four spaces. A list continuation never reaches
+        // here, because the list branch above consumes it.
+        if (/^ {4}\S/.test(line)) {
+          const body = [];
+          while (i < lines.length && (/^ {4}/.test(lines[i]) || /^\s*$/.test(lines[i]))) {
+            body.push(lines[i].replace(/^ {4}/, ''));
+            i += 1;
+          }
+          while (body.length && /^\s*$/.test(body[body.length - 1])) body.pop();
+          blocks.push(renderCodeBlock('', body, 'b' + blockKey));
+          blockKey += 1;
+          continue;
+        }
+
+        // ATX heading -> a real heading element, so the reader has a document
+        // structure and a screen reader announces it as one.
+        const atx = /^(#{1,6})\s+(.*?)\s*#*\s*$/.exec(line);
+        if (atx) {
+          const level = atx[1].length;
+          blocks.push(h('h' + level, { key: 'b' + blockKey, style: MD['h' + level] },
+            inlineNodes(atx[2], 'h' + blockKey)));
           blockKey += 1;
           i += 1;
           continue;
         }
-        if (/^\s*([-*_])\s*\1\s*\1[\s\-*_]*$/.test(line) || /^\s*---+\s*$/.test(line)) {
+
+        // Setext heading: a text line underlined by === or ---.
+        if (i + 1 < lines.length && /^\s*(=+|-{2,})\s*$/.test(lines[i + 1])
+          && !/^\s*([-*+]|\d+[.)])\s+/.test(line) && !/^\s*\|/.test(line)) {
+          const level = /^\s*=/.test(lines[i + 1]) ? 1 : 2;
+          blocks.push(h('h' + level, { key: 'b' + blockKey, style: MD['h' + level] },
+            inlineNodes(line.trim(), 'h' + blockKey)));
+          blockKey += 1;
+          i += 2;
+          continue;
+        }
+
+        if (/^\s*([-*_])\s*\1\s*\1[\s\-*_]*$/.test(line)) {
           blocks.push(h('hr', { key: 'b' + blockKey, style: MD.hr }));
           blockKey += 1;
           i += 1;
           continue;
         }
-        if (/^\s*[-*+]\s+/.test(line)) {
-          const items = [];
-          while (i < lines.length && /^\s*[-*+]\s+/.test(lines[i])) {
-            items.push(lines[i].replace(/^\s*[-*+]\s+/, ''));
-            i += 1;
-          }
-          blocks.push(h('ul', { key: 'b' + blockKey, style: MD.ul },
-            items.map((item, n) => h('li', { key: 'l' + n, style: MD.li }, inlineNodes(item, 'b' + blockKey + '-' + n)))));
+
+        if (/^\s*[-*+]\s+/.test(line) || /^\s*\d+[.)]\s+/.test(line)) {
+          const parsed = parseListBlock(lines, i);
+          i = parsed.next;
+          const tag = parsed.ordered ? 'ol' : 'ul';
+          blocks.push(h(tag, {
+            key: 'b' + blockKey,
+            style: parsed.ordered ? MD.ol : MD.ul,
+            start: parsed.ordered && parsed.startNumber !== 1 ? parsed.startNumber : undefined,
+          }, parsed.items.map((item, n) => {
+            const task = /^\[([ xX])\]\s+/.exec(item.text);
+            const content = task ? item.text.slice(task[0].length) : item.text;
+            const children = [];
+            if (task) {
+              children.push(h('input', {
+                key: 't' + n, type: 'checkbox', checked: task[1] !== ' ',
+                disabled: true, readOnly: true, style: MD.checkbox,
+              }));
+            }
+            children.push(...inlineNodes(content, 'b' + blockKey + '-' + n));
+            if (item.rest.length) children.push(...(renderMarkdown(item.rest.join('\n')) || []));
+            return h('li', { key: 'l' + n, style: MD.li }, children);
+          })));
           blockKey += 1;
           continue;
         }
-        if (/^\s*\d+[.)]\s+/.test(line)) {
-          const items = [];
-          while (i < lines.length && /^\s*\d+[.)]\s+/.test(lines[i])) {
-            items.push(lines[i].replace(/^\s*\d+[.)]\s+/, ''));
-            i += 1;
-          }
-          blocks.push(h('ol', { key: 'b' + blockKey, style: MD.ol },
-            items.map((item, n) => h('li', { key: 'l' + n, style: MD.li }, inlineNodes(item, 'b' + blockKey + '-' + n)))));
-          blockKey += 1;
-          continue;
-        }
-        if (/^\s*>\s?/.test(line)) {
+
+        // Block quote: recurse, so a list or a fence inside a quote renders.
+        if (/^\s*>/.test(line)) {
           const quoted = [];
-          while (i < lines.length && /^\s*>\s?/.test(lines[i])) {
+          while (i < lines.length && (/^\s*>/.test(lines[i]) || /^\s*$/.test(lines[i]))) {
+            if (/^\s*$/.test(lines[i])) {
+              const next = lines[i + 1];
+              if (next === undefined || !/^\s*>/.test(next)) break;
+              quoted.push('');
+              i += 1;
+              continue;
+            }
             quoted.push(lines[i].replace(/^\s*>\s?/, ''));
             i += 1;
           }
-          blocks.push(h('div', { key: 'b' + blockKey, style: MD.quote },
-            inlineNodes(quoted.join(' '), 'q' + blockKey)));
+          blocks.push(h('blockquote', { key: 'b' + blockKey, style: MD.quote },
+            renderMarkdown(quoted.join('\n')) || null));
           blockKey += 1;
           continue;
         }
-        // A GFM table: a pipe row whose next line is the `--- | :---:` delimiter.
-        // The delimiter is what distinguishes a table from prose that happens to
-        // contain pipes, so the second line is checked before anything is split.
+
+        // A GFM table: a pipe row whose next line is the delimiter row. The
+        // delimiter is what separates a table from prose containing pipes.
         if (/\|/.test(line) && i + 1 < lines.length && isTableDelimiter(lines[i + 1])) {
           const aligns = splitTableRow(lines[i + 1]).map((cell) => {
             const left = cell.startsWith(':');
@@ -2802,9 +3084,7 @@ window.__ModuleLoader__.load({
             rows.push(splitTableRow(lines[i]));
             i += 1;
           }
-          const cellStyle = (index) => ({
-            textAlign: aligns[index] || 'left',
-          });
+          const cellStyle = (index) => ({ textAlign: aligns[index] || 'left' });
           blocks.push(h('div', { key: 'b' + blockKey, className: 'dsh-tree-table-wrap' },
             h('table', { className: 'dsh-tree-table' },
               h('thead', null,
@@ -2820,15 +3100,20 @@ window.__ModuleLoader__.load({
           blockKey += 1;
           continue;
         }
+
+        // Paragraph: runs to the next block start.
         const paragraph = [];
         while (i < lines.length && !/^\s*$/.test(lines[i])
-          && !/^\s*```/.test(lines[i]) && !/^#{1,6}\s+/.test(lines[i])
-          && !/^\s*([-*+]|\d+[.)])\s+/.test(lines[i]) && !/^\s*>\s?/.test(lines[i])
-          && !(/^\s*\|/.test(lines[i]) && i + 1 < lines.length && isTableDelimiter(lines[i + 1]))) {
+          && !/^\s*(`{3,}|~{3,})/.test(lines[i]) && !/^#{1,6}\s+/.test(lines[i])
+          && !/^\s*[-*+]\s+/.test(lines[i]) && !/^\s*\d+[.)]\s+/.test(lines[i])
+          && !/^\s*>/.test(lines[i]) && !/^ {4}\S/.test(lines[i])
+          && !(/^\s*\|/.test(lines[i]) && i + 1 < lines.length && isTableDelimiter(lines[i + 1]))
+          && !(i + 1 < lines.length && /^\s*(=+|-{2,})\s*$/.test(lines[i + 1]))) {
           paragraph.push(lines[i]);
           i += 1;
         }
-        blocks.push(h('div', { key: 'b' + blockKey, style: MD.p },
+        if (!paragraph.length) { i += 1; continue; }
+        blocks.push(h('p', { key: 'b' + blockKey, style: MD.p },
           inlineNodes(paragraph.join('\n'), 'p' + blockKey)));
         blockKey += 1;
       }
