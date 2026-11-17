@@ -2408,8 +2408,7 @@ window.__ModuleLoader__.load({
      * It is a footnote to the answer: collapsed by default, and only present
      * at all when the model actually wrote something down. The collapsed row
      * carries the first line of the thinking, so a reader learns what the
-     * agent was up to without opening anything — the same shape the official
-     * Chat view uses for its reasoning rows.
+     * agent was up to without opening anything.
      */
     function ReasoningSection({ node, defaultOpen }) {
       useLocale();
@@ -2418,6 +2417,11 @@ window.__ModuleLoader__.load({
       if (!text.trim()) return null;
       const preview = reasoningPreview(text);
       const dropped = node.reasoningDropped || 0;
+      // A running card already shows the newest line in the reasoning tail, so
+      // the collapsed preview would repeat it verbatim one row below.
+      const running = node.awaiting === 'question' || node.awaiting === 'approval'
+        || node.status === 'thinking' || node.status === 'streaming' || node.status === 'running';
+      const showPreview = !open && preview && !running;
       return h('div', {
         className: 'dsh-tree-reasoning',
         style: { marginTop: 8 },
@@ -2446,7 +2450,7 @@ window.__ModuleLoader__.load({
             },
           }, T('card.thinkTruncated', { count: dropped }))
           : null,
-        !open && preview
+        showPreview
           ? h('div', {
             className: 'dsh-tree-reasoning-preview',
             style: {
