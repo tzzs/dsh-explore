@@ -2920,21 +2920,41 @@ window.__ModuleLoader__.load({
       });
     }
 
+    /**
+     * How long the turn has been open, in milliseconds of wall clock.
+     *
+     * This is deliberately not `cost.ms`: `turnCost` can only measure between
+     * durable events, so during one long thinking step it stops moving and then
+     * jumps by minutes when the step settles. An open turn has to be measured
+     * against the clock, clamped at zero so a skewed clock cannot print "-3s".
+     */
+    function liveElapsedMs(node, now) {
+      if (!node || !node.startedAt || !now) return 0;
+      return Math.max(0, now - node.startedAt);
+    }
+
+    /** Re-render the caller once a second while `active`. */
+    function useTicker(active) {
+      const [, setTick] = useState(0);
+      useEffect(() => {
+        if (!active) return undefined;
+        const timer = setInterval(() => setTick((n) => n + 1), 1000);
+        return () => clearInterval(timer);
+      }, [active]);
+      return Date.now();
+    }
+
     /** What the model is doing right now: thinking, calling a tool, or writing. */
-    function LiveProgress({ node }) {
+    function LiveProgress({ node, now }) {
       useLocale();
       const awaiting = node.awaiting === 'question' || node.awaiting === 'approval';
       const running = awaiting || node.status === 'thinking' || node.status === 'streaming' || node.status === 'running';
-      const [, tick] = useState(0);
-      useEffect(() => {
-        if (!running) return undefined;
-        const timer = setInterval(() => tick((n) => n + 1), 1000);
-        return () => clearInterval(timer);
-      }, [running]);
       if (!running) return null;
       const tool = node.tool || '';
       const step = node.step || 0;
-      const elapsed = node.startedAt ? Math.max(0, Math.round((Date.now() - node.startedAt) / 1000)) : 0;
+      // The clock lives in the card (one timer for the whole card); this row
+      // only reads it, so the live row and the header can never disagree.
+      const elapsed = Math.round(liveElapsedMs(node, now) / 1000);
       // A pending question/approval is not "calling the tool": name the wait so
       // the card says the ball is in the user's court.
       const label = awaiting
@@ -3092,6 +3112,10 @@ window.__ModuleLoader__.load({
       const animateEntry = useRef(entering);
       const isRunning = isInProgressNode(node);
       const awaiting = node.awaiting === 'question' || node.awaiting === 'approval';
+      // A running card has a clock. Without it the elapsed time only moved when
+      // a durable event landed, so a long thinking step left the number frozen
+      // for minutes and then jumped — the label looked broken rather than busy.
+      const now = useTicker(isRunning && Boolean(node.startedAt));
       const answer = node.answer || '';
       const answerText = answer.length > 1400 ? answer.slice(0, 1400) + T('card.truncated') : answer;
 
@@ -3166,19 +3190,31 @@ window.__ModuleLoader__.load({
             }, T('card.latestBadge'))
             : null,
           h(Badge, { label: statusLabel }),
-          node.cost && (node.cost.ms || node.cost.tokens)
-            ? h('span', {
-              title: [
-                node.cost.ms ? T('card.cost.elapsed', { value: formatCost({ ms: node.cost.ms, tokens: 0 }) }) : '',
-                node.cost.tokens ? T('card.cost.context', { value: formatCost({ ms: 0, tokens: node.cost.tokens }) }) : '',
-                node.cost.cached ? T('card.cost.cached', { value: formatCost({ ms: 0, tokens: node.cost.cached }) }) : '',
-              ].filter(Boolean).join(' · '),
-              style: {
-                fontSize: 10.5, color: C.ink3, fontVariantNumeric: 'tabular-nums',
-                whiteSpace: 'nowrap', letterSpacing: '0.02em',
-              },
-            }, formatCost(node.cost))
-            : null,
+          // While the turn is open the header clock is wall clock, not the span
+          // between the first and last durable event: the latter is what
+          // `turnCost` can know from the log, and it stops moving the moment the
+          // model thinks for a while without emitting anything durable.
+          (function () {
+            const live = isRunning && node.startedAt && now
+              ? {
+                ms: liveElapsedMs(node, now),
+                tokens: node.cost ? node.cost.tokens : 0,
+                cached: node.cost ? node.cost.cached : 0,
+              }
+              : node.cost;
+            if (!live || !(live.ms || live.tokens)) return null;
+            return h('span', {
+            title: [
+              live.ms ? T('card.cost.elapsed', { value: formatCost({ ms: live.ms, tokens: 0 }) }) : '',
+              live.tokens ? T('card.cost.context', { value: formatCost({ ms: 0, tokens: live.tokens }) }) : '',
+              live.cached ? T('card.cost.cached', { value: formatCost({ ms: 0, tokens: live.cached }) }) : '',
+            ].filter(Boolean).join(' · '),
+            style: {
+              fontSize: 10.5, color: C.ink3, fontVariantNumeric: 'tabular-nums',
+              whiteSpace: 'nowrap', letterSpacing: '0.02em',
+            },
+          }, formatCost(live));
+          })(),
           h('span', { style: { flex: 1 } }),
           isRunning
             ? h('button', {
@@ -3266,7 +3302,7 @@ window.__ModuleLoader__.load({
             WebkitMaskImage: (!expanded && answer.length > 320) ? 'linear-gradient(#000 82%, transparent 100%)' : 'none',
           },
         }, answer ? renderMarkdown(answerText) : null),
-        h(LiveProgress, { node }),
+        h(LiveProgress, { node, now }),
         h(ReasoningTail, { node }),
         h(ReasoningSection, { node }),
         h(Presence, { show: composing, className: 'dsh-tree-composer' },
