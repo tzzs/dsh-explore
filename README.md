@@ -32,7 +32,7 @@ A branch is not a prompt with history pasted into it. It is a real DSH session c
 - **Host appearance** — the interface follows DSH in eight languages (Chinese, English, German, Spanish, French, Japanese, Portuguese, Russian) and in both the light and the dark theme: elevation, overlay surfaces, scrollbars and native form controls are all theme-aware.
 - **Fork from any answer** — the `+` in the corner of a finished card opens an inline composer; press Enter and the new node appears immediately.
 - **Concurrent branches** — several branches can run at once. A running card carries a live progress row (spinner, "Thinking… / Calling read / Writing…", step N, elapsed seconds), renders streamed tokens as Markdown while they arrive, and offers Stop.
-- **You can see what it is thinking** — an elapsed time says the agent is busy, not what it is doing. A running card carries a live "reasoning tail" with the model's newest line, and a settled card keeps a collapsible "Reasoning" section (also in the full-screen reader). A model that does not think shows neither.
+- **You can see what it is thinking** — an elapsed time says the agent is busy, not what it is doing. A running card carries a live "reasoning tail" with the model's newest line; a settled card carries a row saying how much thinking there is and what it ends on. Both open the reader, where the whole chain sits at the top of the answer, folded away and one click from being read. Expanding it inside the card would stretch a 320px card into a long strip, so it does not. A model that does not think shows none of this.
 - **Waiting on you** — a branch parked on a question or an approval says so on its card ("Waiting for your answer…" / "Waiting for your approval…") with an accent ring; the canvas expands the path to it and centres it, and the toolbar chip "N waiting on you" jumps there. The path to a running or waiting node is never hidden by the default fold.
 - **Jump to latest** — expands the ancestor path of the newest node and centres that card; newest is judged by creation time, so out-of-order completions cannot send you to a stale card.
 - **Fold and search** — branches at depth 3 and deeper start folded, except on the path to a running or waiting node; `Ctrl/Cmd+F` focuses the search box, and Enter steps through matches, revealing their ancestor paths.
@@ -100,6 +100,7 @@ test/motion.cjs                  camera interpolation, gesture interruption, nav
 test/wheel-scroll.cjs            the canvas yields the wheel to inner scroll areas and stops at their ends
 test/live-clock.cjs              the running card counts wall clock, and only one timer exists
 test/reader-dialog.cjs           the reader is a native modal: no hand-built focus trap, contained scroll
+test/markdown-table.cjs          GFM tables: alignment, escaped pipes, scrollable wrapper
 test/layout-direction.cjs        horizontal and vertical geometry, unequal heights, collapsed branches
 test/host-overlay.cjs            conversation overlay, chrome measurement, reader and fallback
 test/locale-parity.cjs           all eight dictionaries: same key set, aligned {placeholders}, no cross-script leakage
@@ -129,7 +130,7 @@ The view is a single client plugin; the full design — data model, trade-offs, 
 ## Development
 
 ```bash
-npm test                      # all fourteen commands below (scripts.test in package.json)
+npm test                      # all fifteen commands below (scripts.test in package.json)
 
 node --check client.js        # syntax
 node test/render-smoke.cjs    # render the whole view with a fake React; assert both language tables
@@ -140,6 +141,7 @@ node test/motion.cjs          # camera moves, gesture interruption, navigation r
 node test/wheel-scroll.cjs    # the wheel belongs to the reasoning box, not the canvas zoom
 node test/live-clock.cjs      # the elapsed time advances between events, from one timer
 node test/reader-dialog.cjs   # the reader is a native <dialog>: showModal, close mirroring, backdrop scroll containment
+node test/markdown-table.cjs  # GFM tables in answers
 node test/layout-direction.cjs # geometry in both directions, unequal heights, collapsed branches
 node test/host-overlay.cjs     # host overlay, chrome measurement, reader, fallback
 node test/locale-parity.cjs   # all eight dictionaries agree on keys, placeholders and script

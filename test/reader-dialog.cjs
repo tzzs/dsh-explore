@@ -94,4 +94,32 @@ matches('the backdrop contains overscroll', /overscroll-behavior: contain;/, bac
 matches('the dialog element is rendered, not a wrapper div',
   /return h\('dialog', \{/, reader);
 
+// --- the reasoning block sits on top, folded, in the reader's own scroll ----
+const bodyStart = reader.indexOf("className: 'dsh-tree-scroll'");
+const answerAt = reader.indexOf("node.answer ? renderMarkdown(node.answer)");
+const thinkAt = reader.indexOf('h(ReasoningDisclosure, { node })');
+assert.ok(bodyStart > 0 && thinkAt > bodyStart && answerAt > thinkAt,
+  'the reasoning block must come before the answer, inside the scrolling body');
+checks += 1;
+assert.ok(reader.indexOf('h(ReasoningSection') < 0, 'the card-style inline panel must not be used in the reader');
+checks += 1;
+
+// --- the disclosure itself -------------------------------------------------
+const disclosureStart = source.indexOf('    function ReasoningDisclosure({ node }) {');
+const disclosureEnd = source.indexOf('\n    function ', disclosureStart + 10);
+assert.ok(disclosureStart > 0 && disclosureEnd > disclosureStart, 'ReasoningDisclosure must exist');
+const disclosure = source.slice(disclosureStart, disclosureEnd);
+matches('the disclosure starts folded', /useState\(false\)/, disclosure);
+matches('it is a real disclosure', /'aria-expanded': open/, disclosure);
+matches('its body only renders when open', /open\s*\n?\s*\? h\('div'/, disclosure);
+doesNotMatch('it is not a nested scroll box', /overflow: 'auto'|maxHeight/, disclosure);
+
+// --- the card points at the reader instead of expanding inline -------------
+const rowStart = source.indexOf('    function ReasoningRow({ node, onOpen }) {');
+const rowEnd = source.indexOf('\n    function ', rowStart + 10);
+const row = source.slice(rowStart, rowEnd);
+assert.ok(rowStart > 0, 'ReasoningRow must exist');
+matches('the card row opens the reader', /onOpen\(\)/, row);
+doesNotMatch('the card row no longer expands inline', /setOpen|aria-expanded/, row);
+
 console.log(`READER DIALOG OK — ${checks} checks, native modal with no hand-built focus or dismissal code`);

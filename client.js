@@ -2786,10 +2786,45 @@ window.__ModuleLoader__.load({
           blockKey += 1;
           continue;
         }
+        // A GFM table: a pipe row whose next line is the `--- | :---:` delimiter.
+        // The delimiter is what distinguishes a table from prose that happens to
+        // contain pipes, so the second line is checked before anything is split.
+        if (/\|/.test(line) && i + 1 < lines.length && isTableDelimiter(lines[i + 1])) {
+          const aligns = splitTableRow(lines[i + 1]).map((cell) => {
+            const left = cell.startsWith(':');
+            const right = cell.endsWith(':');
+            return left && right ? 'center' : right ? 'right' : 'left';
+          });
+          const header = splitTableRow(line);
+          i += 2;
+          const rows = [];
+          while (i < lines.length && /\|/.test(lines[i]) && !/^\s*$/.test(lines[i])) {
+            rows.push(splitTableRow(lines[i]));
+            i += 1;
+          }
+          const cellStyle = (index) => ({
+            textAlign: aligns[index] || 'left',
+          });
+          blocks.push(h('div', { key: 'b' + blockKey, className: 'dsh-tree-table-wrap' },
+            h('table', { className: 'dsh-tree-table' },
+              h('thead', null,
+                h('tr', null, header.map((cell, index) => h('th', {
+                  key: 'h' + index,
+                  style: cellStyle(index),
+                }, inlineNodes(cell, 'th' + blockKey + '-' + index))))),
+              h('tbody', null, rows.map((row, rowIndex) => h('tr', { key: 'r' + rowIndex },
+                row.map((cell, index) => h('td', {
+                  key: 'c' + index,
+                  style: cellStyle(index),
+                }, inlineNodes(cell, 'td' + blockKey + '-' + rowIndex + '-' + index)))))))));
+          blockKey += 1;
+          continue;
+        }
         const paragraph = [];
         while (i < lines.length && !/^\s*$/.test(lines[i])
           && !/^\s*```/.test(lines[i]) && !/^#{1,6}\s+/.test(lines[i])
-          && !/^\s*([-*+]|\d+[.)])\s+/.test(lines[i]) && !/^\s*>\s?/.test(lines[i])) {
+          && !/^\s*([-*+]|\d+[.)])\s+/.test(lines[i]) && !/^\s*>\s?/.test(lines[i])
+          && !(/^\s*\|/.test(lines[i]) && i + 1 < lines.length && isTableDelimiter(lines[i + 1]))) {
           paragraph.push(lines[i]);
           i += 1;
         }
@@ -2798,6 +2833,40 @@ window.__ModuleLoader__.load({
         blockKey += 1;
       }
       return blocks;
+    }
+
+    /** Whether a line is a GFM table delimiter row (`| --- | :---: |`). */
+    function isTableDelimiter(line) {
+      if (!line || line.indexOf('-') < 0) return false;
+      const cells = splitTableRow(line);
+      return cells.length > 0 && cells.every((cell) => /^:?-{1,}:?$/.test(cell));
+    }
+
+    /**
+     * Split one table row into cells.
+     *
+     * The outer pipes are optional in GFM, and `\|` is a literal pipe inside a
+     * cell, so it is swapped for a placeholder before splitting and restored
+     * afterwards.
+     */
+    function splitTableRow(line) {
+      const source = String(line).trim().replace(/^\|/, '').replace(/\|$/, '');
+      const cells = [];
+      let cell = '';
+      for (let index = 0; index < source.length; index += 1) {
+        const ch = source[index];
+        if (ch === '\\' && source[index + 1] === '|') {
+          cell += '\u0000';
+          index += 1;
+        } else if (ch === '|') {
+          cells.push(cell.trim().replace(/\u0000/g, '|'));
+          cell = '';
+        } else {
+          cell += ch;
+        }
+      }
+      cells.push(cell.trim().replace(/\u0000/g, '|'));
+      return cells;
     }
 
     function Chevron({ dir, size, color }) {
@@ -2998,10 +3067,10 @@ window.__ModuleLoader__.load({
      * An elapsed time says the agent is busy; it does not say what it is
      * doing. This row carries the newest reasoning the model has written, so
      * the reader can tell a search from a refactor without opening anything.
-     * It is only rendered while the branch is running — a settled turn shows
-     * its reasoning in the card's own section instead.
+     * Clicking it opens the reader, where the whole chain is readable while the
+     * answer is still streaming.
      */
-    function ReasoningTail({ node }) {
+    function ReasoningTail({ node, onOpen }) {
       useLocale();
       const awaiting = node.awaiting === 'question' || node.awaiting === 'approval';
       const running = awaiting || node.status === 'thinking' || node.status === 'streaming' || node.status === 'running';
@@ -3009,15 +3078,18 @@ window.__ModuleLoader__.load({
       if (!running || !text.trim()) return null;
       const preview = reasoningTail(text);
       if (!preview) return null;
-      return h('div', {
+      return h('button', {
+        onClick: (event) => {
+          event.stopPropagation();
+          onOpen();
+        },
+        title: T('card.thinkExpandTitle'),
         className: 'dsh-tree-reasoning-tail dsh-tree-clamp-2',
-        // The title is the preview, not the whole reasoning: this row re-renders
-        // on every reasoning token, and a multi-kilobyte attribute would be
-        // rebuilt each time for a tooltip nobody reads at that size.
-        title: preview,
         style: {
+          display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer',
+          fontFamily: 'inherit',
           marginTop: 5, padding: '4px 7px', borderRadius: 6,
-          borderLeft: '2px solid ' + C.accentEdge,
+          border: 'none', borderLeft: '2px solid ' + C.accentEdge,
           background: 'color-mix(in srgb, var(--dsw-alias-label-primary) 4%, transparent)',
           fontSize: 10.5, color: C.ink4, lineHeight: 1.45,
         },
@@ -3025,44 +3097,38 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * The settled reasoning of a turn, behind a disclosure.
+     * The card's reasoning row.
      *
-     * It is a footnote to the answer: collapsed by default, and only present
-     * at all when the model actually wrote something down. The collapsed row
-     * carries the first line of the thinking, so a reader learns what the
-     * agent was up to without opening anything.
+     * It is a pointer, not a panel. Expanding the thinking inside a 320px card
+     * stretched the card into a very long strip, which is exactly what made it
+     * awkward to use; the reader is where a long answer — and the thinking
+     * behind it — is actually read. So the row says how much there is and opens
+     * the reader, where the chain sits at the top and folds away.
      */
-    function ReasoningSection({ node, defaultOpen }) {
+    function ReasoningRow({ node, onOpen }) {
       useLocale();
-      const [open, setOpen] = useState(Boolean(defaultOpen));
       const text = node.reasoning || '';
       if (!text.trim()) return null;
       const preview = reasoningPreview(text);
       const dropped = node.reasoningDropped || 0;
-      // A running card already shows the newest line in the reasoning tail, so
-      // the collapsed preview would repeat it verbatim one row below.
-      const running = node.awaiting === 'question' || node.awaiting === 'approval'
-        || node.status === 'thinking' || node.status === 'streaming' || node.status === 'running';
-      const showPreview = !open && preview && !running;
       return h('div', {
         className: 'dsh-tree-reasoning',
-        style: { marginTop: 8 },
+        style: { marginTop: 6 },
       },
         h('button', {
           onClick: (event) => {
             event.stopPropagation();
-            setOpen((value) => !value);
+            onOpen();
           },
-          title: open ? T('card.thinkCollapseTitle') : T('card.thinkExpandTitle'),
-          'aria-expanded': open,
+          title: T('card.thinkExpandTitle'),
           className: LINK,
           style: { color: C.accent, gap: 5, maxWidth: '100%' },
         },
-          h(Chevron, { dir: open ? 'down' : 'right', size: 9 }),
+          h(Chevron, { dir: 'right', size: 9 }),
           h('span', { style: { flex: '0 0 auto' } }, T('card.think')),
           h('span', { style: { color: C.ink4, fontVariantNumeric: 'tabular-nums', flex: '0 0 auto' } },
             T('card.thinkMeta', { count: text.length }))),
-        // The truncation notice is metadata, not part of the reasoning, so a
+        // The truncation notice is metadata, not part of the reasoning, so the
         // collapsed row can still say the text is partial.
         dropped > 0
           ? h('div', {
@@ -3072,7 +3138,7 @@ window.__ModuleLoader__.load({
             },
           }, T('card.thinkTruncated', { count: dropped }))
           : null,
-        showPreview
+        preview
           ? h('div', {
             className: 'dsh-tree-reasoning-preview dsh-tree-clamp-2',
             style: {
@@ -3080,17 +3146,52 @@ window.__ModuleLoader__.load({
               color: C.ink4,
             },
           }, preview)
+          : null);
+    }
+
+    /**
+     * The reader's reasoning block: first thing in the answer, folded away.
+     *
+     * It lives in the reader's own scroll container rather than a nested one:
+     * a second scroll area inside the reader is what made the wheel ambiguous,
+     * and a long chain is easier to read in the flow than in a 260px box.
+     */
+    function ReasoningDisclosure({ node }) {
+      useLocale();
+      const [open, setOpen] = useState(false);
+      const text = node.reasoning || '';
+      if (!text.trim()) return null;
+      const dropped = node.reasoningDropped || 0;
+      return h('div', {
+        className: 'dsh-tree-reasoning',
+        style: { marginBottom: 18 },
+      },
+        h('button', {
+          onClick: () => setOpen((value) => !value),
+          'aria-expanded': open,
+          title: open ? T('card.thinkCollapseTitle') : T('card.thinkExpandTitle'),
+          className: LINK,
+          style: { color: C.accent, gap: 5 },
+        },
+          h(Chevron, { dir: open ? 'down' : 'right', size: 9 }),
+          h('span', null, T('card.think')),
+          h('span', { style: { color: C.ink4, fontVariantNumeric: 'tabular-nums' } },
+            T('card.thinkMeta', { count: text.length }))),
+        dropped > 0
+          ? h('div', {
+            style: {
+              marginTop: 4, paddingLeft: 13, fontSize: 10.8,
+              color: C.ink4, fontVariantNumeric: 'tabular-nums',
+            },
+          }, T('card.thinkTruncated', { count: dropped }))
           : null,
         open
           ? h('div', {
-            onClick: (event) => event.stopPropagation(),
-            className: 'dsh-tree-scroll',
             style: {
-              marginTop: 5, padding: '7px 9px', borderRadius: 7,
+              marginTop: 8, padding: '10px 13px', borderRadius: 9,
               border: '1px solid ' + C.cardEdge,
               background: 'color-mix(in srgb, var(--dsw-alias-label-primary) 3%, transparent)',
-              maxHeight: 260, overflow: 'auto',
-              fontSize: 11.5, lineHeight: 1.68, color: C.ink4,
+              fontSize: 12.4, lineHeight: 1.78, color: C.ink4,
             },
           }, renderMarkdown(text))
           : null);
@@ -3298,8 +3399,8 @@ window.__ModuleLoader__.load({
           },
         }, answer ? renderMarkdown(answerText) : null),
         h(LiveProgress, { node, now }),
-        h(ReasoningTail, { node }),
-        h(ReasoningSection, { node }),
+        h(ReasoningTail, { node, onOpen: () => store.openReader(node.id) }),
+        h(ReasoningRow, { node, onOpen: () => store.openReader(node.id) }),
         h(Presence, { show: composing, className: 'dsh-tree-composer' },
           h(Composer, { store, api, rootId, node, active: composing })),
         answer.length > 260 || childCount > 0
@@ -4169,32 +4270,12 @@ window.__ModuleLoader__.load({
               ...MD.body, fontSize: 13.4, lineHeight: 1.85,
             },
           },
-            node.answer ? renderMarkdown(node.answer) : T('reader.noAnswer'),
-            // The reader is where a long answer is actually read, so the
-            // reasoning that produced it belongs here too.
-            node.reasoning && node.reasoning.trim()
-              ? h('div', { style: { marginTop: 22 } },
-                h('div', {
-                  style: {
-                    fontSize: 10.5, letterSpacing: '0.05em', color: C.ink4,
-                    marginBottom: 6, display: 'flex', alignItems: 'center', gap: 7,
-                  },
-                }, T('card.think'),
-                  h('span', { style: { color: C.ink4, fontVariantNumeric: 'tabular-nums' } },
-                    T('card.thinkMeta', { count: node.reasoning.length })),
-                  node.reasoningDropped
-                    ? h('span', { style: { color: C.ink4, fontVariantNumeric: 'tabular-nums' } },
-                      T('card.thinkTruncated', { count: node.reasoningDropped }))
-                    : null),
-                h('div', {
-                  style: {
-                    padding: '10px 13px', borderRadius: 9,
-                    border: '1px solid ' + C.cardEdge,
-                    background: 'color-mix(in srgb, var(--dsw-alias-label-primary) 3%, transparent)',
-                    fontSize: 12.4, lineHeight: 1.78, color: C.ink4,
-                  },
-                }, renderMarkdown(node.reasoning)))
-              : null),
+            // The thinking comes first: it is what the reader opened the
+            // card for, and folding it keeps the answer itself at the top
+            // of the eye.
+            h(ReasoningDisclosure, { node }),
+            node.answer ? renderMarkdown(node.answer) : T('reader.noAnswer')),
+
           h('div', {
             style: {
               padding: '8px 20px', borderTop: '1px solid ' + C.cardEdge, fontSize: 10.5,
@@ -4322,6 +4403,28 @@ window.__ModuleLoader__.load({
         '}',
         '.dsh-tree-scroll { scrollbar-width: thin; scrollbar-color: var(--dsw-alias-scrollbar-bg-l1) transparent; }',
         '.dsh-tree-scroll:hover { scrollbar-color: var(--dsw-alias-scrollbar-hover-l1) transparent; }',
+        // Tables: a wide one scrolls sideways inside its own wrapper instead of
+        // widening the card or the reader. The wrapper is the scroll container,
+        // so the table keeps its natural width and cells stay on one line.
+        '.dsh-tree-table-wrap {',
+        '  max-width: 100%; margin: 0.7em 0; overflow-x: auto;',
+        '  scrollbar-width: thin; scrollbar-color: var(--dsw-alias-scrollbar-bg-l1) transparent;',
+        '}',
+        '.dsh-tree-table {',
+        '  border-collapse: collapse; font-size: 0.93em; line-height: 1.5;',
+        '  width: max-content; min-width: 100%;',
+        '}',
+        '.dsh-tree-table th, .dsh-tree-table td {',
+        '  border: 1px solid var(--dsw-alias-border-l1); padding: 6px 10px;',
+        '  vertical-align: top; overflow-wrap: break-word;',
+        '}',
+        '.dsh-tree-table th {',
+        '  font-weight: 600; white-space: nowrap;',
+        '  background: color-mix(in srgb, var(--dsw-alias-label-primary) 5%, transparent);',
+        '}',
+        '.dsh-tree-table tbody tr:nth-child(even) td {',
+        '  background: color-mix(in srgb, var(--dsw-alias-label-primary) 2%, transparent);',
+        '}',
         ':has(> .dsh-tree-root--overlay) > header, :has(> .dsh-tree-root--overlay) > [data-slot="conversation.header"] > header { position: relative; z-index: 2; }',
         ':has(> .dsh-tree-root--overlay) > [data-conversation-content] [data-composer-seat]:not(:has([data-conversation-composer-overlay])) { width: min(100%, calc(var(--dsh-composer-card-max-width, 920px) + 2 * var(--dsh-composer-side-clearance, 16px))); align-self: center; background: transparent !important; }',
         '@keyframes dshTreeReveal { from { opacity: 0; transform: translateY(6px) scale(.985); } to { opacity: 1; transform: none; } }',
