@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.0](https://github.com/tzzs/dsh-explore/compare/v0.1.0...v0.2.0) (2026-11-17)
+
+
+### Features
+
+* **canvas:** add layout options and expand workspace ([#21](https://github.com/tzzs/dsh-explore/issues/21)) ([1665a96](https://github.com/tzzs/dsh-explore/commit/1665a96a45f4aea8031a17fedee790739b56d41f))
+* reasoning cards, both tree directions, eight languages, themed surfaces ([#23](https://github.com/tzzs/dsh-explore/issues/23)) ([af96232](https://github.com/tzzs/dsh-explore/commit/af962324a4722c3c2386b643dde9cfe75b94faef))
+
 ## 0.1.0 (2026-11-15)
 
 
