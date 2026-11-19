@@ -9,8 +9,9 @@
  *
  * Asserted:
  *   1. the live tail of a running branch shows the model's current thought;
- *   2. a settled turn's reasoning is projected onto its card and rendered
- *      behind a disclosure;
+ *   2. a settled turn's reasoning is projected onto its node, the card keeps
+ *      only an entry point, and the reader shows the chain (unfolded when the
+ *      card's entry opened it);
  *   3. a turn whose model never reasoned shows no reasoning section at all;
  *   4. the settled block wins over the streamed draft of the same step, so the
  *      text is not doubled;
@@ -225,8 +226,14 @@ if (settledNodes[0].reasoning.indexOf('先看用户到底想要什么') < 0) {
 ok();
 
 const settledText = render('session-settled');
-expect(settledText, '思考过程', 'reasoning section label');
-expect(settledText, '先看用户到底想要什么', 'reasoning body');
+expect(settledText, '思考过程', 'reasoning entry on the card');
+expectNot(settledText, '先看用户到底想要什么', 'reasoning body on the card (the card is a preview only)');
+// The entry opens the reader with the chain already unfolded, so the newest
+// thinking is one click away instead of a second disclosure.
+settledStore.openReader(settledNodes[0].id, { reasoning: true });
+const settledReaderText = render('session-settled');
+expect(settledReaderText, '先看用户到底想要什么', 'reasoning body in the reader');
+settledStore.closeReader();
 ok();
 
 // 2. A branch's reasoning is read from its fork session ----------------------
@@ -338,8 +345,8 @@ const hugeNode = hugeStore.getSnapshot().nodes[0];
 if (hugeNode.reasoning.length > 12100) {
   throw new Error('the reasoning was not capped: ' + hugeNode.reasoning.length);
 }
-// The dropped count is metadata, not text glued onto the reasoning: a
-// collapsed row has to be able to admit the text is partial.
+// The dropped count is metadata, not text glued onto the reasoning: the
+// reader's disclosure has to be able to admit the text is partial.
 if (!hugeNode.reasoningDropped) {
   throw new Error('the truncation was not recorded as metadata');
 }
