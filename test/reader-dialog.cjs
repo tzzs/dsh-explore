@@ -18,7 +18,10 @@
  *      dialog itself contains overscroll, or a gesture over the backdrop
  *      scrolls the page underneath;
  *   5. `display` is never set on the closed dialog, which would override the
- *      closed state and leave the reader on screen forever.
+ *      closed state and leave the reader on screen forever;
+ *   6. the dialog surface itself never starts transparent and never animates
+ *      the top layer: a click that opens the reader must never be able to
+ *      leave it invisible (or stuck after a fast close/reopen pair).
  *
  * Runs in plain Node: no browser, no DOM, no dependencies.
  */
@@ -28,7 +31,7 @@ const path = require('node:path');
 
 const source = fs.readFileSync(path.join(__dirname, '..', 'client.js'), 'utf8');
 
-const start = source.indexOf('    function Reader({ node, open, onClose }) {');
+const start = source.indexOf('    function Reader({ node, open, onClose, reasoningOpen }) {');
 const end = source.indexOf('\n    function TreeView(props) {', start);
 assert.ok(start > 0 && end > start, 'Reader must exist');
 const reader = source.slice(start, end);
@@ -63,7 +66,15 @@ doesNotMatch('no manual focus restoration', /previousFocus/, reader);
 matches('names the dialog with a heading id',
   /'aria-labelledby': titleId/, reader);
 matches('actually gives an element that id', /id: titleId,/, reader);
-matches('offers light dismiss', /closedby: 'any'/, reader);
+matches('a backdrop click is handled explicitly', /if \(event\.target !== dialogRef\.current\) return;/, reader);
+matches('the opening click cannot dismiss the reader', /Date\.now\(\) - openedAt\.current < 350/, reader);
+// A reading id that no longer resolves must not leave the canvas inert with
+// no dialog to close; both the inert flag and a reconciliation effect guard it.
+matches('the canvas is inert only while the reading node resolves',
+  /inert: snapshot\.readingId && store\.getNode\(snapshot\.readingId\) \? true : undefined,/, source);
+matches('a stale reading id is closed',
+  /if \(snapshot\.readingId && !reading\) store\.closeReader\(\);/, source);
+doesNotMatch('no native closedby light dismiss', /closedby:/, reader);
 
 // --- CSS: the parts whose absence fails silently ----------------------
 const cssRule = (selector) => {
@@ -76,9 +87,10 @@ const cssRule = (selector) => {
 
 const dialogRule = cssRule('.dsh-tree-reader');
 matches('the dialog contains overscroll', /overscroll-behavior: contain;/, dialogRule);
-matches('the dialog transitions the top layer',
-  /transition-property: opacity, transform, display, overlay;/, dialogRule);
-matches('the dialog allows discrete transitions', /transition-behavior: allow-discrete;/, dialogRule);
+doesNotMatch('the dialog surface never starts transparent', /opacity:\s*0/, dialogRule);
+doesNotMatch('the dialog itself has no transition', /transition/, dialogRule);
+doesNotMatch('the dialog does not animate the top layer',
+  /transition-property:[^;]*(?:display|overlay)/, dialogRule);
 doesNotMatch('the closed dialog keeps the UA display:none', /display:/, dialogRule);
 
 const openRule = cssRule('.dsh-tree-reader[open]');
@@ -97,7 +109,7 @@ matches('the dialog element is rendered, not a wrapper div',
 // --- the reasoning block sits on top, folded, in the reader's own scroll ----
 const bodyStart = reader.indexOf("className: 'dsh-tree-scroll'");
 const answerAt = reader.indexOf("node.answer ? renderMarkdown(node.answer)");
-const thinkAt = reader.indexOf('h(ReasoningDisclosure, { node })');
+const thinkAt = reader.indexOf('h(ReasoningDisclosure, {');
 assert.ok(bodyStart > 0 && thinkAt > bodyStart && answerAt > thinkAt,
   'the reasoning block must come before the answer, inside the scrolling body');
 checks += 1;
@@ -105,21 +117,25 @@ assert.ok(reader.indexOf('h(ReasoningSection') < 0, 'the card-style inline panel
 checks += 1;
 
 // --- the disclosure itself -------------------------------------------------
-const disclosureStart = source.indexOf('    function ReasoningDisclosure({ node }) {');
+const disclosureStart = source.indexOf('    function ReasoningDisclosure({ node, defaultOpen }) {');
 const disclosureEnd = source.indexOf('\n    function ', disclosureStart + 10);
 assert.ok(disclosureStart > 0 && disclosureEnd > disclosureStart, 'ReasoningDisclosure must exist');
 const disclosure = source.slice(disclosureStart, disclosureEnd);
-matches('the disclosure starts folded', /useState\(false\)/, disclosure);
+matches('the disclosure starts folded unless the entry asks otherwise', /useState\(Boolean\(defaultOpen\)\)/, disclosure);
 matches('it is a real disclosure', /'aria-expanded': open/, disclosure);
 matches('its body only renders when open', /open\s*\n?\s*\? h\('div'/, disclosure);
 doesNotMatch('it is not a nested scroll box', /overflow: 'auto'|maxHeight/, disclosure);
 
-// --- the card points at the reader instead of expanding inline -------------
-const rowStart = source.indexOf('    function ReasoningRow({ node, onOpen }) {');
-const rowEnd = source.indexOf('\n    function ', rowStart + 10);
-const row = source.slice(rowStart, rowEnd);
-assert.ok(rowStart > 0, 'ReasoningRow must exist');
-matches('the card row opens the reader', /onOpen\(\)/, row);
-doesNotMatch('the card row no longer expands inline', /setOpen|aria-expanded/, row);
+// --- the card keeps only an entry point, the reader holds the chain --------
+const cardStart = source.indexOf('    function NodeCard(');
+const cardEnd = source.indexOf('\n    function Composer(', cardStart);
+assert.ok(cardStart > 0 && cardEnd > cardStart, 'NodeCard must exist');
+const card = source.slice(cardStart, cardEnd);
+matches('the card keeps a reasoning entry', /T\('card\.think'\)/, card);
+matches('the entry opens the reader with the chain unfolded',
+  /store\.openReader\(node\.id, \{ reasoning: true \}\)/, card);
+doesNotMatch('the card no longer draws a reasoning panel',
+  /ReasoningRow|dsh-tree-reasoning-preview|card\.thinkMeta/, card);
+matches('the reader starts the chain open when asked', /defaultOpen: reasoningOpen/, reader);
 
 console.log(`READER DIALOG OK — ${checks} checks, native modal with no hand-built focus or dismissal code`);
