@@ -63,6 +63,92 @@ window.__ModuleLoader__.load({
       }
     }
 
+    // Card display presets. A card is the overview; the reader is the close-up.
+    // These three sizes decide how much of that overview is text: the card
+    // width and, with it, how many lines of the answer the preview shows.
+    // `maskAt` is the length at which the bottom fade starts (it exists to hide
+    // the cut, not to report overflow) and `truncate` bounds how much Markdown
+    // the card parses — the reader always renders the whole answer.
+    const CARD_SIZE_KEY = 'dsh-explore:card-size';
+    const CARD_SIZES = {
+      compact: { width: 288, preview: 112, maskAt: 240, truncate: 900 },
+      standard: { width: NODE_W, preview: 146, maskAt: 320, truncate: 1400 },
+      roomy: { width: 448, preview: 264, maskAt: 640, truncate: 3200 },
+    };
+    const CARD_SIZE_ORDER = ['compact', 'standard', 'roomy'];
+    const CARD_SIZE_LABELS = {
+      compact: 'view.cardSizeCompact',
+      standard: 'view.cardSizeStandard',
+      roomy: 'view.cardSizeRoomy',
+    };
+
+    function readCardSize() {
+      try {
+        const stored = window.localStorage.getItem(CARD_SIZE_KEY);
+        return stored && Object.prototype.hasOwnProperty.call(CARD_SIZES, stored) ? stored : 'standard';
+      } catch (error) {
+        return 'standard';
+      }
+    }
+
+    function saveCardSize(size) {
+      try {
+        window.localStorage.setItem(CARD_SIZE_KEY, size);
+      } catch (error) {
+        /* The presets still work for this view when storage is blocked. */
+      }
+    }
+
+    // The reader's width is a separate preference: reading a long answer wants
+    // more line length than the canvas overview does, and the right width
+    // depends on the screen and on the text. Two presets cover both cases.
+    const READER_WIDTH_KEY = 'dsh-explore:reader-width';
+    const READER_WIDTHS = {
+      standard: 'min(820px, calc(100vw - 68px))',
+      wide: 'min(1200px, calc(100vw - 48px))',
+    };
+
+    function readReaderWidth() {
+      try {
+        return window.localStorage.getItem(READER_WIDTH_KEY) === 'wide' ? 'wide' : 'standard';
+      } catch (error) {
+        return 'standard';
+      }
+    }
+
+    function saveReaderWidth(width) {
+      try {
+        window.localStorage.setItem(READER_WIDTH_KEY, width);
+      } catch (error) {
+        /* Keep the current width for this view when storage is blocked. */
+      }
+    }
+
+    // Every branch is a real forked session, so it is a real row in the DSH
+    // workspace. Fork cannot create a child "subtask" row from a client plugin
+    // (only host subagent sessions get hidden/nested rows), so the only
+    // supported way to keep the workspace list quiet is the archive: the
+    // session stays readable and retainable, it just stops being listed and
+    // stops accepting prompts. This preference decides whether a branch that
+    // has finished its turn is put there; the toolbar can switch both ways.
+    const BRANCH_MODE_KEY = 'dsh-explore:branch-sessions';
+
+    function readBranchMode() {
+      try {
+        return window.localStorage.getItem(BRANCH_MODE_KEY) === 'quiet' ? 'quiet' : 'listed';
+      } catch (error) {
+        return 'listed';
+      }
+    }
+
+    function saveBranchMode(mode) {
+      try {
+        window.localStorage.setItem(BRANCH_MODE_KEY, mode === 'quiet' ? 'quiet' : 'listed');
+      } catch (error) {
+        /* The choice still applies to this view when storage is blocked. */
+      }
+    }
+
     // Font families follow Settings → Appearance. DSH composes the user's list
     // with its own default stack on body (`--dsw-font-family` /
     // `--ds-font-family-code`), so reading the composed tokens keeps glyph
@@ -105,6 +191,14 @@ window.__ModuleLoader__.load({
         'view.latest': '定位最新',
         'view.latestTitle': '展开路径并定位到最新创建的节点',
         'view.latestTitleEmpty': '还没有节点',
+        'view.cardSizeGroup': '卡片信息量',
+        'view.cardSizeCompact': '紧凑',
+        'view.cardSizeStandard': '标准',
+        'view.cardSizeRoomy': '宽松',
+        'view.branchesShown': '分支记录：在工作区',
+        'view.branchesShownTitle': '把已完成的分支会话收进归档，工作区只留主会话',
+        'view.branchesQuiet': '分支记录：已归档',
+        'view.branchesQuietTitle': '把本树的分支会话恢复到工作区',
         'view.empty.title': '这棵树还是空的',
         'view.empty.hint': '回到 Chat 问一句，这里就会长出第一个节点。',
         'view.empty.report': '若已经问过却是空的，把这一行告我：事件 {events} · 会话 {state}。',
@@ -128,10 +222,6 @@ window.__ModuleLoader__.load({
         'card.deleteTitle': '隐藏这个节点和它下面的所有分支',
         'card.deleteConfirm': '删除这个节点和它下面的所有分支？（随时可恢复）',
         'card.readTitle': '点击全屏阅读',
-        'card.expandTitle': '展开整段回答',
-        'card.collapseTitle': '收起这段回答',
-        'card.expand': '展开回答',
-        'card.collapse': '收起回答',
         'card.fullscreen': '全屏阅读',
         'card.fullscreenTitle': '全屏阅读完整回答',
         'card.unfoldBranch': '展开这一枝',
@@ -170,6 +260,9 @@ window.__ModuleLoader__.load({
         'reader.hint': 'Esc 关闭 · 点背景关闭',
         'reader.branch': '分支',
         'reader.mainline': '主线',
+        'reader.widthGroup': '阅读宽度',
+        'reader.widthStandard': '标准宽',
+        'reader.widthWide': '较宽',
 
         'error.title': '树视图出错了',
         'error.reload': '重新载入视图',
@@ -212,6 +305,14 @@ window.__ModuleLoader__.load({
         'view.latest': 'Jump to latest',
         'view.latestTitle': 'Expand the path and jump to the newest node',
         'view.latestTitleEmpty': 'No nodes yet',
+        'view.cardSizeGroup': 'Card size',
+        'view.cardSizeCompact': 'Compact',
+        'view.cardSizeStandard': 'Standard',
+        'view.cardSizeRoomy': 'Roomy',
+        'view.branchesShown': 'Branch rows: in workspace',
+        'view.branchesShownTitle': 'Move finished branch sessions into the archive, leaving only the main session in the workspace',
+        'view.branchesQuiet': 'Branch rows: archived',
+        'view.branchesQuietTitle': 'Bring this tree\'s branch sessions back into the workspace',
         'view.empty.title': 'This tree is still empty',
         'view.empty.hint': 'Ask something in Chat and the first node will grow here.',
         'view.empty.report': 'If you already asked and this is still empty, tell me: {events} events · session {state}.',
@@ -235,10 +336,6 @@ window.__ModuleLoader__.load({
         'card.deleteTitle': 'Hide this node and every branch under it',
         'card.deleteConfirm': 'Delete this node and all branches under it? (reversible)',
         'card.readTitle': 'Click to read in full screen',
-        'card.expandTitle': 'Expand this answer',
-        'card.collapseTitle': 'Collapse this answer',
-        'card.expand': 'Expand answer',
-        'card.collapse': 'Collapse answer',
         'card.fullscreen': 'Read full screen',
         'card.fullscreenTitle': 'Read the complete answer in full screen',
         'card.unfoldBranch': 'Expand this branch',
@@ -277,6 +374,9 @@ window.__ModuleLoader__.load({
         'reader.hint': 'Esc or click the backdrop to close',
         'reader.branch': 'Branch',
         'reader.mainline': 'Main line',
+        'reader.widthGroup': 'Reading width',
+        'reader.widthStandard': 'Standard',
+        'reader.widthWide': 'Wider',
 
         'error.title': 'The tree view crashed',
         'error.reload': 'Reload the view',
@@ -316,6 +416,14 @@ window.__ModuleLoader__.load({
         'view.latest': 'Zum Neuesten',
         'view.latestTitle': 'Pfad ausklappen und zum neuesten Knoten springen',
         'view.latestTitleEmpty': 'Noch keine Knoten',
+        'view.cardSizeGroup': 'Kartengröße',
+        'view.cardSizeCompact': 'Kompakt',
+        'view.cardSizeStandard': 'Standard',
+        'view.cardSizeRoomy': 'Geräumig',
+        'view.branchesShown': 'Zweigzeilen: im Arbeitsbereich',
+        'view.branchesShownTitle': 'Abgeschlossene Zweig-Sitzungen ins Archiv verschieben, sodass nur die Hauptsitzung im Arbeitsbereich bleibt',
+        'view.branchesQuiet': 'Zweigzeilen: archiviert',
+        'view.branchesQuietTitle': 'Die Zweig-Sitzungen dieses Baums zurück in den Arbeitsbereich holen',
         'view.empty.title': 'Dieser Baum ist noch leer',
         'view.empty.hint': 'Stelle im Chat eine Frage, dann wächst hier der erste Knoten.',
         'view.empty.report': 'Wenn du schon gefragt hast und es hier noch leer ist, sag mir: {events} Ereignisse · Sitzung {state}.',
@@ -338,10 +446,6 @@ window.__ModuleLoader__.load({
         'card.deleteTitle': 'Diesen Knoten und alle Zweige darunter ausblenden',
         'card.deleteConfirm': 'Diesen Knoten und alle Zweige darunter löschen? (umkehrbar)',
         'card.readTitle': 'Klicken, um im Vollbild zu lesen',
-        'card.expandTitle': 'Diese Antwort ausklappen',
-        'card.collapseTitle': 'Diese Antwort einklappen',
-        'card.expand': 'Antwort ausklappen',
-        'card.collapse': 'Antwort einklappen',
         'card.fullscreen': 'Vollbild lesen',
         'card.fullscreenTitle': 'Die vollständige Antwort im Vollbild lesen',
         'card.unfoldBranch': 'Diesen Zweig ausklappen',
@@ -376,6 +480,9 @@ window.__ModuleLoader__.load({
         'reader.hint': 'Esc oder Klick auf den Hintergrund zum Schließen',
         'reader.branch': 'Zweig',
         'reader.mainline': 'Hauptlinie',
+        'reader.widthGroup': 'Lesebreite',
+        'reader.widthStandard': 'Standard',
+        'reader.widthWide': 'Breiter',
         'error.title': 'Die Baumansicht ist abgestürzt',
         'error.reload': 'Ansicht neu laden',
         'error.hint': 'Die Leinwand-Daten sind sicher; nur diese Darstellung ist fehlgeschlagen.',
@@ -415,6 +522,14 @@ window.__ModuleLoader__.load({
         'view.latest': 'Ir a lo más reciente',
         'view.latestTitle': 'Expandir la ruta e ir al nodo más reciente',
         'view.latestTitleEmpty': 'Aún no hay nodos',
+        'view.cardSizeGroup': 'Tamaño de tarjeta',
+        'view.cardSizeCompact': 'Compacta',
+        'view.cardSizeStandard': 'Estándar',
+        'view.cardSizeRoomy': 'Amplia',
+        'view.branchesShown': 'Ramas: en el espacio',
+        'view.branchesShownTitle': 'Mover las sesiones de rama terminadas al archivo y dejar solo la sesión principal en el espacio de trabajo',
+        'view.branchesQuiet': 'Ramas: archivadas',
+        'view.branchesQuietTitle': 'Devolver al espacio de trabajo las sesiones de rama de este árbol',
         'view.empty.title': 'Este árbol aún está vacío',
         'view.empty.hint': 'Pregunta algo en Chat y el primer nodo crecerá aquí.',
         'view.empty.report': 'Si ya preguntaste y esto sigue vacío, dime: {events} eventos · sesión {state}.',
@@ -437,10 +552,6 @@ window.__ModuleLoader__.load({
         'card.deleteTitle': 'Ocultar este nodo y todas las ramas que cuelgan de él',
         'card.deleteConfirm': '¿Eliminar este nodo y todas sus ramas? (reversible)',
         'card.readTitle': 'Haz clic para leer a pantalla completa',
-        'card.expandTitle': 'Expandir esta respuesta',
-        'card.collapseTitle': 'Contraer esta respuesta',
-        'card.expand': 'Expandir respuesta',
-        'card.collapse': 'Contraer respuesta',
         'card.fullscreen': 'Pantalla completa',
         'card.fullscreenTitle': 'Leer la respuesta completa a pantalla completa',
         'card.unfoldBranch': 'Expandir esta rama',
@@ -475,6 +586,9 @@ window.__ModuleLoader__.load({
         'reader.hint': 'Esc o clic en el fondo para cerrar',
         'reader.branch': 'Rama',
         'reader.mainline': 'Línea principal',
+        'reader.widthGroup': 'Ancho de lectura',
+        'reader.widthStandard': 'Estándar',
+        'reader.widthWide': 'Más ancho',
         'error.title': 'La vista de árbol falló',
         'error.reload': 'Recargar la vista',
         'error.hint': 'Los datos del lienzo están a salvo; solo falló este render.',
@@ -514,6 +628,14 @@ window.__ModuleLoader__.load({
         'view.latest': 'Aller au plus récent',
         'view.latestTitle': 'Déplier le chemin et aller au nœud le plus récent',
         'view.latestTitleEmpty': 'Aucun nœud pour l’instant',
+        'view.cardSizeGroup': 'Taille des cartes',
+        'view.cardSizeCompact': 'Compacte',
+        'view.cardSizeStandard': 'Standard',
+        'view.cardSizeRoomy': 'Large',
+        'view.branchesShown': 'Branches : dans l’espace',
+        'view.branchesShownTitle': 'Déplacer les sessions de branche terminées vers l’archive pour ne garder que la session principale',
+        'view.branchesQuiet': 'Branches : archivées',
+        'view.branchesQuietTitle': 'Ramener dans l’espace de travail les sessions de branche de cet arbre',
         'view.empty.title': 'Cet arbre est encore vide',
         'view.empty.hint': 'Posez une question dans Chat et le premier nœud poussera ici.',
         'view.empty.report': 'Si vous avez déjà posé une question et que c’est toujours vide, dites-moi : {events} événements · session {state}.',
@@ -536,10 +658,6 @@ window.__ModuleLoader__.load({
         'card.deleteTitle': 'Masquer ce nœud et toutes les branches en dessous',
         'card.deleteConfirm': 'Supprimer ce nœud et toutes les branches en dessous ? (réversible)',
         'card.readTitle': 'Cliquez pour lire en plein écran',
-        'card.expandTitle': 'Déplier cette réponse',
-        'card.collapseTitle': 'Replier cette réponse',
-        'card.expand': 'Déplier la réponse',
-        'card.collapse': 'Replier la réponse',
         'card.fullscreen': 'Plein écran',
         'card.fullscreenTitle': 'Lire la réponse complète en plein écran',
         'card.unfoldBranch': 'Déplier cette branche',
@@ -574,6 +692,9 @@ window.__ModuleLoader__.load({
         'reader.hint': 'Échap ou clic sur l’arrière-plan pour fermer',
         'reader.branch': 'Branche',
         'reader.mainline': 'Ligne principale',
+        'reader.widthGroup': 'Largeur de lecture',
+        'reader.widthStandard': 'Standard',
+        'reader.widthWide': 'Plus large',
         'error.title': 'La vue arborescente a planté',
         'error.reload': 'Recharger la vue',
         'error.hint': 'Les données du canevas sont intactes ; seul ce rendu a échoué.',
@@ -613,6 +734,14 @@ window.__ModuleLoader__.load({
         'view.latest': '最新へ移動',
         'view.latestTitle': '経路を展開して最新のノードへ移動',
         'view.latestTitleEmpty': 'ノードはまだありません',
+        'view.cardSizeGroup': 'カードの情報量',
+        'view.cardSizeCompact': 'コンパクト',
+        'view.cardSizeStandard': '標準',
+        'view.cardSizeRoomy': 'ゆったり',
+        'view.branchesShown': 'ブランチ記録：ワークスペース',
+        'view.branchesShownTitle': '完了したブランチセッションをアーカイブし、ワークスペースにはメインセッションだけを残します',
+        'view.branchesQuiet': 'ブランチ記録：アーカイブ済み',
+        'view.branchesQuietTitle': 'このツリーのブランチセッションをワークスペースに戻します',
         'view.empty.title': 'このツリーはまだ空です',
         'view.empty.hint': 'Chat で質問すると、ここに最初のノードが生まれます。',
         'view.empty.report': 'すでに質問したのに空のままなら、次を伝えてください：イベント {events} · セッション {state}。',
@@ -635,10 +764,6 @@ window.__ModuleLoader__.load({
         'card.deleteTitle': 'このノードとその下のすべてのブランチを非表示',
         'card.deleteConfirm': 'このノードとその下のすべてのブランチを削除しますか？（復元できます）',
         'card.readTitle': 'クリックして全画面で読む',
-        'card.expandTitle': 'この回答を展開',
-        'card.collapseTitle': 'この回答を折りたたむ',
-        'card.expand': '回答を展開',
-        'card.collapse': '回答を折りたたむ',
         'card.fullscreen': '全画面で読む',
         'card.fullscreenTitle': '完全な回答を全画面で読む',
         'card.unfoldBranch': 'このブランチを展開',
@@ -673,6 +798,9 @@ window.__ModuleLoader__.load({
         'reader.hint': 'Esc または背景をクリックで閉じる',
         'reader.branch': 'ブランチ',
         'reader.mainline': '本線',
+        'reader.widthGroup': '閲覧幅',
+        'reader.widthStandard': '標準幅',
+        'reader.widthWide': '広め',
         'error.title': 'ツリービューでエラーが発生しました',
         'error.reload': 'ビューを再読み込み',
         'error.hint': 'キャンバスのデータは失われていません。描画だけが失敗しました。',
@@ -712,6 +840,14 @@ window.__ModuleLoader__.load({
         'view.latest': 'Ir para o mais recente',
         'view.latestTitle': 'Expandir o caminho e ir para o nó mais recente',
         'view.latestTitleEmpty': 'Ainda não há nós',
+        'view.cardSizeGroup': 'Tamanho do cartão',
+        'view.cardSizeCompact': 'Compacto',
+        'view.cardSizeStandard': 'Padrão',
+        'view.cardSizeRoomy': 'Amplo',
+        'view.branchesShown': 'Ramos: no espaço',
+        'view.branchesShownTitle': 'Mover as sessões de ramo concluídas para o arquivo, deixando só a sessão principal no espaço de trabalho',
+        'view.branchesQuiet': 'Ramos: arquivados',
+        'view.branchesQuietTitle': 'Trazer de volta ao espaço de trabalho as sessões de ramo desta árvore',
         'view.empty.title': 'Esta árvore ainda está vazia',
         'view.empty.hint': 'Pergunte algo no Chat e o primeiro nó vai crescer aqui.',
         'view.empty.report': 'Se você já perguntou e isto continua vazio, me diga: {events} eventos · sessão {state}.',
@@ -734,10 +870,6 @@ window.__ModuleLoader__.load({
         'card.deleteTitle': 'Ocultar este nó e todos os ramos abaixo dele',
         'card.deleteConfirm': 'Excluir este nó e todos os ramos abaixo dele? (reversível)',
         'card.readTitle': 'Clique para ler em tela cheia',
-        'card.expandTitle': 'Expandir esta resposta',
-        'card.collapseTitle': 'Recolher esta resposta',
-        'card.expand': 'Expandir resposta',
-        'card.collapse': 'Recolher resposta',
         'card.fullscreen': 'Tela cheia',
         'card.fullscreenTitle': 'Ler a resposta completa em tela cheia',
         'card.unfoldBranch': 'Expandir este ramo',
@@ -772,6 +904,9 @@ window.__ModuleLoader__.load({
         'reader.hint': 'Esc ou clique no fundo para fechar',
         'reader.branch': 'Ramo',
         'reader.mainline': 'Linha principal',
+        'reader.widthGroup': 'Largura de leitura',
+        'reader.widthStandard': 'Padrão',
+        'reader.widthWide': 'Mais largo',
         'error.title': 'A visualização em árvore falhou',
         'error.reload': 'Recarregar a visualização',
         'error.hint': 'Os dados do canvas estão seguros; apenas esta renderização falhou.',
@@ -811,6 +946,14 @@ window.__ModuleLoader__.load({
         'view.latest': 'К последнему',
         'view.latestTitle': 'Развернуть путь и перейти к новейшему узлу',
         'view.latestTitleEmpty': 'Узлов пока нет',
+        'view.cardSizeGroup': 'Размер карточки',
+        'view.cardSizeCompact': 'Компактный',
+        'view.cardSizeStandard': 'Стандартный',
+        'view.cardSizeRoomy': 'Просторный',
+        'view.branchesShown': 'Ветки: в рабочем пространстве',
+        'view.branchesShownTitle': 'Переместить завершённые сеансы веток в архив, оставив в рабочем пространстве только основной сеанс',
+        'view.branchesQuiet': 'Ветки: в архиве',
+        'view.branchesQuietTitle': 'Вернуть сеансы веток этого дерева в рабочее пространство',
         'view.empty.title': 'Это дерево пока пустое',
         'view.empty.hint': 'Спросите что-нибудь в Chat, и здесь появится первый узел.',
         'view.empty.report': 'Если вы уже спрашивали, а здесь по-прежнему пусто, сообщите: события {events} · сеанс {state}.',
@@ -833,10 +976,6 @@ window.__ModuleLoader__.load({
         'card.deleteTitle': 'Скрыть этот узел и все ветки под ним',
         'card.deleteConfirm': 'Удалить этот узел и все ветки под ним? (обратимо)',
         'card.readTitle': 'Нажмите, чтобы читать на весь экран',
-        'card.expandTitle': 'Развернуть этот ответ',
-        'card.collapseTitle': 'Свернуть этот ответ',
-        'card.expand': 'Развернуть ответ',
-        'card.collapse': 'Свернуть ответ',
         'card.fullscreen': 'Во весь экран',
         'card.fullscreenTitle': 'Прочитать полный ответ во весь экран',
         'card.unfoldBranch': 'Развернуть эту ветку',
@@ -871,6 +1010,9 @@ window.__ModuleLoader__.load({
         'reader.hint': 'Esc или клик по фону, чтобы закрыть',
         'reader.branch': 'Ветка',
         'reader.mainline': 'Основная линия',
+        'reader.widthGroup': 'Ширина чтения',
+        'reader.widthStandard': 'Стандартная',
+        'reader.widthWide': 'Широкая',
         'error.title': 'Древовидное представление упало',
         'error.reload': 'Перезагрузить представление',
         'error.hint': 'Данные холста не потеряны; не удалась только эта отрисовка.',
@@ -1186,26 +1328,6 @@ window.__ModuleLoader__.load({
         if (text && text.trim()) parts.push(text);
       }
       return parts.join('\n\n');
-    }
-
-    /**
-     * The one-line summary of a reasoning text: the first line of its last
-     * paragraph.
-     *
-     * A collapsed section shows this so the reader learns what the agent was
-     * up to without opening anything. It is deliberately *not* a copy of the
-     * official Chat row, which picks the last completed paragraph's first line
-     * only while streaming and the first line of the whole text once settled.
-     */
-    function reasoningPreview(text) {
-      if (!text) return '';
-      const source = String(text);
-      // The last paragraph is the freshest thought; take its first line.
-      const paragraphs = source.split(/\r?\n[\t ]*\r?\n/);
-      const last = paragraphs[paragraphs.length - 1] || '';
-      const firstLine = last.split(/\r?\n/).find((line) => line.trim());
-      const chosen = firstLine ? firstLine.trim() : '';
-      return chosen.replace(/\*\*/g, '').slice(0, 200);
     }
 
     /**
@@ -1732,7 +1854,9 @@ window.__ModuleLoader__.load({
       return result;
     }
 
-    function layoutTree(nodes, collapsed, heights, direction) {
+    function layoutTree(nodes, collapsed, heights, direction, cardWidth) {
+      // Cards can be sized by the user; geometry follows the width they chose.
+      const cardW = Number.isFinite(cardWidth) && cardWidth > 0 ? cardWidth : NODE_W;
       const childrenOf = childrenMapOf(nodes);
       const kids = (node) => (collapsed[node.id] ? [] : childrenOf.get(node.id) || []);
       const roots = childrenOf.get('@root') || [];
@@ -1767,7 +1891,7 @@ window.__ModuleLoader__.load({
             center = (positions.get(first.id).y + heightOf(first) / 2 + positions.get(last.id).y + heightOf(last) / 2) / 2;
           }
           const y = Math.max(top, Math.min(top + span - ownHeight, center - ownHeight / 2));
-          positions.set(node.id, { x: (depthOf.get(node.id) || 0) * (NODE_W + GAP_Y), y });
+          positions.set(node.id, { x: (depthOf.get(node.id) || 0) * (cardW + GAP_Y), y });
         }
         let top = 0;
         for (const root of roots) {
@@ -1781,13 +1905,13 @@ window.__ModuleLoader__.load({
           const pos = positions.get(node.id);
           if (!pos) continue;
           const height = heightOf(node);
-          maxX = Math.max(maxX, pos.x + NODE_W);
+          maxX = Math.max(maxX, pos.x + cardW);
           maxY = Math.max(maxY, pos.y + height);
           for (const child of kids(node)) {
             const childPos = positions.get(child.id);
             if (childPos) edges.push({
               id: node.id + '>' + child.id,
-              x1: pos.x + NODE_W, y1: pos.y + height / 2,
+              x1: pos.x + cardW, y1: pos.y + height / 2,
               x2: childPos.x, y2: childPos.y + heightOf(child) / 2,
             });
           }
@@ -1812,14 +1936,14 @@ window.__ModuleLoader__.load({
       function measure(node) {
         const list = kids(node);
         if (list.length === 0) {
-          widths.set(node.id, NODE_W);
-          return NODE_W;
+          widths.set(node.id, cardW);
+          return cardW;
         }
         let total = 0;
         list.forEach((child, index) => {
           total += measure(child) + (index > 0 ? GAP_X : 0);
         });
-        const width = Math.max(NODE_W, total);
+        const width = Math.max(cardW, total);
         widths.set(node.id, width);
         return width;
       }
@@ -1830,7 +1954,7 @@ window.__ModuleLoader__.load({
         const list = kids(node);
         const depth = depthOf.get(node.id) || 0;
         if (list.length === 0) {
-          positions.set(node.id, { x: left + (widths.get(node.id) - NODE_W) / 2, y: rowTop[depth] || 0 });
+          positions.set(node.id, { x: left + (widths.get(node.id) - cardW) / 2, y: rowTop[depth] || 0 });
           return;
         }
         let cursor = left;
@@ -1838,9 +1962,9 @@ window.__ModuleLoader__.load({
           place(child, cursor);
           cursor += widths.get(child.id) + GAP_X;
         }
-        const first = positions.get(list[0].id).x + NODE_W / 2;
-        const last = positions.get(list[list.length - 1].id).x + NODE_W / 2;
-        positions.set(node.id, { x: (first + last) / 2 - NODE_W / 2, y: rowTop[depth] || 0 });
+        const first = positions.get(list[0].id).x + cardW / 2;
+        const last = positions.get(list[list.length - 1].id).x + cardW / 2;
+        positions.set(node.id, { x: (first + last) / 2 - cardW / 2, y: rowTop[depth] || 0 });
       }
 
       let x = 0;
@@ -1860,9 +1984,9 @@ window.__ModuleLoader__.load({
           if (!kidPos) continue;
           edges.push({
             id: node.id + '>' + kidNode.id,
-            x1: parentPos.x + NODE_W / 2,
+            x1: parentPos.x + cardW / 2,
             y1: parentPos.y + parentHeight,
-            x2: kidPos.x + NODE_W / 2,
+            x2: kidPos.x + cardW / 2,
             y2: kidPos.y,
           });
         }
@@ -1871,7 +1995,7 @@ window.__ModuleLoader__.load({
       let maxX = 0;
       let maxY = 0;
       for (const [id, pos] of positions) {
-        maxX = Math.max(maxX, pos.x + NODE_W);
+        maxX = Math.max(maxX, pos.x + cardW);
         maxY = Math.max(maxY, pos.y + (heights[id] || NODE_H));
       }
       for (const node of nodes) {
@@ -1936,9 +2060,19 @@ window.__ModuleLoader__.load({
         // only masks it and its subtree here.
         hidden: {},
         archived: [],
+        // Branch sessions this tree put into DSH's archive so the workspace
+        // list stays readable. Kept apart from `archived` (which is owned by
+        // deletion/restore): restoring a deleted node must not surface a
+        // session the branch policy deliberately quieted.
+        quieted: [],
+        // The tree's copy of the branch-row policy. The preference itself is
+        // persisted globally; keeping the effective value here means a blocked
+        // localStorage cannot make the toolbar and the turn-end hook disagree.
+        branchMode: readBranchMode(),
         selectedId: null,
         composingId: null,
         readingId: null,
+        readingReasoning: false,
         draft: '',
         loaded: false,
         error: null,
@@ -1956,6 +2090,7 @@ window.__ModuleLoader__.load({
           if (saved.collapsed && typeof saved.collapsed === 'object') state.collapsed = saved.collapsed;
           if (saved.hidden && typeof saved.hidden === 'object') state.hidden = saved.hidden;
           if (Array.isArray(saved.archived)) state.archived = saved.archived;
+          if (Array.isArray(saved.quieted)) state.quieted = saved.quieted;
         }
       } catch (error) {
         /* ignore corrupt state */
@@ -1991,6 +2126,8 @@ window.__ModuleLoader__.load({
             collapsed: state.collapsed,
             hidden: state.hidden,
             archived: state.archived,
+            quieted: state.quieted,
+            branchMode: state.branchMode,
           };
           window.localStorage.setItem(STORE_PREFIX + rootId, JSON.stringify(payload));
         } catch (error) {
@@ -2155,12 +2292,14 @@ window.__ModuleLoader__.load({
           state.selectedId = id;
           emit();
         },
-        openReader(id) {
+        openReader(id, options) {
           state.readingId = id;
+          state.readingReasoning = Boolean(options && options.reasoning);
           emit();
         },
         closeReader() {
           state.readingId = null;
+          state.readingReasoning = false;
           emit();
         },
         toggleCollapse(id) {
@@ -2192,6 +2331,21 @@ window.__ModuleLoader__.load({
         setArchived(ids) {
           state.archived = Array.isArray(ids) ? ids.slice() : [];
           persist();
+          emit();
+        },
+        setQuieted(ids) {
+          state.quieted = Array.isArray(ids) ? ids.slice() : [];
+          persist();
+          emit();
+        },
+        setBranchMode(mode) {
+          state.branchMode = mode === 'quiet' ? 'quiet' : 'listed';
+          persist();
+          emit();
+        },
+        /** Drop measured heights, e.g. when the cards change width. */
+        resetHeights() {
+          state.heights = {};
           emit();
         },
         compose(id) {
@@ -2268,6 +2422,103 @@ window.__ModuleLoader__.load({
         }
       }
 
+      /** Archive one session; returns whether the host accepted the call. */
+      function archiveSession(sessionId) {
+        const workspaces = workspacesOf();
+        if (!workspaces || typeof workspaces.archiveSession !== 'function') return false;
+        try {
+          const result = workspaces.archiveSession(sessionId, { stopActivity: true });
+          if (result && typeof result.catch === 'function') result.catch(() => undefined);
+          return true;
+        } catch (error) {
+          return false;
+        }
+      }
+
+      function unarchiveSession(sessionId) {
+        const workspaces = workspacesOf();
+        if (!workspaces || typeof workspaces.unarchiveSession !== 'function') return false;
+        try {
+          const result = workspaces.unarchiveSession(sessionId);
+          if (result && typeof result.catch === 'function') result.catch(() => undefined);
+          return true;
+        } catch (error) {
+          return false;
+        }
+      }
+
+      /** Sessions still referenced by a visible node of this tree. */
+      function visibleSessionsOf(store) {
+        const snapshot = store.getSnapshot();
+        const hidden = hiddenSetOf(snapshot.nodes, snapshot.hidden);
+        const sessions = new Set();
+        for (const node of snapshot.nodes) {
+          if (hidden.has(node.id) || !node.sessionId) continue;
+          sessions.add(node.sessionId);
+        }
+        return sessions;
+      }
+
+      /**
+       * Put a finished branch session into the archive.
+       *
+       * A branch is a real session, so DSH lists it next to the root session.
+       * Forking cannot create a child "subtask" row from a client plugin, and
+       * archived sessions stay readable through the same retain/binding path
+       * the tree already uses — so archiving is how a finished branch stops
+       * taking a top-level row. Only finished turns are quieted: an archived
+       * session refuses prompts, and a branch that is still running or waiting
+       * must stay promptable.
+       */
+      function quietBranch(store, sessionId) {
+        const snapshot = store.getSnapshot();
+        if (!sessionId || (snapshot.branchMode || readBranchMode()) !== 'quiet') return;
+        const quieted = Array.isArray(snapshot.quieted) ? snapshot.quieted : [];
+        if (quieted.indexOf(sessionId) >= 0) return;
+        if (!archiveSession(sessionId)) return;
+        store.setQuieted(quieted.concat(sessionId));
+      }
+
+      /**
+       * Switch this tree's branch sessions between "listed" and "quieted".
+       *
+       * Existing finished branches migrate in both directions; running or
+       * waiting branches are left alone. A tombstoned node's session stays
+       * archived either way: its restore path is the tombstone, not this
+       * preference.
+       */
+      function setBranchListing(rootId, mode) {
+        const store = storeFor(rootId);
+        const snapshot = store.getSnapshot();
+        const visible = visibleSessionsOf(store);
+        saveBranchMode(mode);
+        store.setBranchMode(mode);
+        if (mode === 'quiet') {
+          const quieted = new Set(Array.isArray(snapshot.quieted) ? snapshot.quieted : []);
+          for (const node of snapshot.nodes) {
+            if (node.kind !== 'branch' || !node.sessionId || !visible.has(node.sessionId)) continue;
+            if (RUNNING_STATUSES.indexOf(node.status) >= 0) continue;
+            if (node.awaiting === 'question' || node.awaiting === 'approval') continue;
+            // Already archived by this policy; do not re-issue the call.
+            if (quieted.has(node.sessionId)) continue;
+            if (!archiveSession(node.sessionId)) continue;
+            quieted.add(node.sessionId);
+          }
+          store.setQuieted([...quieted]);
+          return 'quiet';
+        }
+        // The tree only unarchives what it archived. A session whose node is
+        // tombstoned, or whose unarchive was not accepted, stays on the list:
+        // dropping it here would strand it archived and untracked forever.
+        const remaining = [];
+        for (const sessionId of snapshot.quieted || []) {
+          if (!visible.has(sessionId)) { remaining.push(sessionId); continue; }
+          if (!unarchiveSession(sessionId)) remaining.push(sessionId);
+        }
+        store.setQuieted(remaining);
+        return 'listed';
+      }
+
       /**
        * Tombstone a node and its subtree. Archived sessions are remembered so
        * "恢复" can put them back into the session list.
@@ -2287,6 +2538,7 @@ window.__ModuleLoader__.load({
           visibleSessions.add(node.sessionId);
         }
         const archived = Array.isArray(after.archived) ? after.archived.slice() : [];
+        const quieted = new Set(Array.isArray(after.quieted) ? after.quieted : []);
         const workspaces = workspacesOf();
         let changed = false;
         for (const node of after.nodes) {
@@ -2295,6 +2547,9 @@ window.__ModuleLoader__.load({
           // Never archive the root session, nor a session a visible node still points at.
           if (!sessionId || sessionId === rootId) continue;
           if (visibleSessions.has(sessionId) || archived.indexOf(sessionId) >= 0) continue;
+          // Already quieted by the branch policy: deleting the node must not
+          // later pull that session back into the workspace through "恢复".
+          if (quieted.has(sessionId)) continue;
           if (!workspaces || typeof workspaces.archiveSession !== 'function') continue;
           try {
             const result = workspaces.archiveSession(sessionId, { stopActivity: true });
@@ -2324,6 +2579,21 @@ window.__ModuleLoader__.load({
           }
         }
         store.restoreHidden();
+        if ((store.getSnapshot().branchMode || readBranchMode()) !== 'listed') return;
+        // A branch quieted before its node was deleted stays archived through
+        // the tombstone. Once the node is back and the policy is listed, that
+        // session has to come back too.
+        const restored = store.getSnapshot();
+        const sessions = new Set();
+        for (const node of restored.nodes) if (node.sessionId) sessions.add(node.sessionId);
+        const remaining = [];
+        let changed = false;
+        for (const sessionId of restored.quieted || []) {
+          if (!sessions.has(sessionId)) { remaining.push(sessionId); continue; }
+          if (!unarchiveSession(sessionId)) { remaining.push(sessionId); continue; }
+          changed = true;
+        }
+        if (changed) store.setQuieted(remaining);
       }
 
       function remember(sessionId, rootId, nodeId) {
@@ -2495,6 +2765,15 @@ window.__ModuleLoader__.load({
             changes.status = 'streaming';
           }
           if (Object.keys(changes).length) store.patch(nodeId, changes);
+          // A branch that finished while the view was elsewhere is quieted on
+          // the first read that sees its end, so reopening a tree applies the
+          // same policy as watching the turn finish live.
+          // Only a real turn end may quiet a branch. `running === false` is
+          // also what a parked question/approval and a cold, not-yet-hydrated
+          // session look like; archiving those would make them unanswerable.
+          if (read2.ended && !read2.awaiting && running !== true && current.sessionId) {
+            quietBranch(store, current.sessionId);
+          }
         };
         read();
         binding.eventSource.subscribe(read);
@@ -2516,6 +2795,27 @@ window.__ModuleLoader__.load({
         // A tombstoned node cannot be forked from even if a stale card asks.
         if (hiddenSetOf(snapshot.nodes, snapshot.hidden).has(parentNode.id)) return;
         const nodeId = 'b-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+        // Forking from a branch the archive holds is fine for the log, but the
+        // archive is not where new work starts: bring the parent back for the
+        // fork, then quiet it again. Only the child runs.
+        const parentQuieted = (snapshot.quieted || []).indexOf(parentNode.sessionId) >= 0;
+        if (parentQuieted) {
+          // Wait for the unarchive: a fire-and-forget call could race the fork.
+          try {
+            await Promise.resolve(unarchiveSession(parentNode.sessionId));
+          } catch (error) {
+            /* the fork only needs the log, so keep going */
+          }
+        }
+        // Re-quiet only when the policy still owns this session. Switching the
+        // tree to "listed" while the fork was in flight must not sneak the
+        // parent back into the archive untracked.
+        const requietParent = () => {
+          const latest = store.getSnapshot();
+          if ((latest.branchMode || readBranchMode()) !== 'quiet') return;
+          if ((latest.quieted || []).indexOf(parentNode.sessionId) < 0) return;
+          archiveSession(parentNode.sessionId);
+        };
         let childId;
         try {
           childId = await ctx.sessions.fork({
@@ -2523,9 +2823,11 @@ window.__ModuleLoader__.load({
             atSeq: parentNode.answerSeq || undefined,
           });
         } catch (error) {
+          if (parentQuieted) requietParent();
           store.setError(T('error.forkFailed', { reason: String((error && error.message) || error) }));
           return;
         }
+        if (parentQuieted) requietParent();
         remember(childId, rootId, nodeId);
         store.upsert({
           id: nodeId,
@@ -2623,6 +2925,9 @@ window.__ModuleLoader__.load({
               } catch (error) {
                 /* ignore */
               }
+              // The turn is over, so this session will only ever be read: put
+              // it into the archive and keep the workspace list to the tree.
+              quietBranch(store, childId);
             }
           } finally {
             busy = false;
@@ -2649,7 +2954,10 @@ window.__ModuleLoader__.load({
         }
       }
 
-      return { rootOf, storeFor, ensureProjection, ensureOpen, branch, loadOlder, deleteSubtree, restoreHidden };
+      return {
+        rootOf, storeFor, ensureProjection, ensureOpen, branch, loadOlder,
+        deleteSubtree, restoreHidden, setBranchListing,
+      };
     }
 
     // -------------------------------------------------------------- markdown
@@ -3382,68 +3690,15 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * The card's reasoning row.
-     *
-     * It is a pointer, not a panel. Expanding the thinking inside a 320px card
-     * stretched the card into a very long strip, which is exactly what made it
-     * awkward to use; the reader is where a long answer — and the thinking
-     * behind it — is actually read. So the row says how much there is and opens
-     * the reader, where the chain sits at the top and folds away.
-     */
-    function ReasoningRow({ node, onOpen }) {
-      useLocale();
-      const text = node.reasoning || '';
-      if (!text.trim()) return null;
-      const preview = reasoningPreview(text);
-      const dropped = node.reasoningDropped || 0;
-      return h('div', {
-        className: 'dsh-tree-reasoning',
-        style: { marginTop: 6 },
-      },
-        h('button', {
-          onClick: (event) => {
-            event.stopPropagation();
-            onOpen();
-          },
-          title: T('card.thinkExpandTitle'),
-          className: LINK,
-          style: { color: C.accent, gap: 5, maxWidth: '100%' },
-        },
-          h(Chevron, { dir: 'right', size: 9 }),
-          h('span', { style: { flex: '0 0 auto' } }, T('card.think')),
-          h('span', { style: { color: C.ink4, fontVariantNumeric: 'tabular-nums', flex: '0 0 auto' } },
-            T('card.thinkMeta', { count: text.length }))),
-        // The truncation notice is metadata, not part of the reasoning, so the
-        // collapsed row can still say the text is partial.
-        dropped > 0
-          ? h('div', {
-            style: {
-              marginTop: 3, paddingLeft: 13, fontSize: 10.2,
-              color: C.ink4, fontVariantNumeric: 'tabular-nums',
-            },
-          }, T('card.thinkTruncated', { count: dropped }))
-          : null,
-        preview
-          ? h('div', {
-            className: 'dsh-tree-reasoning-preview dsh-tree-clamp-2',
-            style: {
-              marginTop: 4, paddingLeft: 13, fontSize: 10.8, lineHeight: 1.5,
-              color: C.ink4,
-            },
-          }, preview)
-          : null);
-    }
-
-    /**
      * The reader's reasoning block: first thing in the answer, folded away.
      *
      * It lives in the reader's own scroll container rather than a nested one:
      * a second scroll area inside the reader is what made the wheel ambiguous,
      * and a long chain is easier to read in the flow than in a 260px box.
      */
-    function ReasoningDisclosure({ node }) {
+    function ReasoningDisclosure({ node, defaultOpen }) {
       useLocale();
-      const [open, setOpen] = useState(false);
+      const [open, setOpen] = useState(Boolean(defaultOpen));
       const text = node.reasoning || '';
       if (!text.trim()) return null;
       const dropped = node.reasoningDropped || 0;
@@ -3482,13 +3737,14 @@ window.__ModuleLoader__.load({
           : null);
     }
 
-    function NodeCard({ node, selected, dimmed, index, store, api, rootId, match, collapsed, childCount, descendants, isLatest, entering }) {
+    function NodeCard({ node, selected, dimmed, index, store, api, rootId, match, collapsed, childCount, descendants, isLatest, entering, width, preview }) {
       useLocale();
       const snapshot = store.getSnapshot();
       const composing = snapshot.composingId === node.id;
-      const [expanded, setExpanded] = useState(false);
       const [menuOpen, setMenuOpen] = useState(false);
       const cardRef = useRef(null);
+      const cardWidth = width || NODE_W;
+      const cardPreview = preview || CARD_SIZES.standard;
       // Freeze this mount's entry decision; streamed tokens do not restart it.
       const animateEntry = useRef(entering);
       const isRunning = isInProgressNode(node);
@@ -3498,7 +3754,9 @@ window.__ModuleLoader__.load({
       // for minutes and then jumped — the label looked broken rather than busy.
       const now = useTicker(isRunning && Boolean(node.startedAt));
       const answer = node.answer || '';
-      const answerText = answer.length > 1400 ? answer.slice(0, 1400) + T('card.truncated') : answer;
+      const answerText = answer.length > cardPreview.truncate
+        ? answer.slice(0, cardPreview.truncate) + T('card.truncated')
+        : answer;
 
       useEffect(() => {
         const element = cardRef.current;
@@ -3541,7 +3799,7 @@ window.__ModuleLoader__.load({
           position: 'absolute',
           left: 0,
           top: 0,
-          width: NODE_W,
+          width: cardWidth,
           minHeight: 132,
           background: C.card,
           border: '1px solid ' + (awaiting || match || selected ? C.accent : C.cardEdge),
@@ -3676,38 +3934,38 @@ window.__ModuleLoader__.load({
           style: {
             ...MD.body,
             marginTop: 6,
-            maxHeight: expanded ? 3000 : 146,
+            maxHeight: cardPreview.preview,
             overflow: 'hidden',
             cursor: answer ? 'zoom-in' : 'default',
-            maskImage: (!expanded && answer.length > 320) ? 'linear-gradient(#000 82%, transparent 100%)' : 'none',
-            WebkitMaskImage: (!expanded && answer.length > 320) ? 'linear-gradient(#000 82%, transparent 100%)' : 'none',
+            maskImage: (answer.length > cardPreview.maskAt) ? 'linear-gradient(#000 82%, transparent 100%)' : 'none',
+            WebkitMaskImage: (answer.length > cardPreview.maskAt) ? 'linear-gradient(#000 82%, transparent 100%)' : 'none',
           },
         }, answer ? renderMarkdown(answerText) : null),
         h(LiveProgress, { node, now }),
-        h(ReasoningTail, { node, onOpen: () => store.openReader(node.id) }),
-        h(ReasoningRow, { node, onOpen: () => store.openReader(node.id) }),
+        h(ReasoningTail, { node, onOpen: () => store.openReader(node.id, { reasoning: true }) }),
         h(Presence, { show: composing, className: 'dsh-tree-composer' },
           h(Composer, { store, api, rootId, node, active: composing })),
-        answer.length > 260 || childCount > 0
+        answer || childCount > 0 || (node.reasoning || '').trim()
           ? h('div', {
+            onClick: (event) => {
+              if (!answer) return;
+              const target = event.target;
+              if (target && typeof target.closest === 'function' && target.closest('button')) return;
+              event.stopPropagation();
+              store.openReader(node.id);
+            },
             style: {
               marginTop: 9, paddingTop: 7, borderTop: '1px solid ' + C.cardEdge,
               display: 'flex', alignItems: 'center', gap: 10, minHeight: 22,
             },
           },
-            answer.length > 260
-              ? h('button', {
-                onClick: (event) => {
-                  event.stopPropagation();
-                  setExpanded((value) => !value);
-                },
-                title: expanded ? T('card.collapseTitle') : T('card.expandTitle'),
-                className: LINK,
-                style: { color: C.accent },
-              },
-                expanded ? T('card.collapse') : T('card.expand'),
-                h(Chevron, { dir: expanded ? 'up' : 'down', size: 9 }))
-              : null,
+            // The card is a preview, so "read the whole thing" is available on
+            // every answered card — short answers included. It used to hang off
+            // an answer-length condition, which made the entry point disappear
+            // exactly on the cards that looked like they had nothing to open.
+            // It is a real button (24px tall) rather than a text link: at a
+            // zoomed-out canvas a 16px link shrinks into a few pixels of hit
+            // area, and a missed click reads as "the button does nothing".
             answer
               ? h('button', {
                 onClick: (event) => {
@@ -3715,16 +3973,30 @@ window.__ModuleLoader__.load({
                   store.openReader(node.id);
                 },
                 title: T('card.fullscreenTitle'),
-                className: LINK,
-                style: { cursor: 'zoom-in' },
+                className: BTN + ' dsh-tree-btn--sm',
+                style: { color: C.accent, cursor: 'zoom-in' },
               }, T('card.fullscreen'),
                 h('svg', {
-                  width: 9, height: 9, viewBox: '0 0 16 16', 'aria-hidden': true,
+                  width: 11, height: 11, viewBox: '0 0 16 16', 'aria-hidden': true,
                   style: { display: 'block', flex: '0 0 auto' },
                 }, h('path', {
                   d: 'M6 2.5H2.5V6 M10 2.5h3.5V6 M6 13.5H2.5V10 M10 13.5h3.5V10',
                   fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round',
                 })))
+              : null,
+            // The thinking is a pointer, not a panel: the card keeps only this
+            // footer entry, and the reader opens with the chain unfolded at the
+            // top so the newest reasoning is one click away.
+            (node.reasoning || '').trim()
+              ? h('button', {
+                onClick: (event) => {
+                  event.stopPropagation();
+                  store.openReader(node.id, { reasoning: true });
+                },
+                title: T('card.thinkExpandTitle'),
+                className: LINK,
+                style: { color: C.accent },
+              }, T('card.think'))
               : null,
             h('span', { style: { flex: 1 } }),
             childCount > 0
@@ -3808,6 +4080,17 @@ window.__ModuleLoader__.load({
       }, [nodes]);
       const [query, setQuery] = useState('');
       const [direction, setDirection] = useState(readLayoutDirection);
+      // How much of the answer a card shows is a preference, not a constant:
+      // the same tree is read at different zoom levels on different screens.
+      const [cardSize, setCardSize] = useState(readCardSize);
+      const card = CARD_SIZES[cardSize] || CARD_SIZES.standard;
+      const cardWidth = card.width;
+      // Branch rows: every fork is a real session, so the workspace lists it.
+      // This is the tree's answer to that: finish a branch and it moves into
+      // the archive, or leave the whole tree listed as it has always been.
+      // The effective mode lives in the store so a blocked localStorage cannot
+      // make the toolbar and the turn-end hook disagree.
+      const branchMode = snapshot.branchMode || readBranchMode();
       const drag = useRef(null);
       const wrapRef = useRef(null);
       const searchRef = useRef(null);
@@ -3839,8 +4122,8 @@ window.__ModuleLoader__.load({
         return { direct, descendants: descendantCountsOf(liveNodes, childrenOf) };
       }, [liveNodes]);
       const layout = useMemo(
-        () => layoutTree(liveNodes, collapsedMap, snapshot.heights, direction),
-        [liveNodes, collapsedMap, snapshot.heights, direction]);
+        () => layoutTree(liveNodes, collapsedMap, snapshot.heights, direction, cardWidth),
+        [liveNodes, collapsedMap, snapshot.heights, direction, cardWidth]);
       const path = useMemo(
         () => (snapshot.selectedId ? pathOf(liveNodes, snapshot.selectedId) : new Set()),
         [liveNodes, snapshot.selectedId]);
@@ -3857,6 +4140,7 @@ window.__ModuleLoader__.load({
       const labels = useMemo(() => labelMapOf(liveNodes, collapsedMap), [liveNodes, collapsedMap]);
       const running = liveNodes.filter((node) => RUNNING_STATUSES.indexOf(node.status) >= 0).length;
       const waiting = liveNodes.filter((node) => node.awaiting === 'question' || node.awaiting === 'approval').length;
+      const branchRows = liveNodes.filter((node) => node.kind === 'branch' && node.sessionId).length;
       const hiddenCount = hiddenIds.size;
       const tombstoned = Object.keys(snapshot.hidden || {}).length;
 
@@ -3873,12 +4157,12 @@ window.__ModuleLoader__.load({
           const pos = layout.positions.get(node.id);
           if (!pos) continue;
           const height = snapshot.heights[node.id] || NODE_H;
-          if (pos.x + NODE_W >= left && pos.x <= right && pos.y + height >= top && pos.y <= bottom) {
+          if (pos.x + cardWidth >= left && pos.x <= right && pos.y + height >= top && pos.y <= bottom) {
             shown.push(node);
           }
         }
         return shown.length ? shown : liveNodes;
-      }, [liveNodes, layout, view, size, snapshot.heights]);
+      }, [liveNodes, layout, view, size, snapshot.heights, cardWidth]);
 
       /** Reveal first; position only after the expanded layout has committed. */
       const focusNode = useCallback((id) => {
@@ -3893,11 +4177,11 @@ window.__ModuleLoader__.load({
         const top = size.top + (toolbarRef.current ? toolbarRef.current.offsetHeight : 44) + 28;
         const availableHeight = Math.max(1, rect.height - top - size.bottom);
         const height = snapshot.heights[pendingFocus] || NODE_H;
-        const z = Math.max(0.2, Math.min(1, (rect.width - 48) / NODE_W, (availableHeight - 32) / height));
-        setView({ z, x: rect.width / 2 - (pos.x + NODE_W / 2) * z,
+        const z = Math.max(0.2, Math.min(1, (rect.width - 48) / cardWidth, (availableHeight - 32) / height));
+        setView({ z, x: rect.width / 2 - (pos.x + cardWidth / 2) * z,
           y: top + availableHeight / 2 - (pos.y + height / 2) * z }, true);
         setPendingFocus(null);
-      }, [pendingFocus, layout, snapshot.heights, size.top, size.bottom]);
+      }, [pendingFocus, layout, snapshot.heights, size.top, size.bottom, cardWidth]);
       const latest = latestNodeOf(liveNodes);
 
       /** Jump to the next card matching `predicate`, wrapping around. */
@@ -4079,6 +4363,20 @@ window.__ModuleLoader__.load({
         else fit();
       }, [direction]);
 
+      // A card-size change reflows every card. Keep the selected one where the
+      // user is looking rather than leaving them to hunt the tree again.
+      const previousCardSize = useRef(cardSize);
+      useEffect(() => {
+        if (previousCardSize.current === cardSize) return;
+        previousCardSize.current = cardSize;
+        // Heights were measured against the old card width; keeping them would
+        // lay the new width out with old rows, especially for culled cards
+        // that will not re-render (and therefore never re-measure) soon.
+        store.resetHeights();
+        if (snapshot.selectedId && layout.positions.has(snapshot.selectedId)) setPendingFocus(snapshot.selectedId);
+        else fit();
+      }, [cardSize]);
+
       const fittedRef = useRef(false);
       useEffect(() => {
         if (fittedRef.current || !ready || !liveNodes.length || !size.w) return;
@@ -4113,7 +4411,7 @@ window.__ModuleLoader__.load({
 
       return h('div', {
         ref: wrapRef,
-        inert: snapshot.readingId ? true : undefined,
+        inert: snapshot.readingId && store.getNode(snapshot.readingId) ? true : undefined,
         onWheel,
         onMouseDown,
         onMouseMove,
@@ -4172,6 +4470,8 @@ window.__ModuleLoader__.load({
               descendants: counts.descendants.get(node.id) || 0,
               isLatest: latest ? latest.id === node.id : false,
               entering: !seenNodes.current.has(node.id),
+              width: cardWidth,
+              preview: card,
             }));
           })),
 
@@ -4213,6 +4513,18 @@ window.__ModuleLoader__.load({
               title: T('view.restoreHiddenTitle'),
               ...pillProps(),
             }, T('view.restoreHidden', { count: Math.max(hiddenCount, tombstoned) }))
+            : null,
+          // Branch sessions are real sessions. One control says where they
+          // live: the workspace list, or the archive. Switching also migrates
+          // the branches that already exist in this tree.
+          branchRows > 0
+            ? h('button', {
+              onClick: () => {
+                api.setBranchListing(rootId, branchMode === 'quiet' ? 'listed' : 'quiet');
+              },
+              title: branchMode === 'quiet' ? T('view.branchesQuietTitle') : T('view.branchesShownTitle'),
+              ...pillProps(),
+            }, branchMode === 'quiet' ? T('view.branchesQuiet') : T('view.branchesShown'))
             : null,
           h('span', { style: { flex: 1 } }),
           h('div', {
@@ -4296,6 +4608,29 @@ window.__ModuleLoader__.load({
                 setDirection('horizontal');
               },
             }, h(Icon, { name: 'layoutHorizontal' }))),
+          // Card size is a preference, not a per-session state: the same three
+          // presets are offered everywhere and remembered for this browser.
+          h('div', {
+            role: 'group',
+            'aria-label': T('view.cardSizeGroup'),
+            title: T('view.cardSizeGroup'),
+            style: {
+              display: 'flex', alignItems: 'center', gap: 2, padding: 2,
+              border: '1px solid ' + C.cardEdge, borderRadius: 9, background: C.canvas,
+            },
+          },
+            CARD_SIZE_ORDER.map((size) => h('button', {
+              key: size,
+              className: BTN_SEGMENT,
+              title: T(CARD_SIZE_LABELS[size]),
+              'aria-label': T(CARD_SIZE_LABELS[size]),
+              'aria-pressed': cardSize === size,
+              onClick: () => {
+                if (cardSize === size) return;
+                saveCardSize(size);
+                setCardSize(size);
+              },
+            }, h(Icon, { name: size === 'compact' ? 'cardSmall' : size === 'roomy' ? 'cardRoomy' : 'cardStandard' })))),
           h('button', { onClick: fit, className: BTN, title: T('view.fitTitle') }, h(Icon, { name: 'fit' }), T('view.fit')),
           h('button', {
             disabled: !latest,
@@ -4355,7 +4690,7 @@ window.__ModuleLoader__.load({
                   const waiting = node.awaiting === 'question' || node.awaiting === 'approval';
                   return h('rect', {
                     key: node.id,
-                    x: pos.x, y: pos.y, width: NODE_W,
+                    x: pos.x, y: pos.y, width: cardWidth,
                     height: snapshot.heights[node.id] || NODE_H,
                     rx: 10,
                     fill: matches && matches.has(node.id) ? C.accent : waiting ? C.accent : active ? C.accentSoft : C.line,
@@ -4391,23 +4726,54 @@ window.__ModuleLoader__.load({
     }
 
     function Icon({ name }) {
-      const paths = {
-        plus: 'M8 3v10M3 8h10', minus: 'M3 8h10',
-        search: 'M11 11l3 3M12 7a5 5 0 1 1-10 0 5 5 0 0 1 10 0',
-        fit: 'M6 2H2v4M10 2h4v4M2 10v4h4M14 10v4h-4',
-        latest: 'M8 1v3M8 12v3M1 8h3M12 8h3M12 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
-        more: 'M3 8h.01M8 8h.01M13 8h.01',
-        close: 'M4 4l8 8M12 4l-8 8',
-        // The two layout directions: one parent, two children, drawn the way
-        // the tree reads in that direction.
-        layoutVertical: 'M8 2v3M4 5h8M4 5v4M12 5v4M4 11h.01M12 11h.01',
-        layoutHorizontal: 'M2 8h3M5 4v8M5 4h4M5 12h4M11 4h.01M11 12h.01',
+      // A glyph is a stroke path, a list of rounded rects, a list of filled
+      // dots, or a combination. The dots are what make the two layout icons
+      // read as a tree (one parent, two children) instead of as brackets, and
+      // the rects keep the three card sizes on the same radius and stroke.
+      const glyphs = {
+        plus: { d: 'M8 3v10M3 8h10' },
+        minus: { d: 'M3 8h10' },
+        search: { d: 'M11 11l3 3M12 7a5 5 0 1 1-10 0 5 5 0 0 1 10 0' },
+        fit: { d: 'M6 2H2v4M10 2h4v4M2 10v4h4M14 10v4h-4' },
+        latest: { d: 'M8 1v3M8 12v3M1 8h3M12 8h3M12 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0' },
+        more: { d: 'M3 8h.01M8 8h.01M13 8h.01' },
+        close: { d: 'M4 4l8 8M12 4l-8 8' },
+        // The two layout directions: a parent node, its route and two children.
+        // The direction is the direction of the route, so the pair reads at a
+        // glance even at 16px.
+        layoutVertical: {
+          d: 'M8 6V7.8M4 7.8h8M4 7.8v1.6M12 7.8v1.6',
+          dots: [[8, 4.6, 1.35], [4, 10.8, 1.35], [12, 10.8, 1.35]],
+        },
+        layoutHorizontal: {
+          d: 'M6 8h1.8M7.8 4v8M7.8 4h1.6M7.8 12h1.6',
+          dots: [[4.6, 8, 1.35], [10.8, 4, 1.35], [10.8, 12, 1.35]],
+        },
+        // Card size: three rounded cards of increasing width. Rounded rects
+        // share one radius family, so the set looks drawn rather than typed.
+        cardSmall: { rects: [[5.5, 5.5, 5, 5, 1.2]] },
+        cardStandard: { rects: [[4, 4, 8, 8, 1.5]] },
+        cardRoomy: { rects: [[2.5, 2.5, 11, 11, 1.8]] },
       };
-      return h('svg', { width: 16, height: 16, viewBox: '0 0 16 16', 'aria-hidden': true,
-        style: { display: 'block', flexShrink: 0 } }, h('path', {
-        d: paths[name], fill: 'none', stroke: 'currentColor', strokeWidth: 1.7,
+      const glyph = glyphs[name];
+      if (!glyph) return null;
+      const stroke = {
+        fill: 'none', stroke: 'currentColor', strokeWidth: 1.7,
         strokeLinecap: 'round', strokeLinejoin: 'round',
-      }));
+      };
+      const parts = [];
+      if (glyph.d) parts.push(h('path', { key: 'path', d: glyph.d, ...stroke }));
+      (glyph.rects || []).forEach((rect, index) => parts.push(h('rect', {
+        key: 'rect-' + index,
+        x: rect[0], y: rect[1], width: rect[2], height: rect[3], rx: rect[4], ...stroke,
+      })));
+      (glyph.dots || []).forEach((dot, index) => parts.push(h('circle', {
+        key: 'dot-' + index, cx: dot[0], cy: dot[1], r: dot[2], fill: 'currentColor',
+      })));
+      return h('svg', {
+        width: 16, height: 16, viewBox: '0 0 16 16', 'aria-hidden': true,
+        style: { display: 'block', flexShrink: 0 },
+      }, parts);
     }
 
     // Buttons: all paint lives in CSS so :hover/:active/:focus-visible can exist.
@@ -4485,11 +4851,21 @@ window.__ModuleLoader__.load({
      * and no focus restoration; it only mirrors the element's `close` event back
      * into React state.
      */
-    function Reader({ node, open, onClose }) {
+    function Reader({ node, open, onClose, reasoningOpen }) {
       useLocale();
       const dialogRef = useRef(null);
       const close = useRef(onClose);
       close.current = onClose;
+      // Reading width is personal, not per-node: a long answer wants a longer
+      // measure on a wide screen, and the choice survives closing the reader.
+      const [width, setWidth] = useState(readReaderWidth);
+      const readerWidth = READER_WIDTHS[width] || READER_WIDTHS.standard;
+      // The click that opens the dialog can be followed by a second click (a
+      // nervous double click, or "it did nothing" impatience). Light dismiss
+      // would then close the reader the user was waiting for, which looks
+      // exactly like the button not working. Ignore backdrop clicks for a
+      // moment after opening, then keep the affordance.
+      const openedAt = useRef(0);
 
       // `show()` would leave the page interactive; the reader is blocking.
       useEffect(() => {
@@ -4497,8 +4873,16 @@ window.__ModuleLoader__.load({
         if (!dialog) return undefined;
         if (open) {
           if (!dialog.open) {
-            if (typeof dialog.showModal === 'function') dialog.showModal();
-            else dialog.setAttribute('open', '');
+            // A refused showModal() (a host CSS quirk, a stale top-layer
+            // transition) must still surface the reader: fall back to the
+            // non-modal attribute rather than leaving the click with no result.
+            try {
+              if (typeof dialog.showModal === 'function') dialog.showModal();
+              else dialog.setAttribute('open', '');
+            } catch (error) {
+              dialog.setAttribute('open', '');
+            }
+            openedAt.current = Date.now();
           }
         } else if (dialog.open) {
           dialog.close();
@@ -4523,9 +4907,18 @@ window.__ModuleLoader__.load({
         // The modal already carries role="dialog" and aria-modal: adding them
         // here would announce the overlay twice.
         'aria-labelledby': titleId,
-        // Click-outside dismissal. Where `closedby` is unsupported the dialog
-        // still closes on Esc and the back gesture, so this only degrades.
-        closedby: 'any',
+        // Click-outside dismissal is handled below instead of with `closedby`:
+        // the native light dismiss cannot tell the opening click (or a second
+        // click at the same spot) from a deliberate backdrop click.
+        onClick: (event) => {
+          if (event.target !== dialogRef.current) return; // a click inside the content
+          if (Date.now() - openedAt.current < 350) return; // the click that opened it
+          close.current();
+        },
+        // Width is a preset rather than a drag handle: a dialog with a resize
+        // grip is one more thing to fight with the keyboard and on touch, and
+        // two widths cover "keep it out of the way" and "give me the line".
+        style: { width: readerWidth, maxWidth: 'calc(100vw - 24px)' },
       },
           h('div', {
             style: {
@@ -4541,6 +4934,37 @@ window.__ModuleLoader__.load({
                 id: titleId,
                 style: { fontSize: 15, fontWeight: 600, lineHeight: 1.5, color: C.ink },
               }, node.question || T('card.noQuestion'))),
+            h('div', {
+              role: 'group',
+              'aria-label': T('reader.widthGroup'),
+              title: T('reader.widthGroup'),
+              style: {
+                display: 'flex', alignItems: 'center', gap: 2, padding: 2, flex: '0 0 auto',
+                border: '1px solid ' + C.cardEdge, borderRadius: 8, background: C.canvas,
+              },
+            },
+              h('button', {
+                className: BTN + ' dsh-tree-btn--sm',
+                title: T('reader.widthStandard'),
+                'aria-label': T('reader.widthStandard'),
+                'aria-pressed': width === 'standard',
+                onClick: () => {
+                  if (width === 'standard') return;
+                  saveReaderWidth('standard');
+                  setWidth('standard');
+                },
+              }, T('reader.widthStandard')),
+              h('button', {
+                className: BTN + ' dsh-tree-btn--sm',
+                title: T('reader.widthWide'),
+                'aria-label': T('reader.widthWide'),
+                'aria-pressed': width === 'wide',
+                onClick: () => {
+                  if (width === 'wide') return;
+                  saveReaderWidth('wide');
+                  setWidth('wide');
+                },
+              }, T('reader.widthWide'))),
             h('button', {
               onClick: onClose,
               title: T('reader.close'),
@@ -4558,7 +4982,11 @@ window.__ModuleLoader__.load({
             // The thinking comes first: it is what the reader opened the
             // card for, and folding it keeps the answer itself at the top
             // of the eye.
-            h(ReasoningDisclosure, { node }),
+            h(ReasoningDisclosure, {
+              key: (node.id || 'node') + (reasoningOpen ? ':open' : ':folded'),
+              node,
+              defaultOpen: reasoningOpen,
+            }),
             node.answer ? renderMarkdown(node.answer) : T('reader.noAnswer')),
 
           h('div', {
@@ -4633,6 +5061,11 @@ window.__ModuleLoader__.load({
       const reading = snapshot.readingId ? store.getNode(snapshot.readingId) : undefined;
       const readerNode = useRef(null);
       if (reading) readerNode.current = reading;
+      // A reading id that no longer resolves (the node was pruned or hidden)
+      // would leave the canvas inert with no dialog to close. Treat it as shut.
+      useEffect(() => {
+        if (snapshot.readingId && !reading) store.closeReader();
+      }, [snapshot.readingId, reading, store]);
 
       const canvas = h('div', {
         ref: hostRef,
@@ -4644,7 +5077,13 @@ window.__ModuleLoader__.load({
         },
       },
         h(Boundary, null, h(Canvas, { key: rootId, store, api, rootId, size, ready: !surface || size.container === surface.container })),
-        h(Reader, { key: rootId, node: reading || readerNode.current, open: Boolean(reading), onClose: () => store.closeReader() }));
+        h(Reader, {
+          key: rootId,
+          node: reading || readerNode.current,
+          open: Boolean(reading),
+          reasoningOpen: Boolean(snapshot.readingReasoning),
+          onClose: () => store.closeReader(),
+        }));
       return h('div', { ref: anchorRef, style: { width: '100%', height: '100%', minHeight: 0, flex: '1 1 0' } },
         surface ? surface.createPortal(canvas, surface.container) : canvas);
     }
@@ -4721,36 +5160,28 @@ window.__ModuleLoader__.load({
         '.dsh-tree-menu { transform-origin: top right; }',
         '.dsh-tree-menu[data-open="true"] { animation-timing-function: var(--tree-spring); }',
         '.dsh-tree-composer { transform-origin: top center; }',
-        // The reader is a native modal dialog; only its surface and its enter/exit
-        // transition belong to the plugin.
+        // The reader is a native modal dialog; only its surface belongs to the
+        // plugin.
+        // The reader opens instantly. An animated top-layer surface is allowed
+        // to leave the reading view invisible for a frame, and a fast
+        // close/reopen pair could leave it stuck mid-transition — from the
+        // user's side the click then looks like it did nothing. The dialog
+        // therefore has no transition of its own; the backdrop still carries
+        // the scrim, so the switch does not read as a page flash.
         '.dsh-tree-reader {',
         '  margin: auto; padding: 0; border: none; margin-block: auto;',
-        '  width: min(820px, calc(100vw - 68px)); max-width: calc(100vw - 68px);',
         '  max-height: calc(100vh - 56px);',
         '  background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary);',
         '  border-radius: 14px; box-shadow: var(--dsh-tree-shadow-3); overflow: hidden;',
         // MANDATORY: without this, a scroll inside the dialog chains to the page
         // behind it as soon as the dialog reaches its own scroll boundary.
         '  overscroll-behavior: contain;',
-        '  opacity: 0;',
-        // MANDATORY for the top layer: display and overlay are discrete, and the
-        // element has to stay in the top layer while it animates out.
-        '  transition-property: opacity, transform, display, overlay;',
-        '  transition-duration: var(--tree-exit);',
-        '  transition-timing-function: ease-out;',
-        '  transition-behavior: allow-discrete;',
         '}',
         // display is set only while open: an unconditional display would override
         // the closed state and leave the dialog permanently on screen.
         '.dsh-tree-reader[open] {',
-        '  display: flex; flex-direction: column; opacity: 1;',
-        '  transition-duration: var(--tree-enter);',
+        '  display: flex; flex-direction: column;',
         '}',
-        '@media (prefers-reduced-motion: no-preference) {',
-        '  .dsh-tree-reader { transform: translateY(6px) scale(.985); }',
-        '  .dsh-tree-reader[open] { transform: none; }',
-        '}',
-        '@starting-style { .dsh-tree-reader[open] { opacity: 0; } }',
         // MANDATORY: ::backdrop is not a scroll container by default, so
         // overscroll-behavior alone would not stop a gesture over the backdrop
         // from scrolling the page underneath.
@@ -4899,6 +5330,7 @@ window.__ModuleLoader__.load({
             loadOlder: runtime.loadOlder,
             deleteSubtree: runtime.deleteSubtree,
             restoreHidden: runtime.restoreHidden,
+            setBranchListing: runtime.setBranchListing,
           } }),
         }, TreeView));
       },
