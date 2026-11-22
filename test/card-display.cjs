@@ -108,16 +108,20 @@ doesNotMatch('the card has no expand state', /setExpanded|expanded \?/, card);
 doesNotMatch('the card no longer reads a card.expand key', /card\.(?:expand|collapse|expandTitle|collapseTitle)/, card);
 doesNotMatch('the expand strings are gone from every dictionary', /'card\.(?:expand|collapse|expandTitle|collapseTitle)':/, source);
 
-// The fullscreen entry point is present whenever there is an answer to read,
-// short answers included — the old answer-length condition hid it exactly on
-// the cards that looked like they had nothing to open.
-matches('the footer is drawn for any answered card', /answer \|\| childCount > 0/, card);
+// The card's body is one fixed-height band, and the answer is a window inside
+// it. This is the half of the design that stops the card growing line by line
+// as an answer streams: `maxHeight` lets the box grow with its content, a
+// declared `height` clips it. The band is present on every card, so it is not
+// conditional on the answer at all.
+matches('the footer is drawn on every card', /className: 'dsh-tree-actions',\n\s+style: \{\n\s+marginTop: 9, paddingTop: 7, borderTop/, card);
+doesNotMatch('the footer no longer hangs off the answer length', /answer \|\| childCount > 0/, card);
 matches('the footer offers the reader', /T\('card\.fullscreen'\)/, card);
 matches('the footer opens the reader', /store\.openReader\(node\.id\)/, card);
-matches('the blank part of the footer row opens the reader too', /target\.closest\('button'\)/, card);
+doesNotMatch('the footer row is not a click target of its own', /target\.closest\('button'\)/, card);
 
 // The preview follows the preset rather than three hard-coded numbers.
-matches('the preview height comes from the preset', /maxHeight: cardPreview\.preview/, card);
+matches('the band caps at the preset height', /maxHeight: cardPreview\.preview/, card);
+matches('a running band takes the preset height', /bandStyle\.height = cardPreview\.preview/, card);
 matches('the fade threshold comes from the preset', /cardPreview\.maskAt/, card);
 matches('the parse cap comes from the preset', /cardPreview\.truncate/, card);
 matches('the card width comes from the preset', /width: cardWidth/, card);
@@ -142,7 +146,7 @@ assert.equal(wide.edges[0].x2, wide.positions.get('child').x, 'the edge reaches 
 checks += 4;
 
 // --- the reader's width preference ------------------------------------------
-const readerStart = source.indexOf('    function Reader({ node, open, onClose, reasoningOpen }) {');
+const readerStart = source.indexOf('    function Reader({ node, open, onClose, pane, onPane }) {');
 const readerEnd = source.indexOf('\n    function TreeView(props) {', readerStart);
 assert.ok(readerStart > 0 && readerEnd > readerStart, 'Reader must exist');
 const reader = source.slice(readerStart, readerEnd);

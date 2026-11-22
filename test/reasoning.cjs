@@ -226,13 +226,19 @@ if (settledNodes[0].reasoning.indexOf('先看用户到底想要什么') < 0) {
 ok();
 
 const settledText = render('session-settled');
-expect(settledText, '思考过程', 'reasoning entry on the card');
+expect(settledText, '思考过程', 'reasoning strip on the card');
 expectNot(settledText, '先看用户到底想要什么', 'reasoning body on the card (the card is a preview only)');
-// The entry opens the reader with the chain already unfolded, so the newest
-// thinking is one click away instead of a second disclosure.
-settledStore.openReader(settledNodes[0].id, { reasoning: true });
+// One entry, two bodies: the reader opens on the answer, and the chain is one
+// deliberate switch away. This is the proof that the enlarge entry is unified —
+// there is no second way in that lands on the thinking instead.
+settledStore.openReader(settledNodes[0].id);
+const answerPaneText = render('session-settled');
+expectNot(answerPaneText, '先看用户到底想要什么', 'the reader opens on the answer');
+settledStore.setReaderPane('reasoning');
 const settledReaderText = render('session-settled');
-expect(settledReaderText, '先看用户到底想要什么', 'reasoning body in the reader');
+expect(settledReaderText, '先看用户到底想要什么', 'reasoning body after switching to its pane');
+settledStore.setReaderPane('result');
+expectNot(render('session-settled'), '先看用户到底想要什么', 'switching back shows the answer');
 settledStore.closeReader();
 ok();
 
