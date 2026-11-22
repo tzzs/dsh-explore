@@ -108,7 +108,7 @@ matches('switching back stores the unhandled ids', /store\.setQuieted\(remaining
 matches('the runtime exposes the switch', /deleteSubtree, restoreHidden, setBranchListing,/, runtime);
 
 // --- the view exposes it ----------------------------------------------------
-const canvasStart = source.indexOf('    function Canvas({ store, api, rootId, size, ready }) {');
+const canvasStart = source.indexOf('    function Canvas({ store, api, rootId, size }) {');
 const canvasEnd = source.indexOf('    function Icon(', canvasStart);
 assert.ok(canvasStart > 0 && canvasEnd > canvasStart, 'Canvas must exist');
 const canvas = source.slice(canvasStart, canvasEnd);

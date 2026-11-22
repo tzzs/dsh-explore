@@ -1,3 +1,14 @@
+/*
+ * The explore view is a view, not an overlay over the host's chrome.
+ *
+ * The bug this pins down: the canvas used to portal itself into the
+ * conversation root and cover the session header, then win the tab row back
+ * with a `:has() > header { z-index }` rule. That rule is host-shaped, and
+ * where it did not match the title row and the View tabs disappeared with the
+ * composer. The view now renders in place under the host's
+ * `data-conversation-composer-overlay` contract, so the header is never
+ * inside the canvas's box and needs no stacking order at all.
+ */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -7,7 +18,7 @@ const start = source.indexOf('    function TreeView(props) {');
 const end = source.indexOf('    // ------------------------------------------------------------------ mount', start);
 assert(start >= 0 && end > start);
 
-function mount(withHeader = true) {
+function mount() {
   const states = [];
   const refs = [];
   let stateIndex = 0;
@@ -15,18 +26,7 @@ function mount(withHeader = true) {
   let effects = [];
   let readingId = null;
   const observations = [];
-  const header = { getBoundingClientRect: () => ({ bottom: 76 }) };
-  const composer = { getBoundingClientRect: () => ({ top: 500 }) };
-  const container = {
-    querySelector(selector) {
-      if (selector === ':scope > header') return null;
-      if (selector === ':scope > [data-slot="conversation.header"] > header') return withHeader ? header : null;
-      return null;
-    },
-  };
-  const body = { parentElement: container, querySelector: selector => selector === '[data-composer-seat]' ? composer : null };
-  const anchor = { closest: selector => selector === '[data-conversation-content]' ? body : null };
-  const canvasElement = { clientWidth: 900, clientHeight: 600, getBoundingClientRect: () => ({ top: 0, bottom: 600 }) };
+  const canvasElement = { clientWidth: 900, clientHeight: 600 };
   const store = {
     subscribe: () => () => {},
     // The reader is one value: which node is open and which of its bodies is
@@ -51,6 +51,8 @@ function mount(withHeader = true) {
     observe(element) { observations.push(element); }
     disconnect() {}
   };
+  // A host that offered createPortal would still be ignored: the view must not
+  // reach over the host's chrome even when the means are available.
   const createPortal = (child, target) => ({ type: 'portal', child, target });
   const TreeView = new Function('h', 'useLocale', 'useState', 'useRef', 'useMemo', 'useEffect', 'require',
     'ResizeObserver', 'Boundary', 'Canvas', 'Reader', 'FONT', 'C',
@@ -64,28 +66,42 @@ function mount(withHeader = true) {
     effects = [];
     return TreeView({ sessionId: 'fixture', api });
   };
-  const initial = render();
-  refs[0].current = anchor;
-  refs[1].current = canvasElement;
-  effects[2]();
-  if (!withHeader) return { initial, current: render() };
-  const overlay = render();
-  effects[3]();
-  return { container, header, composer, observations, initial, render, read: id => { readingId = id; } };
+  render();
+  refs[0].current = canvasElement;
+  for (const effect of effects) effect();
+  return { render, observations, canvasElement, read: id => { readingId = id; } };
 }
 
 const fixture = mount();
-let portal = fixture.render().props.children[0];
-assert.equal(portal.type, 'portal', 'canvas is mounted above the host content');
-assert.equal(portal.target, fixture.container, 'canvas uses the conversation container');
-assert.equal(portal.child.props.style.zIndex, 1, 'host controls stay above the canvas');
-const canvas = portal.child.props.children[0].props.children[0];
-assert.deepEqual(canvas.props.size, { w: 900, h: 600, top: 76, bottom: 100, container: fixture.container });
-assert.equal(canvas.props.ready, true, 'the camera waits for the overlay dimensions');
-assert(fixture.observations.includes(fixture.header) && fixture.observations.includes(fixture.composer), 'host chrome is observed for resizing');
+const root = fixture.render();
+
+assert.notEqual(root.props.children[0].type, 'portal', 'the canvas never portals over the host chrome');
+assert.equal(root.props.className, 'dsh-tree-root', 'the canvas is a plain view root');
+assert.equal(root.props['data-conversation-composer-overlay'], '',
+  'the canvas claims the host composer-overlay contract so it owns the footer');
+assert.equal(root.props.style.position, 'relative', 'the canvas keeps its own box inside the view area');
+
+const canvas = root.props.children[0];
+assert.equal(canvas.type, 'Boundary');
+const surface = canvas.props.children[0];
+assert.deepEqual(surface.props.size, { w: 900, h: 600 }, 'the camera measures the view box only');
+assert.equal(surface.props.ready, undefined, 'no host chrome measurement gates the camera');
+assert(fixture.observations.includes(fixture.canvasElement), 'the view box is observed for resizing');
+
 fixture.read('root');
-portal = fixture.render().props.children[0];
-assert.equal(portal.child.props.style.zIndex, 20, 'the reader covers the host controls');
-const fallback = mount(false);
-assert.notEqual(fallback.current.props.children[0].type, 'portal', 'unsupported host layouts retain the ordinary canvas');
-console.log('HOST OVERLAY OK: host header, composer, resizing, reader, and fallback');
+const reading = fixture.render();
+assert.equal(reading.props.children[1].props.open, true, 'the reader still opens on top of the view');
+
+// The stylesheet is what actually hides the composer seat and drops the
+// header z-index hack the old overlay needed.
+const styleStart = source.indexOf("style.textContent = [");
+const styleEnd = source.indexOf("].join('\\n');", styleStart);
+assert(styleStart >= 0 && styleEnd > styleStart);
+const sheet = source.slice(styleStart, styleEnd);
+assert.match(sheet, /\[data-conversation-scroll\]:has\(> \[data-slot="conversation\.session"\] \.dsh-tree-root\) > \[data-composer-seat\] \{ display: none !important; \}/,
+  'the composer seat is hidden for exactly the span the canvas occupies');
+assert.equal(sheet.indexOf('> header { position: relative; z-index: 2; }'), -1,
+  'the header no longer depends on a stacking order it does not control');
+assert.equal(sheet.indexOf('.dsh-tree-root--overlay'), -1, 'no overlay mode is left to keep in sync');
+
+console.log('HOST CHROME OK: canvas stays inside the view, composer hidden, no header z-index hack');

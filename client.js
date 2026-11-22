@@ -3076,6 +3076,46 @@ window.__ModuleLoader__.load({
     }
 
     /**
+     * A slash command or skill call: `/name` with whitespace on both sides.
+     * The host marks the same shape in sent text with its own skill matcher
+     * (`skillReferenceRule`), and the canvas reads that shape so a call reads
+     * as a call instead of as prose. `/usr/bin` and `and/or` stay text: the
+     * head needs a boundary on each side, not just a slash.
+     *
+     * Anchored `^` because it is run against `text.slice(at)`: without it the
+     * scan would silently accept a later slash that happens to be bounded and
+     * chip the wrong token.
+     */
+    const SLASH_COMMAND = /^\/([\w-]+)(?!\S)/;
+
+    function commandChip(token, key) {
+      return h('span', { key, className: 'dsh-tree-command' }, token);
+    }
+
+    /** Plain text with every slash command rendered as the chip. */
+    function commandTextNodes(text, keyBase) {
+      const source = String(text === undefined || text === null ? '' : text);
+      const out = [];
+      let start = 0;
+      let cursor = 0;
+      while (cursor < source.length) {
+        const at = source.indexOf('/', cursor);
+        if (at < 0) break;
+        // Word-boundary discipline: the trigger sits at the start or after
+        // whitespace, so `x/name` never matches.
+        if (at > 0 && !/\s/.test(source[at - 1])) { cursor = at + 1; continue; }
+        const match = SLASH_COMMAND.exec(source.slice(at));
+        if (!match) { cursor = at + 1; continue; }
+        if (at > start) out.push(source.slice(start, at));
+        out.push(commandChip(match[0], keyBase + '-c' + at));
+        start = at + match[0].length;
+        cursor = start;
+      }
+      if (start < source.length) out.push(source.slice(start));
+      return out.length ? out : [source];
+    }
+
+    /**
      * Inline Markdown: escapes, code spans, emphasis, strikethrough, images,
      * links, autolinks and hard breaks.
      */
@@ -3089,6 +3129,16 @@ window.__ModuleLoader__.load({
       let i = 0;
       while (i < source.length) {
         const ch = source[i];
+        // A slash command or skill call is a chip, not prose.
+        if (ch === '/' && (i === 0 || /\s/.test(source[i - 1]))) {
+          const match = SLASH_COMMAND.exec(source.slice(i));
+          if (match) {
+            flush();
+            out.push(commandChip(match[0], nextKey()));
+            i += match[0].length;
+            continue;
+          }
+        }
         // Backslash escape: the next character is literal.
         if (ch === '\\' && i + 1 < source.length && /[\\`*_{}[\]()#+\-.!>~|]/.test(source[i + 1])) {
           buffer += source[i + 1];
@@ -3960,7 +4010,7 @@ window.__ModuleLoader__.load({
           style: {
             fontSize: 12.5, fontWeight: 600, lineHeight: 1.45, color: C.ink,
           },
-        }, node.question || T('card.noQuestion')),
+        }, commandTextNodes(node.question || T('card.noQuestion'), 'q')),
         // Everything that grows with the stream lives inside one band. That is
         // the fix for the card that used to grow and shrink under the reader:
         // a content-sized answer box plus a one-or-two-line strip moved the
@@ -4083,7 +4133,7 @@ window.__ModuleLoader__.load({
           }, T('composer.send'))));
     }
 
-    function Canvas({ store, api, rootId, size, ready }) {
+    function Canvas({ store, api, rootId, size }) {
       useLocale();
       const snapshot = store.getSnapshot();
       const nodes = snapshot.nodes;
@@ -4189,14 +4239,14 @@ window.__ModuleLoader__.load({
         const pos = layout.positions.get(pendingFocus);
         if (!pos) { setPendingFocus(null); return; }
         const rect = wrapRef.current ? wrapRef.current.getBoundingClientRect() : { width: 900, height: 600 };
-        const top = size.top + (toolbarRef.current ? toolbarRef.current.offsetHeight : 44) + 28;
-        const availableHeight = Math.max(1, rect.height - top - size.bottom);
+        const top = (toolbarRef.current ? toolbarRef.current.offsetHeight : 44) + 28;
+        const availableHeight = Math.max(1, rect.height - top);
         const height = snapshot.heights[pendingFocus] || NODE_H;
         const z = Math.max(0.2, Math.min(1, (rect.width - 48) / cardWidth, (availableHeight - 32) / height));
         setView({ z, x: rect.width / 2 - (pos.x + cardWidth / 2) * z,
           y: top + availableHeight / 2 - (pos.y + height / 2) * z }, true);
         setPendingFocus(null);
-      }, [pendingFocus, layout, snapshot.heights, size.top, size.bottom, cardWidth]);
+      }, [pendingFocus, layout, snapshot.heights, cardWidth]);
       const latest = latestNodeOf(liveNodes);
 
       /** Jump to the next card matching `predicate`, wrapping around. */
@@ -4341,14 +4391,14 @@ window.__ModuleLoader__.load({
       };
 
       /** Height the floating toolbar occupies, so the tree starts below it. */
-      const chromeHeight = () => size.top + (toolbarRef.current ? toolbarRef.current.offsetHeight : 48) + 22;
+      const chromeHeight = () => (toolbarRef.current ? toolbarRef.current.offsetHeight : 48) + 22;
 
       const fit = () => {
         const rect = wrapRef.current ? wrapRef.current.getBoundingClientRect() : { width: 900, height: 600 };
         if (!layout.width || !layout.height) return;
         const chrome = chromeHeight();
         const availableW = Math.max(200, rect.width - 80);
-        const availableH = Math.max(200, rect.height - chrome - size.bottom - 48);
+        const availableH = Math.max(200, rect.height - chrome - 48);
         const z = Math.min(1, Math.min(availableW / layout.width, availableH / layout.height));
         const scale = Math.max(0.2, z);
         setView({
@@ -4394,12 +4444,12 @@ window.__ModuleLoader__.load({
 
       const fittedRef = useRef(false);
       useEffect(() => {
-        if (fittedRef.current || !ready || !liveNodes.length || !size.w) return;
+        if (fittedRef.current || !liveNodes.length || !size.w) return;
         fittedRef.current = true;
         const rect = wrapRef.current ? wrapRef.current.getBoundingClientRect() : { width: 900, height: 600 };
         const chrome = chromeHeight();
         const availableW = Math.max(200, rect.width - 96);
-        const availableH = Math.max(200, rect.height - chrome - size.bottom - 56);
+        const availableH = Math.max(200, rect.height - chrome - 56);
         const raw = Math.min(1, availableW / Math.max(1, layout.width), availableH / Math.max(1, layout.height));
         const scale = Math.max(0.62, raw);
         setView({
@@ -4407,7 +4457,7 @@ window.__ModuleLoader__.load({
           x: Math.max(28, (rect.width - layout.width * scale) / 2),
           y: chrome,
         });
-      }, [liveNodes.length, size.w, ready]);
+      }, [liveNodes.length, size.w]);
 
       // Ctrl/Cmd+F is the tree's own search while this view is mounted.
       useEffect(() => {
@@ -4496,7 +4546,7 @@ window.__ModuleLoader__.load({
           onMouseDown: (event) => event.stopPropagation(),
           onWheel: (event) => event.stopPropagation(),
           style: {
-            position: 'absolute', top: size.top + 10, left: 12, right: 12, display: 'flex', gap: 8,
+            position: 'absolute', top: 10, left: 12, right: 12, display: 'flex', gap: 8,
             flexWrap: 'wrap', padding: 8, borderRadius: 12, background: C.card,
             border: '1px solid ' + C.cardEdge, boxShadow: 'var(--dsh-tree-shadow-1)',
             alignItems: 'center', fontSize: 12, color: C.ink3,
@@ -4659,7 +4709,7 @@ window.__ModuleLoader__.load({
           ? h('div', {
             onMouseDown: (event) => event.stopPropagation(),
             style: {
-              position: 'absolute', right: 12, bottom: 12 + Math.min(size.bottom, Math.max(0, size.h - size.top - 160)), width: 168, height: 112,
+              position: 'absolute', right: 12, bottom: 12, width: 168, height: 112,
               border: '1px solid ' + C.cardEdge, borderRadius: 8, background: C.card,
               boxShadow: 'var(--dsh-tree-shadow-1)', overflow: 'hidden', cursor: 'pointer',
             },
@@ -4975,7 +5025,7 @@ window.__ModuleLoader__.load({
               h('div', {
                 id: titleId,
                 style: { fontSize: 15, fontWeight: 600, lineHeight: 1.5, color: C.ink },
-              }, node.question || T('card.noQuestion'))),
+              }, commandTextNodes(node.question || T('card.noQuestion'), 'rq'))),
             h('button', {
               onClick: onClose,
               title: T('reader.close'),
@@ -5080,41 +5130,17 @@ window.__ModuleLoader__.load({
       const rootId = useMemo(() => api.rootOf(sessionId), [sessionId, api]);
       const store = useMemo(() => api.storeFor(rootId), [rootId, api]);
       const [, force] = useState(0);
-      const anchorRef = useRef(null);
       const hostRef = useRef(null);
-      const [surface, setSurface] = useState(null);
-      const [size, setSize] = useState({ w: 0, h: 0, top: 0, bottom: 0 });
+      const [size, setSize] = useState({ w: 0, h: 0 });
 
       useEffect(() => store.subscribe(() => force((n) => n + 1)), [store]);
       useEffect(() => {
         api.ensureOpen(rootId, store);
       }, [rootId, store, api]);
       useEffect(() => {
-        const anchor = anchorRef.current;
-        const body = anchor && anchor.closest('[data-conversation-content]');
-        const container = body && body.parentElement;
-        const header = container && (container.querySelector(':scope > header') ||
-          container.querySelector(':scope > [data-slot="conversation.header"] > header'));
-        const composer = body && body.querySelector('[data-composer-seat]');
-        if (!container || !header || !composer) return;
-        try {
-          const { createPortal } = require('react-dom');
-          if (typeof createPortal !== 'function') return;
-          setSize({ w: 0, h: 0, top: 0, bottom: 0 });
-          setSurface({ container, header, composer, createPortal });
-        } catch (error) {
-          /* Hosts without a portal keep the canvas inside the view. */
-        }
-      }, []);
-      useEffect(() => {
         const element = hostRef.current;
         if (!element) return undefined;
-        const measure = () => {
-          const rect = element.getBoundingClientRect();
-          const top = surface ? Math.max(0, surface.header.getBoundingClientRect().bottom - rect.top) : 0;
-          const bottom = surface ? Math.max(0, rect.bottom - surface.composer.getBoundingClientRect().top) : 0;
-          setSize({ w: element.clientWidth, h: element.clientHeight, top, bottom, container: surface ? surface.container : null });
-        };
+        const measure = () => setSize({ w: element.clientWidth, h: element.clientHeight });
         measure();
         if (typeof ResizeObserver === 'undefined') {
           window.addEventListener('resize', measure);
@@ -5122,12 +5148,8 @@ window.__ModuleLoader__.load({
         }
         const observer = new ResizeObserver(measure);
         observer.observe(element);
-        if (surface) {
-          observer.observe(surface.header);
-          observer.observe(surface.composer);
-        }
         return () => observer.disconnect();
-      }, [surface]);
+      }, []);
 
       const snapshot = store.getSnapshot();
       const readingState = snapshot.reading;
@@ -5140,16 +5162,21 @@ window.__ModuleLoader__.load({
         if (readingState && !reading) store.closeReader();
       }, [readingState, reading, store]);
 
-      const canvas = h('div', {
+      // The canvas is a view, not an overlay over the host's chrome. The
+      // composer-overlay contract hands it the whole scrollport below the
+      // header, and `ensureStyles()` hides the composer seat for the same
+      // span, so the tab row and the session title keep their own space and
+      // stay clickable no matter what the host's stacking order is.
+      return h('div', {
         ref: hostRef,
-        className: surface ? 'dsh-tree-root dsh-tree-root--overlay' : 'dsh-tree-root',
+        className: 'dsh-tree-root',
+        'data-conversation-composer-overlay': '',
         style: {
-          position: surface ? 'absolute' : 'relative', inset: surface ? 0 : undefined,
-          width: '100%', height: '100%', minHeight: 0, zIndex: surface ? (reading ? 20 : 1) : undefined,
+          position: 'relative', width: '100%', height: '100%', minHeight: 0,
           overflow: 'hidden', fontFamily: FONT, color: C.ink, background: C.canvas,
         },
       },
-        h(Boundary, null, h(Canvas, { key: rootId, store, api, rootId, size, ready: !surface || size.container === surface.container })),
+        h(Boundary, null, h(Canvas, { key: rootId, store, api, rootId, size })),
         h(Reader, {
           key: rootId,
           node: reading || readerNode.current,
@@ -5158,8 +5185,6 @@ window.__ModuleLoader__.load({
           onPane: (pane) => store.setReaderPane(pane),
           onClose: () => store.closeReader(),
         }));
-      return h('div', { ref: anchorRef, style: { width: '100%', height: '100%', minHeight: 0, flex: '1 1 0' } },
-        surface ? surface.createPortal(canvas, surface.container) : canvas);
     }
 
     // ------------------------------------------------------------------ mount
@@ -5222,8 +5247,13 @@ window.__ModuleLoader__.load({
         '.dsh-tree-table tbody tr:nth-child(even) td {',
         '  background: color-mix(in srgb, var(--dsw-alias-label-primary) 2%, transparent);',
         '}',
-        ':has(> .dsh-tree-root--overlay) > header, :has(> .dsh-tree-root--overlay) > [data-slot="conversation.header"] > header { position: relative; z-index: 2; }',
-        ':has(> .dsh-tree-root--overlay) > [data-conversation-content] [data-composer-seat]:not(:has([data-conversation-composer-overlay])) { width: min(100%, calc(var(--dsh-composer-card-max-width, 920px) + 2 * var(--dsh-composer-side-clearance, 16px))); align-self: center; background: transparent !important; }',
+        // The canvas is a view, so the host header (session title and the View
+        // tab row) keeps its own space above the scrollport and never needs a
+        // z-index to survive it. Only the composer seat is given up: the canvas
+        // owns the footer while this View is mounted, and the seat returns the
+        // moment the View unmounts. Scoped off `data-conversation-scroll` rather
+        // than a hashed class so it does not depend on the host's build.
+        '[data-conversation-scroll]:has(> [data-slot="conversation.session"] .dsh-tree-root) > [data-composer-seat] { display: none !important; }',
         '@keyframes dshTreeReveal { from { opacity: 0; transform: translateY(6px) scale(.985); } to { opacity: 1; transform: none; } }',
         '@keyframes dshTreeDismiss { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(3px) scale(.99); } }',
         '.dsh-tree-card { transition: opacity var(--tree-enter) var(--tree-ease), box-shadow var(--tree-enter) var(--tree-ease), border-color var(--tree-fast) ease; }',
@@ -5233,6 +5263,15 @@ window.__ModuleLoader__.load({
         '.dsh-tree-menu { transform-origin: top right; }',
         '.dsh-tree-menu[data-open="true"] { animation-timing-function: var(--tree-spring); }',
         '.dsh-tree-composer { transform-origin: top center; }',
+        // A slash command or skill call reads as one token, with the host's
+        // reference-chip treatment: the business accent, a 4px pad and the
+        // shared small radius. `line-height: inherit` keeps the chip on the
+        // text's own baseline, so a card preview does not gain a line.
+        '.dsh-tree-command {',
+        '  padding: 0 4px; border-radius: var(--dsw-radius-sm, 4px); line-height: inherit;',
+        '  color: var(--dsw-alias-state-business-primary); font-weight: 500; white-space: nowrap;',
+        '  background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 10%, transparent);',
+        '}',
         // The reader is a native modal dialog; only its surface belongs to the
         // plugin.
         // The reader opens instantly. An animated top-layer surface is allowed

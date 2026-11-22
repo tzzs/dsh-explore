@@ -162,7 +162,7 @@ assert.ok(readerRule, 'the reader surface rule must exist');
 doesNotMatch('the reader width has one source (the preset)', /(?:^|\s)width\s*:/, readerRule[0]);
 
 // --- the toolbar exposes the card size --------------------------------------
-const canvasStart = source.indexOf('    function Canvas({ store, api, rootId, size, ready }) {');
+const canvasStart = source.indexOf('    function Canvas({ store, api, rootId, size }) {');
 const canvasEnd = source.indexOf('    function Icon(', canvasStart);
 assert.ok(canvasStart > 0 && canvasEnd > canvasStart, 'Canvas must exist');
 const canvas = source.slice(canvasStart, canvasEnd);
