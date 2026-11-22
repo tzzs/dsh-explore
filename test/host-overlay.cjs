@@ -29,7 +29,9 @@ function mount(withHeader = true) {
   const canvasElement = { clientWidth: 900, clientHeight: 600, getBoundingClientRect: () => ({ top: 0, bottom: 600 }) };
   const store = {
     subscribe: () => () => {},
-    getSnapshot: () => ({ readingId }),
+    // The reader is one value: which node is open and which of its bodies is
+    // on screen. The mock follows that contract, not the old id+boolean pair.
+    getSnapshot: () => ({ reading: readingId ? { nodeId: readingId, pane: 'result' } : null }),
     getNode: () => ({ id: readingId }),
   };
   const api = { rootOf: id => id, storeFor: () => store, ensureOpen() {} };

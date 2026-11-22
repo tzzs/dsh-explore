@@ -221,7 +221,6 @@ window.__ModuleLoader__.load({
         'card.delete': '删除这个节点',
         'card.deleteTitle': '隐藏这个节点和它下面的所有分支',
         'card.deleteConfirm': '删除这个节点和它下面的所有分支？（随时可恢复）',
-        'card.readTitle': '点击全屏阅读',
         'card.fullscreen': '全屏阅读',
         'card.fullscreenTitle': '全屏阅读完整回答',
         'card.unfoldBranch': '展开这一枝',
@@ -235,9 +234,7 @@ window.__ModuleLoader__.load({
         'card.cost.cached': '缓存 {value}',
 
         'card.think': '思考过程',
-        'card.thinkExpandTitle': '展开思考过程',
-        'card.thinkCollapseTitle': '收起思考过程',
-        'card.thinkMeta': '思考 {count} 字',
+        'card.thinkMeta': '{count} 字',
         'card.thinkTruncated': '（只保留了最新的 {count} 字思考）',
 
         'live.calling': '正在调用 {tool}',
@@ -261,6 +258,8 @@ window.__ModuleLoader__.load({
         'reader.branch': '分支',
         'reader.mainline': '主线',
         'reader.widthGroup': '阅读宽度',
+        'reader.paneGroup': '阅读内容',
+        'reader.paneAnswer': '最终结果',
         'reader.widthStandard': '标准宽',
         'reader.widthWide': '较宽',
 
@@ -335,7 +334,6 @@ window.__ModuleLoader__.load({
         'card.delete': 'Delete this node',
         'card.deleteTitle': 'Hide this node and every branch under it',
         'card.deleteConfirm': 'Delete this node and all branches under it? (reversible)',
-        'card.readTitle': 'Click to read in full screen',
         'card.fullscreen': 'Read full screen',
         'card.fullscreenTitle': 'Read the complete answer in full screen',
         'card.unfoldBranch': 'Expand this branch',
@@ -349,9 +347,7 @@ window.__ModuleLoader__.load({
         'card.cost.cached': 'cached {value}',
 
         'card.think': 'Reasoning',
-        'card.thinkExpandTitle': 'Expand the reasoning',
-        'card.thinkCollapseTitle': 'Collapse the reasoning',
-        'card.thinkMeta': '{count} chars of reasoning',
+        'card.thinkMeta': '{count} chars',
         'card.thinkTruncated': '(only the newest {count} chars of reasoning are kept)',
 
         'live.calling': 'Calling {tool}',
@@ -375,6 +371,8 @@ window.__ModuleLoader__.load({
         'reader.branch': 'Branch',
         'reader.mainline': 'Main line',
         'reader.widthGroup': 'Reading width',
+        'reader.paneGroup': 'Reading pane',
+        'reader.paneAnswer': 'Final answer',
         'reader.widthStandard': 'Standard',
         'reader.widthWide': 'Wider',
 
@@ -445,7 +443,6 @@ window.__ModuleLoader__.load({
         'card.delete': 'Diesen Knoten löschen',
         'card.deleteTitle': 'Diesen Knoten und alle Zweige darunter ausblenden',
         'card.deleteConfirm': 'Diesen Knoten und alle Zweige darunter löschen? (umkehrbar)',
-        'card.readTitle': 'Klicken, um im Vollbild zu lesen',
         'card.fullscreen': 'Vollbild lesen',
         'card.fullscreenTitle': 'Die vollständige Antwort im Vollbild lesen',
         'card.unfoldBranch': 'Diesen Zweig ausklappen',
@@ -458,9 +455,7 @@ window.__ModuleLoader__.load({
         'card.cost.context': 'Kontext {value}',
         'card.cost.cached': 'Cache {value}',
         'card.think': 'Gedankengang',
-        'card.thinkExpandTitle': 'Den Gedankengang ausklappen',
-        'card.thinkCollapseTitle': 'Den Gedankengang einklappen',
-        'card.thinkMeta': '{count} Zeichen Gedankengang',
+        'card.thinkMeta': '{count} Zeichen',
         'card.thinkTruncated': '(nur die neuesten {count} Zeichen Gedankengang bleiben erhalten)',
         'live.calling': 'Ruft {tool} auf',
         'live.outputting': 'Schreibt…',
@@ -481,6 +476,8 @@ window.__ModuleLoader__.load({
         'reader.branch': 'Zweig',
         'reader.mainline': 'Hauptlinie',
         'reader.widthGroup': 'Lesebreite',
+        'reader.paneGroup': 'Leseinhalt',
+        'reader.paneAnswer': 'Endergebnis',
         'reader.widthStandard': 'Standard',
         'reader.widthWide': 'Breiter',
         'error.title': 'Die Baumansicht ist abgestürzt',
@@ -551,7 +548,6 @@ window.__ModuleLoader__.load({
         'card.delete': 'Eliminar este nodo',
         'card.deleteTitle': 'Ocultar este nodo y todas las ramas que cuelgan de él',
         'card.deleteConfirm': '¿Eliminar este nodo y todas sus ramas? (reversible)',
-        'card.readTitle': 'Haz clic para leer a pantalla completa',
         'card.fullscreen': 'Pantalla completa',
         'card.fullscreenTitle': 'Leer la respuesta completa a pantalla completa',
         'card.unfoldBranch': 'Expandir esta rama',
@@ -564,9 +560,7 @@ window.__ModuleLoader__.load({
         'card.cost.context': 'contexto {value}',
         'card.cost.cached': 'caché {value}',
         'card.think': 'Razonamiento',
-        'card.thinkExpandTitle': 'Expandir el razonamiento',
-        'card.thinkCollapseTitle': 'Contraer el razonamiento',
-        'card.thinkMeta': '{count} caracteres de razonamiento',
+        'card.thinkMeta': '{count} caracteres',
         'card.thinkTruncated': '(solo se conservan los {count} caracteres más recientes del razonamiento)',
         'live.calling': 'Llamando a {tool}',
         'live.outputting': 'Escribiendo…',
@@ -587,6 +581,8 @@ window.__ModuleLoader__.load({
         'reader.branch': 'Rama',
         'reader.mainline': 'Línea principal',
         'reader.widthGroup': 'Ancho de lectura',
+        'reader.paneGroup': 'Contenido de lectura',
+        'reader.paneAnswer': 'Resultado final',
         'reader.widthStandard': 'Estándar',
         'reader.widthWide': 'Más ancho',
         'error.title': 'La vista de árbol falló',
@@ -657,7 +653,6 @@ window.__ModuleLoader__.load({
         'card.delete': 'Supprimer ce nœud',
         'card.deleteTitle': 'Masquer ce nœud et toutes les branches en dessous',
         'card.deleteConfirm': 'Supprimer ce nœud et toutes les branches en dessous ? (réversible)',
-        'card.readTitle': 'Cliquez pour lire en plein écran',
         'card.fullscreen': 'Plein écran',
         'card.fullscreenTitle': 'Lire la réponse complète en plein écran',
         'card.unfoldBranch': 'Déplier cette branche',
@@ -670,9 +665,7 @@ window.__ModuleLoader__.load({
         'card.cost.context': 'contexte {value}',
         'card.cost.cached': 'cache {value}',
         'card.think': 'Raisonnement',
-        'card.thinkExpandTitle': 'Déplier le raisonnement',
-        'card.thinkCollapseTitle': 'Replier le raisonnement',
-        'card.thinkMeta': '{count} caractères de raisonnement',
+        'card.thinkMeta': '{count} caractères',
         'card.thinkTruncated': '(seuls les {count} derniers caractères du raisonnement sont conservés)',
         'live.calling': 'Appel de {tool}',
         'live.outputting': 'Écriture…',
@@ -693,6 +686,8 @@ window.__ModuleLoader__.load({
         'reader.branch': 'Branche',
         'reader.mainline': 'Ligne principale',
         'reader.widthGroup': 'Largeur de lecture',
+        'reader.paneGroup': 'Contenu de lecture',
+        'reader.paneAnswer': 'Résultat final',
         'reader.widthStandard': 'Standard',
         'reader.widthWide': 'Plus large',
         'error.title': 'La vue arborescente a planté',
@@ -763,7 +758,6 @@ window.__ModuleLoader__.load({
         'card.delete': 'このノードを削除',
         'card.deleteTitle': 'このノードとその下のすべてのブランチを非表示',
         'card.deleteConfirm': 'このノードとその下のすべてのブランチを削除しますか？（復元できます）',
-        'card.readTitle': 'クリックして全画面で読む',
         'card.fullscreen': '全画面で読む',
         'card.fullscreenTitle': '完全な回答を全画面で読む',
         'card.unfoldBranch': 'このブランチを展開',
@@ -776,9 +770,7 @@ window.__ModuleLoader__.load({
         'card.cost.context': 'コンテキスト {value}',
         'card.cost.cached': 'キャッシュ {value}',
         'card.think': '思考',
-        'card.thinkExpandTitle': '思考を展開',
-        'card.thinkCollapseTitle': '思考を折りたたむ',
-        'card.thinkMeta': '思考 {count} 文字',
+        'card.thinkMeta': '{count} 文字',
         'card.thinkTruncated': '（最新の思考 {count} 文字のみ保持）',
         'live.calling': '{tool} を呼び出し中',
         'live.outputting': '出力中…',
@@ -799,6 +791,8 @@ window.__ModuleLoader__.load({
         'reader.branch': 'ブランチ',
         'reader.mainline': '本線',
         'reader.widthGroup': '閲覧幅',
+        'reader.paneGroup': '表示する内容',
+        'reader.paneAnswer': '最終結果',
         'reader.widthStandard': '標準幅',
         'reader.widthWide': '広め',
         'error.title': 'ツリービューでエラーが発生しました',
@@ -869,7 +863,6 @@ window.__ModuleLoader__.load({
         'card.delete': 'Excluir este nó',
         'card.deleteTitle': 'Ocultar este nó e todos os ramos abaixo dele',
         'card.deleteConfirm': 'Excluir este nó e todos os ramos abaixo dele? (reversível)',
-        'card.readTitle': 'Clique para ler em tela cheia',
         'card.fullscreen': 'Tela cheia',
         'card.fullscreenTitle': 'Ler a resposta completa em tela cheia',
         'card.unfoldBranch': 'Expandir este ramo',
@@ -882,9 +875,7 @@ window.__ModuleLoader__.load({
         'card.cost.context': 'contexto {value}',
         'card.cost.cached': 'cache {value}',
         'card.think': 'Raciocínio',
-        'card.thinkExpandTitle': 'Expandir o raciocínio',
-        'card.thinkCollapseTitle': 'Recolher o raciocínio',
-        'card.thinkMeta': '{count} caracteres de raciocínio',
+        'card.thinkMeta': '{count} caracteres',
         'card.thinkTruncated': '(apenas os {count} caracteres mais recentes do raciocínio são mantidos)',
         'live.calling': 'Chamando {tool}',
         'live.outputting': 'Escrevendo…',
@@ -905,6 +896,8 @@ window.__ModuleLoader__.load({
         'reader.branch': 'Ramo',
         'reader.mainline': 'Linha principal',
         'reader.widthGroup': 'Largura de leitura',
+        'reader.paneGroup': 'Conteúdo da leitura',
+        'reader.paneAnswer': 'Resultado final',
         'reader.widthStandard': 'Padrão',
         'reader.widthWide': 'Mais largo',
         'error.title': 'A visualização em árvore falhou',
@@ -975,7 +968,6 @@ window.__ModuleLoader__.load({
         'card.delete': 'Удалить этот узел',
         'card.deleteTitle': 'Скрыть этот узел и все ветки под ним',
         'card.deleteConfirm': 'Удалить этот узел и все ветки под ним? (обратимо)',
-        'card.readTitle': 'Нажмите, чтобы читать на весь экран',
         'card.fullscreen': 'Во весь экран',
         'card.fullscreenTitle': 'Прочитать полный ответ во весь экран',
         'card.unfoldBranch': 'Развернуть эту ветку',
@@ -988,9 +980,7 @@ window.__ModuleLoader__.load({
         'card.cost.context': 'контекст {value}',
         'card.cost.cached': 'кэш {value}',
         'card.think': 'Рассуждения',
-        'card.thinkExpandTitle': 'Развернуть рассуждения',
-        'card.thinkCollapseTitle': 'Свернуть рассуждения',
-        'card.thinkMeta': 'Рассуждения: {count} симв.',
+        'card.thinkMeta': '{count} симв.',
         'card.thinkTruncated': '(сохранены только последние {count} симв. рассуждений)',
         'live.calling': 'Вызов {tool}',
         'live.outputting': 'Пишет…',
@@ -1011,6 +1001,8 @@ window.__ModuleLoader__.load({
         'reader.branch': 'Ветка',
         'reader.mainline': 'Основная линия',
         'reader.widthGroup': 'Ширина чтения',
+        'reader.paneGroup': 'Содержимое чтения',
+        'reader.paneAnswer': 'Итоговый ответ',
         'reader.widthStandard': 'Стандартная',
         'reader.widthWide': 'Широкая',
         'error.title': 'Древовидное представление упало',
@@ -1346,6 +1338,30 @@ window.__ModuleLoader__.load({
         return trimmed.replace(/\*\*/g, '').slice(0, 200);
       }
       return '';
+    }
+
+    /**
+     * What one node has to read, as one value.
+     *
+     * The card and the reader are two sizes of the same document, so they must
+     * agree about what the node holds; deriving that in one place is also what
+     * stops an enlarge affordance from promising a body the node cannot fill.
+     * `kind` is computed from the node's own content and is never passed in.
+     *
+     *   'none'      nothing written yet
+     *   'reasoning' a chain of thinking and no answer yet
+     *   'result'    an answer, which may or may not have a chain behind it
+     */
+    function readingOf(node) {
+      const answer = (node && node.answer) || '';
+      const reasoning = (node && node.reasoning) || '';
+      const hasReasoning = reasoning.trim().length > 0;
+      return {
+        kind: answer.trim() ? 'result' : hasReasoning ? 'reasoning' : 'none',
+        hasReasoning,
+        reasoningChars: reasoning.trim().length,
+        dropped: (node && node.reasoningDropped) || 0,
+      };
     }
 
     function maxDurableSeq(entries) {
@@ -2071,8 +2087,11 @@ window.__ModuleLoader__.load({
         branchMode: readBranchMode(),
         selectedId: null,
         composingId: null,
-        readingId: null,
-        readingReasoning: false,
+        // The enlarged card: which node is open and which of its two bodies is
+        // on screen. One value rather than a boolean beside an id, so "a node
+        // with no pane" and "a pane with no node" cannot be represented — and
+        // a caller cannot ask for a body the node has not written.
+        reading: null,
         draft: '',
         loaded: false,
         error: null,
@@ -2292,14 +2311,31 @@ window.__ModuleLoader__.load({
           state.selectedId = id;
           emit();
         },
-        openReader(id, options) {
-          state.readingId = id;
-          state.readingReasoning = Boolean(options && options.reasoning);
+        /**
+         * Open the enlarged card on the body this node can actually fill.
+         *
+         * It takes no option for the body: the card must not be able to ask
+         * for a mode, or the several affordances that open it drift apart
+         * again — which is exactly how "read" and "read the reasoning" became
+         * two different buttons on one card.
+         */
+        openReader(id) {
+          const node = state.nodes.find((candidate) => candidate.id === id);
+          if (!node) return;
+          state.reading = { nodeId: id, pane: readingOf(node).kind === 'reasoning' ? 'reasoning' : 'result' };
+          emit();
+        },
+        setReaderPane(pane) {
+          if (!state.reading) return;
+          const node = state.nodes.find((candidate) => candidate.id === state.reading.nodeId);
+          // A body the node has not written is not a pane: refuse it here
+          // rather than render an empty document under a pressed segment.
+          if (pane === 'reasoning' && !readingOf(node).hasReasoning) return;
+          state.reading = { ...state.reading, pane: pane === 'reasoning' ? 'reasoning' : 'result' };
           emit();
         },
         closeReader() {
-          state.readingId = null;
-          state.readingReasoning = false;
+          state.reading = null;
           emit();
         },
         toggleCollapse(id) {
@@ -3626,8 +3662,14 @@ window.__ModuleLoader__.load({
             ? T('live.outputting')
             : step > 0 ? T('live.thinking') : T('live.starting');
       return h('div', {
+        className: 'dsh-tree-live',
         style: {
-          marginTop: 7, padding: '6px 8px', borderRadius: 7,
+          // A fixed row: its label swaps from 正在思考… to 正在调用 read to
+          // 正在输出… and none of them may move the card, so the height is
+          // declared rather than derived from the text. `flex: 0 0 auto` is
+          // load-bearing inside the band: a shrinkable row is compressed to
+          // nothing the moment the answer overflows the fixed window.
+          marginTop: 7, height: 29, flex: '0 0 auto', boxSizing: 'border-box', padding: '6px 8px', borderRadius: 7,
           background: C.accentSoft, border: '1px solid ' + C.accentEdge,
           display: 'flex', alignItems: 'center', gap: 7,
           fontSize: 10.5, color: C.accent, lineHeight: 1.4,
@@ -3655,86 +3697,64 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * The agent's current thought, in one line.
+     * The card's one line of thinking.
      *
-     * An elapsed time says the agent is busy; it does not say what it is
-     * doing. This row carries the newest reasoning the model has written, so
-     * the reader can tell a search from a refactor without opening anything.
-     * Clicking it opens the reader, where the whole chain is readable while the
-     * answer is still streaming.
+     * A status line, not a control: the card has exactly one way to grow, and
+     * it is the footer's read button. Keeping the chain out of the card's
+     * controls is also why this is a single fixed 18px row — the newest
+     * thought is the honest answer to "what is it doing right now", but a
+     * strip that may take one line or two makes the card jump every time the
+     * model starts a new paragraph.
      */
-    function ReasoningTail({ node, onOpen }) {
+    function ThinkingStrip({ node, reading }) {
       useLocale();
       const awaiting = node.awaiting === 'question' || node.awaiting === 'approval';
       const running = awaiting || node.status === 'thinking' || node.status === 'streaming' || node.status === 'running';
-      const text = node.reasoning || '';
-      if (!running || !text.trim()) return null;
-      const preview = reasoningTail(text);
-      if (!preview) return null;
-      return h('button', {
-        onClick: (event) => {
-          event.stopPropagation();
-          onOpen();
-        },
-        title: T('card.thinkExpandTitle'),
-        className: 'dsh-tree-reasoning-tail dsh-tree-clamp-2',
+      const tail = running ? reasoningTail(node.reasoning || '') : '';
+      // The row exists only when it has something to say. Hiding it cannot move
+      // the card, because everything here lives inside the fixed band.
+      const detail = running ? tail : (reading.hasReasoning ? T('card.thinkMeta', { count: reading.reasoningChars }) : '');
+      if (!detail) return null;
+      return h('div', {
+        className: 'dsh-tree-thinking',
+        title: reading.dropped > 0 ? T('card.thinkTruncated', { count: reading.dropped }) : undefined,
         style: {
-          display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer',
-          fontFamily: 'inherit',
-          marginTop: 5, padding: '4px 7px', borderRadius: 6,
-          border: 'none', borderLeft: '2px solid ' + C.accentEdge,
+          // `flex: 0 0 auto` for the same reason as the chip: inside the fixed
+          // band a shrinkable row loses to the answer and collapses to a sliver.
+          marginTop: 5, height: 18, flex: '0 0 auto', boxSizing: 'border-box',
+          display: 'flex', alignItems: 'center', gap: 5,
+          padding: '0 7px', borderRadius: 6,
+          borderLeft: '2px solid ' + C.accentEdge,
           background: 'color-mix(in srgb, var(--dsw-alias-label-primary) 4%, transparent)',
-          fontSize: 10.5, color: C.ink4, lineHeight: 1.45,
+          fontSize: 10.5, lineHeight: '18px', color: C.ink4, overflow: 'hidden',
         },
-      }, preview);
+      },
+        h('span', { style: { flex: '0 0 auto', color: C.ink3 } }, T('card.think')),
+        h('span', { className: 'dsh-tree-one-line', style: { flex: '1 1 auto', minWidth: 0 } }, detail));
     }
 
-    /**
-     * The reader's reasoning block: first thing in the answer, folded away.
-     *
-     * It lives in the reader's own scroll container rather than a nested one:
-     * a second scroll area inside the reader is what made the wheel ambiguous,
-     * and a long chain is easier to read in the flow than in a 260px box.
-     */
-    function ReasoningDisclosure({ node, defaultOpen }) {
+    /** One body of the enlarged card: the answer, or the chain behind it. */
+    function ReaderPane({ node, reading, pane }) {
       useLocale();
-      const [open, setOpen] = useState(Boolean(defaultOpen));
-      const text = node.reasoning || '';
-      if (!text.trim()) return null;
-      const dropped = node.reasoningDropped || 0;
-      return h('div', {
-        className: 'dsh-tree-reasoning',
-        style: { marginBottom: 18 },
-      },
-        h('button', {
-          onClick: () => setOpen((value) => !value),
-          'aria-expanded': open,
-          title: open ? T('card.thinkCollapseTitle') : T('card.thinkExpandTitle'),
-          className: LINK,
-          style: { color: C.accent, gap: 5 },
+      if (pane !== 'reasoning') {
+        return node.answer ? renderMarkdown(node.answer) : T('reader.noAnswer');
+      }
+      return h('div', null,
+        h('div', {
+          style: {
+            marginBottom: 12, fontSize: 10.8, color: C.ink4,
+            fontVariantNumeric: 'tabular-nums',
+          },
         },
-          h(Chevron, { dir: open ? 'down' : 'right', size: 9 }),
-          h('span', null, T('card.think')),
-          h('span', { style: { color: C.ink4, fontVariantNumeric: 'tabular-nums' } },
-            T('card.thinkMeta', { count: text.length }))),
-        dropped > 0
-          ? h('div', {
-            style: {
-              marginTop: 4, paddingLeft: 13, fontSize: 10.8,
-              color: C.ink4, fontVariantNumeric: 'tabular-nums',
-            },
-          }, T('card.thinkTruncated', { count: dropped }))
-          : null,
-        open
-          ? h('div', {
-            style: {
-              marginTop: 8, padding: '10px 13px', borderRadius: 9,
-              border: '1px solid ' + C.cardEdge,
-              background: 'color-mix(in srgb, var(--dsw-alias-label-primary) 3%, transparent)',
-              fontSize: 12.4, lineHeight: 1.78, color: C.ink4,
-            },
-          }, renderMarkdown(text))
-          : null);
+          T('card.think'), ' · ', T('card.thinkMeta', { count: reading.reasoningChars }),
+          reading.dropped > 0
+            ? h('div', { style: { marginTop: 3 } }, T('card.thinkTruncated', { count: reading.dropped }))
+            : null),
+        // A rule instead of a bordered box: the chain is a document in the
+        // reader's own flow, and a box inside the scroll area would make it a
+        // second scroll target.
+        h('div', { style: { borderLeft: '2px solid ' + C.accentEdge, paddingLeft: 14 } },
+          renderMarkdown(node.reasoning || '')));
     }
 
     function NodeCard({ node, selected, dimmed, index, store, api, rootId, match, collapsed, childCount, descendants, isLatest, entering, width, preview }) {
@@ -3749,6 +3769,8 @@ window.__ModuleLoader__.load({
       const animateEntry = useRef(entering);
       const isRunning = isInProgressNode(node);
       const awaiting = node.awaiting === 'question' || node.awaiting === 'approval';
+      const live = isRunning || awaiting;
+      const reading = readingOf(node);
       // A running card has a clock. Without it the elapsed time only moved when
       // a durable event landed, so a long thinking step left the number frozen
       // for minutes and then jumped — the label looked broken rather than busy.
@@ -3789,6 +3811,18 @@ window.__ModuleLoader__.load({
             : node.status === 'error' ? T('card.status.error')
               : node.status === 'stopped' ? T('card.status.stopped')
                 : T('card.status.done');
+      // A running card's body is a fixed-height window; a settled one shrinks
+      // to its content. The window is what keeps the card — and with it the
+      // whole tree — still while tokens arrive. Shrinking at the end costs one
+      // layout pass per finished branch, which is the trade design.md §6
+      // already makes: pin the position while it streams, lay the tree out
+      // once when the branch is done.
+      const bandStyle = {
+        marginTop: 6, boxSizing: 'border-box',
+        display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        maxHeight: cardPreview.preview,
+      };
+      if (live) bandStyle.height = cardPreview.preview;
 
       return h('div', {
         ref: cardRef,
@@ -3816,7 +3850,10 @@ window.__ModuleLoader__.load({
           cursor: 'pointer',
         },
       },
-        h('div', { style: { display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, minHeight: 20 } },
+        // A reserved header row: the running card carries a [停止] text button
+        // and the settled one a [+] icon button, and those are 26px and 24px.
+        // Without the floor the card drops 2px the moment the turn ends.
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, minHeight: 26 } },
           h(StatusDot, { status: node.status, waiting: awaiting }),
           h(Badge, { label: index, tone: C.accent }),
           isLatest
@@ -3924,94 +3961,72 @@ window.__ModuleLoader__.load({
             fontSize: 12.5, fontWeight: 600, lineHeight: 1.45, color: C.ink,
           },
         }, node.question || T('card.noQuestion')),
+        // Everything that grows with the stream lives inside one band. That is
+        // the fix for the card that used to grow and shrink under the reader:
+        // a content-sized answer box plus a one-or-two-line strip moved the
+        // card on almost every token, and every move re-laid out the tree.
         h('div', {
-          onClick: (event) => {
-            if (!answer) return;
-            event.stopPropagation();
-            store.openReader(node.id);
-          },
-          title: answer ? T('card.readTitle') : undefined,
-          style: {
-            ...MD.body,
-            marginTop: 6,
-            maxHeight: cardPreview.preview,
-            overflow: 'hidden',
-            cursor: answer ? 'zoom-in' : 'default',
-            maskImage: (answer.length > cardPreview.maskAt) ? 'linear-gradient(#000 82%, transparent 100%)' : 'none',
-            WebkitMaskImage: (answer.length > cardPreview.maskAt) ? 'linear-gradient(#000 82%, transparent 100%)' : 'none',
-          },
-        }, answer ? renderMarkdown(answerText) : null),
-        h(LiveProgress, { node, now }),
-        h(ReasoningTail, { node, onOpen: () => store.openReader(node.id, { reasoning: true }) }),
+          className: 'dsh-tree-band',
+          style: bandStyle,
+        },
+          h('div', {
+            className: 'dsh-tree-preview',
+            style: {
+              ...MD.body,
+              flex: '1 1 auto', minHeight: 0, overflow: 'hidden',
+              maskImage: (answer.length > cardPreview.maskAt) ? 'linear-gradient(#000 82%, transparent 100%)' : 'none',
+              WebkitMaskImage: (answer.length > cardPreview.maskAt) ? 'linear-gradient(#000 82%, transparent 100%)' : 'none',
+            },
+          }, answer ? renderMarkdown(answerText) : null),
+          h(LiveProgress, { node, now }),
+          h(ThinkingStrip, { node, reading })),
         h(Presence, { show: composing, className: 'dsh-tree-composer' },
           h(Composer, { store, api, rootId, node, active: composing })),
-        answer || childCount > 0 || (node.reasoning || '').trim()
-          ? h('div', {
+        // One row, always present, with exactly one control that enlarges: the
+        // button. The answer body, the strip and the blank rest of the row all
+        // used to open the same reader too, which is what made "how do I read
+        // this" a guessing game.
+        h('div', {
+          className: 'dsh-tree-actions',
+          style: {
+            marginTop: 9, paddingTop: 7, borderTop: '1px solid ' + C.cardEdge,
+            display: 'flex', alignItems: 'center', gap: 10, minHeight: 22,
+          },
+        },
+          // The card is a preview, so "read the whole thing" is available on
+          // every card — short answers included. It is a real button (24px
+          // tall) rather than a text link: at a zoomed-out canvas a 16px link
+          // shrinks into a few pixels of hit area, and a missed click reads as
+          // "the button does nothing".
+          h('button', {
             onClick: (event) => {
-              if (!answer) return;
-              const target = event.target;
-              if (target && typeof target.closest === 'function' && target.closest('button')) return;
               event.stopPropagation();
               store.openReader(node.id);
             },
-            style: {
-              marginTop: 9, paddingTop: 7, borderTop: '1px solid ' + C.cardEdge,
-              display: 'flex', alignItems: 'center', gap: 10, minHeight: 22,
-            },
-          },
-            // The card is a preview, so "read the whole thing" is available on
-            // every answered card — short answers included. It used to hang off
-            // an answer-length condition, which made the entry point disappear
-            // exactly on the cards that looked like they had nothing to open.
-            // It is a real button (24px tall) rather than a text link: at a
-            // zoomed-out canvas a 16px link shrinks into a few pixels of hit
-            // area, and a missed click reads as "the button does nothing".
-            answer
-              ? h('button', {
-                onClick: (event) => {
-                  event.stopPropagation();
-                  store.openReader(node.id);
-                },
-                title: T('card.fullscreenTitle'),
-                className: BTN + ' dsh-tree-btn--sm',
-                style: { color: C.accent, cursor: 'zoom-in' },
-              }, T('card.fullscreen'),
-                h('svg', {
-                  width: 11, height: 11, viewBox: '0 0 16 16', 'aria-hidden': true,
-                  style: { display: 'block', flex: '0 0 auto' },
-                }, h('path', {
-                  d: 'M6 2.5H2.5V6 M10 2.5h3.5V6 M6 13.5H2.5V10 M10 13.5h3.5V10',
-                  fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round',
-                })))
-              : null,
-            // The thinking is a pointer, not a panel: the card keeps only this
-            // footer entry, and the reader opens with the chain unfolded at the
-            // top so the newest reasoning is one click away.
-            (node.reasoning || '').trim()
-              ? h('button', {
-                onClick: (event) => {
-                  event.stopPropagation();
-                  store.openReader(node.id, { reasoning: true });
-                },
-                title: T('card.thinkExpandTitle'),
-                className: LINK,
-                style: { color: C.accent },
-              }, T('card.think'))
-              : null,
-            h('span', { style: { flex: 1 } }),
-            childCount > 0
-              ? h('button', {
-                onClick: (event) => {
-                  event.stopPropagation();
-                  store.toggleCollapse(node.id);
-                },
-                title: collapsed ? T('card.unfoldBranch') : T('card.foldBranch'),
-                className: collapsed ? CHIP : LINK,
+            title: T('card.fullscreenTitle'),
+            className: BTN + ' dsh-tree-btn--sm',
+            style: { color: C.accent, cursor: 'zoom-in' },
+          }, T('card.fullscreen'),
+            h('svg', {
+              width: 11, height: 11, viewBox: '0 0 16 16', 'aria-hidden': true,
+              style: { display: 'block', flex: '0 0 auto' },
+            }, h('path', {
+              d: 'M6 2.5H2.5V6 M10 2.5h3.5V6 M6 13.5H2.5V10 M10 13.5h3.5V10',
+              fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round',
+            }))),
+          h('span', { style: { flex: 1 } }),
+          childCount > 0
+            ? h('button', {
+              onClick: (event) => {
+                event.stopPropagation();
+                store.toggleCollapse(node.id);
               },
-                h(Chevron, { dir: collapsed ? 'right' : 'down', size: 9 }),
-                T(collapsed ? 'card.unfoldDescendants' : 'card.foldDescendants', { count: descendants || childCount }))
-              : null)
-          : null);
+              title: collapsed ? T('card.unfoldBranch') : T('card.foldBranch'),
+              className: collapsed ? CHIP : LINK,
+            },
+              h(Chevron, { dir: collapsed ? 'right' : 'down', size: 9 }),
+              T(collapsed ? 'card.unfoldDescendants' : 'card.foldDescendants', { count: descendants || childCount }))
+            : null));
     }
 
     function Composer({ store, api, rootId, node, active }) {
@@ -4225,7 +4240,7 @@ window.__ModuleLoader__.load({
           announcedRef.current.add(node.id);
           // Never yank the canvas out from under the reader overlay, and do not
           // steal the viewport when another branch is already waiting.
-          if (firstWait && !store.getSnapshot().readingId) focusNode(node.id);
+          if (firstWait && !store.getSnapshot().reading) focusNode(node.id);
         }
       }, [liveNodes, defaultCollapsedMap, store, focusNode]);
 
@@ -4411,7 +4426,7 @@ window.__ModuleLoader__.load({
 
       return h('div', {
         ref: wrapRef,
-        inert: snapshot.readingId && store.getNode(snapshot.readingId) ? true : undefined,
+        inert: snapshot.reading ? true : undefined,
         onWheel,
         onMouseDown,
         onMouseMove,
@@ -4851,7 +4866,7 @@ window.__ModuleLoader__.load({
      * and no focus restoration; it only mirrors the element's `close` event back
      * into React state.
      */
-    function Reader({ node, open, onClose, reasoningOpen }) {
+    function Reader({ node, open, onClose, pane, onPane }) {
       useLocale();
       const dialogRef = useRef(null);
       const close = useRef(onClose);
@@ -4882,6 +4897,12 @@ window.__ModuleLoader__.load({
             } catch (error) {
               dialog.setAttribute('open', '');
             }
+            // `showModal()` focuses the first focusable descendant, which here
+            // is the close button — and a reflexive Enter would then dismiss
+            // the document the reader just opened. Focusing the dialog itself
+            // (it is the element with `aria-labelledby`) leaves Enter inert and
+            // still hands the first Tab to the close button.
+            if (typeof dialog.focus === 'function') dialog.focus();
             openedAt.current = Date.now();
           }
         } else if (dialog.open) {
@@ -4891,15 +4912,34 @@ window.__ModuleLoader__.load({
       }, [open, node && node.id]);
 
       // Esc, the back gesture and light dismiss all end in a `close` event.
+      //
+      // The dependency is the node, not `[]`: the dialog is not rendered until
+      // a node is open, so an effect that runs once on mount finds no element,
+      // bails out, and never runs again. The browser still dismisses the
+      // element on Esc, but nothing mirrors it back into the store — the canvas
+      // stays inert with no dialog left to close it, and every click in the
+      // view dies until the tab remounts.
       useEffect(() => {
         const dialog = dialogRef.current;
         if (!dialog) return undefined;
         const onDismiss = () => close.current();
+        // `cancel` fires before the browser closes the dialog, so clearing the
+        // store here lifts the canvas's `inert` before the browser restores
+        // focus to the button that opened the reader. Doing it only on `close`
+        // left focus on <body>, because the opener was still inside an inert
+        // subtree at restore time.
+        const onCancel = () => close.current();
         dialog.addEventListener('close', onDismiss);
-        return () => dialog.removeEventListener('close', onDismiss);
-      }, []);
+        dialog.addEventListener('cancel', onCancel);
+        return () => {
+          dialog.removeEventListener('close', onDismiss);
+          dialog.removeEventListener('cancel', onCancel);
+        };
+      }, [node && node.id]);
 
       if (!node) return null;
+      const reading = readingOf(node);
+      const activePane = pane === 'reasoning' && reading.hasReasoning ? 'reasoning' : 'result';
       const titleId = 'dsh-tree-reader-title-' + (node.id || 'node');
       return h('dialog', {
         ref: dialogRef,
@@ -4907,6 +4947,8 @@ window.__ModuleLoader__.load({
         // The modal already carries role="dialog" and aria-modal: adding them
         // here would announce the overlay twice.
         'aria-labelledby': titleId,
+        // The dialog is focusable so the explicit focus() above can land on it.
+        tabIndex: '-1',
         // Click-outside dismissal is handled below instead of with `closedby`:
         // the native light dismiss cannot tell the opening click (or a second
         // click at the same spot) from a deliberate backdrop click.
@@ -4934,6 +4976,48 @@ window.__ModuleLoader__.load({
                 id: titleId,
                 style: { fontSize: 15, fontWeight: 600, lineHeight: 1.5, color: C.ink },
               }, node.question || T('card.noQuestion'))),
+            h('button', {
+              onClick: onClose,
+              title: T('reader.close'),
+              'aria-label': T('reader.closeLabel'),
+              className: 'dsh-tree-btn dsh-tree-btn--icon',
+              style: { width: 30, height: 30, minWidth: 30, minHeight: 30 },
+            }, h(Icon, { name: 'close' }))),
+          // The two control groups share this row at opposite ends rather than
+          // crowding the title: the pane switch is content navigation, the
+          // width group is a preference, and together they would leave the
+          // question about a third of an 820px header.
+          h('div', {
+            style: {
+              padding: '6px 20px', borderBottom: '1px solid ' + C.line,
+              display: 'flex', alignItems: 'center', gap: 8, minHeight: 46,
+              boxSizing: 'border-box',
+            },
+          },
+            reading.hasReasoning
+              ? h('div', {
+                role: 'group',
+                'aria-label': T('reader.paneGroup'),
+                title: T('reader.paneGroup'),
+                style: {
+                  display: 'flex', alignItems: 'center', gap: 2, padding: 2, flex: '0 0 auto',
+                  border: '1px solid ' + C.cardEdge, borderRadius: 8, background: C.canvas,
+                },
+              },
+                h('button', {
+                  className: BTN + ' dsh-tree-btn--sm',
+                  title: T('reader.paneAnswer'),
+                  'aria-pressed': activePane === 'result',
+                  onClick: () => onPane('result'),
+                }, T('reader.paneAnswer')),
+                h('button', {
+                  className: BTN + ' dsh-tree-btn--sm',
+                  title: T('card.think'),
+                  'aria-pressed': activePane === 'reasoning',
+                  onClick: () => onPane('reasoning'),
+                }, T('card.think')))
+              : null,
+            h('span', { style: { flex: 1 } }),
             h('div', {
               role: 'group',
               'aria-label': T('reader.widthGroup'),
@@ -4964,30 +5048,18 @@ window.__ModuleLoader__.load({
                   saveReaderWidth('wide');
                   setWidth('wide');
                 },
-              }, T('reader.widthWide'))),
-            h('button', {
-              onClick: onClose,
-              title: T('reader.close'),
-              'aria-label': T('reader.closeLabel'),
-              className: 'dsh-tree-btn dsh-tree-btn--icon',
-              style: { width: 30, height: 30, minWidth: 30, minHeight: 30 },
-            }, h(Icon, { name: 'close' }))),
+              }, T('reader.widthWide')))),
           h('div', {
+            // One body, one scroll container. Keyed by the pane so switching
+            // starts the other document at its own top instead of inheriting
+            // the offset of the one you left.
+            key: activePane,
             className: 'dsh-tree-scroll',
             style: {
               padding: '18px 22px 22px', overflow: 'auto', flex: 1,
               ...MD.body, fontSize: 13.4, lineHeight: 1.85,
             },
-          },
-            // The thinking comes first: it is what the reader opened the
-            // card for, and folding it keeps the answer itself at the top
-            // of the eye.
-            h(ReasoningDisclosure, {
-              key: (node.id || 'node') + (reasoningOpen ? ':open' : ':folded'),
-              node,
-              defaultOpen: reasoningOpen,
-            }),
-            node.answer ? renderMarkdown(node.answer) : T('reader.noAnswer')),
+          }, h(ReaderPane, { node, reading, pane: activePane })),
 
           h('div', {
             style: {
@@ -5058,14 +5130,15 @@ window.__ModuleLoader__.load({
       }, [surface]);
 
       const snapshot = store.getSnapshot();
-      const reading = snapshot.readingId ? store.getNode(snapshot.readingId) : undefined;
+      const readingState = snapshot.reading;
+      const reading = readingState ? store.getNode(readingState.nodeId) : undefined;
       const readerNode = useRef(null);
       if (reading) readerNode.current = reading;
       // A reading id that no longer resolves (the node was pruned or hidden)
       // would leave the canvas inert with no dialog to close. Treat it as shut.
       useEffect(() => {
-        if (snapshot.readingId && !reading) store.closeReader();
-      }, [snapshot.readingId, reading, store]);
+        if (readingState && !reading) store.closeReader();
+      }, [readingState, reading, store]);
 
       const canvas = h('div', {
         ref: hostRef,
@@ -5081,7 +5154,8 @@ window.__ModuleLoader__.load({
           key: rootId,
           node: reading || readerNode.current,
           open: Boolean(reading),
-          reasoningOpen: Boolean(snapshot.readingReasoning),
+          pane: (readingState && readingState.pane) || 'result',
+          onPane: (pane) => store.setReaderPane(pane),
           onClose: () => store.closeReader(),
         }));
       return h('div', { ref: anchorRef, style: { width: '100%', height: '100%', minHeight: 0, flex: '1 1 0' } },
@@ -5115,12 +5189,11 @@ window.__ModuleLoader__.load({
         // scroll areas use the host's scrollbar tokens.
         '.dsh-tree-root { color-scheme: light; }',
         'body[data-ds-dark-theme] .dsh-tree-root { color-scheme: dark; }',
-        '.dsh-tree-clamp-2, .dsh-tree-clamp-3 {',
+        '.dsh-tree-clamp-3 {',
         '  display: -webkit-box; -webkit-box-orient: vertical;',
-        '  -webkit-line-clamp: 2; line-clamp: 2;',
+        '  -webkit-line-clamp: 3; line-clamp: 3;',
         '  overflow: hidden; overflow-wrap: break-word;',
         '}',
-        '.dsh-tree-clamp-3 { -webkit-line-clamp: 3; line-clamp: 3; }',
         '.dsh-tree-one-line {',
         '  min-inline-size: 0; overflow: hidden; text-overflow: ellipsis;',
         '  white-space: nowrap;',
