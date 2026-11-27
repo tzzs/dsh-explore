@@ -146,7 +146,7 @@ assert.equal(wide.edges[0].x2, wide.positions.get('child').x, 'the edge reaches 
 checks += 4;
 
 // --- the reader's width preference ------------------------------------------
-const readerStart = source.indexOf('    function Reader({ node, open, onClose, pane, onPane }) {');
+const readerStart = source.indexOf('    function Reader(');
 const readerEnd = source.indexOf('\n    function TreeView(props) {', readerStart);
 assert.ok(readerStart > 0 && readerEnd > readerStart, 'Reader must exist');
 const reader = source.slice(readerStart, readerEnd);
