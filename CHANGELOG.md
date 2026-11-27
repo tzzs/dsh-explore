@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.3.0](https://github.com/tzzs/dsh-explore/compare/v0.2.0...v0.3.0) (2026-11-27)
+
+
+### Features
+
+* card density, reader polish, and quieter branch rows ([#24](https://github.com/tzzs/dsh-explore/issues/24)) ([d6dd670](https://github.com/tzzs/dsh-explore/commit/d6dd6700cf81903a2be1e3984800cab3b8612862))
+* **card:** keep prompt images on the card and in the reader ([#28](https://github.com/tzzs/dsh-explore/issues/28)) ([6080f2a](https://github.com/tzzs/dsh-explore/commit/6080f2a85dddce3c402ebb51b12cf005615cd8a4))
+* **card:** one stable card, one enlarge entry, two reader panes ([#27](https://github.com/tzzs/dsh-explore/issues/27)) ([1893414](https://github.com/tzzs/dsh-explore/commit/1893414b2927d1e195eee9aa5b056d0b701e93b4))
+
+
+### Bug Fixes
+
+* **explore:** keep the session header and View tabs above the canvas ([#26](https://github.com/tzzs/dsh-explore/issues/26)) ([d245cb4](https://github.com/tzzs/dsh-explore/commit/d245cb4e5bea18691e77b9f17c301139a657e6f9))
+
 ## [0.2.0](https://github.com/tzzs/dsh-explore/compare/v0.1.0...v0.2.0) (2026-11-17)
 
 
