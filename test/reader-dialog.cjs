@@ -31,7 +31,7 @@ const path = require('node:path');
 
 const source = fs.readFileSync(path.join(__dirname, '..', 'client.js'), 'utf8');
 
-const start = source.indexOf('    function Reader({ node, open, onClose, pane, onPane }) {');
+const start = source.indexOf('    function Reader(');
 const end = source.indexOf('\n    function TreeView(props) {', start);
 assert.ok(start > 0 && end > start, 'Reader must exist');
 const reader = source.slice(start, end);
@@ -121,7 +121,7 @@ matches('the dialog element is rendered, not a wrapper div',
 // and gave the "思考过程" row a fold of its own. The pane switch replaces both:
 // the reader renders exactly one of the two documents, chosen by the store.
 check('one scroll container', (reader.match(/className: 'dsh-tree-scroll'/g) || []).length, 1);
-matches('the body renders the active pane', /h\(ReaderPane, \{ node, reading, pane: activePane \}\)/, reader);
+matches('the body renders the active pane', /h\(ReaderPane, \{ node, reading, pane: activePane, api \}\)/, reader);
 matches('a pane switch restarts the other document at its top', /key: activePane,/, reader);
 matches('the reader gets the pane from the store-backed props', /const activePane = pane === 'reasoning' && reading\.hasReasoning \? 'reasoning' : 'result';/, reader);
 

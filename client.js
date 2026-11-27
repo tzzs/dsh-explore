@@ -205,6 +205,7 @@ window.__ModuleLoader__.load({
 
         'card.noQuestion': '（无问题）',
         'card.questionReply': '（回答上一轮的提问）',
+        'card.imageAlt': '附图',
         'card.latestBadge': '最新',
         'card.latestTitle': '这是最新创建的节点',
         'card.status.thinking': '思考中',
@@ -318,6 +319,7 @@ window.__ModuleLoader__.load({
 
         'card.noQuestion': '(no question)',
         'card.questionReply': '(replying to the previous question)',
+        'card.imageAlt': 'Attached image',
         'card.latestBadge': 'Latest',
         'card.latestTitle': 'The newest node in this tree',
         'card.status.thinking': 'Thinking',
@@ -427,6 +429,7 @@ window.__ModuleLoader__.load({
         'view.empty.report': 'Wenn du schon gefragt hast und es hier noch leer ist, sag mir: {events} Ereignisse · Sitzung {state}.',
         'card.noQuestion': '(keine Frage)',
         'card.questionReply': '(Antwort auf die vorherige Frage)',
+        'card.imageAlt': 'Angehängtes Bild',
         'card.latestBadge': 'Neuestes',
         'card.latestTitle': 'Der neueste Knoten in diesem Baum',
         'card.status.thinking': 'Denkt nach',
@@ -532,6 +535,7 @@ window.__ModuleLoader__.load({
         'view.empty.report': 'Si ya preguntaste y esto sigue vacío, dime: {events} eventos · sesión {state}.',
         'card.noQuestion': '(sin pregunta)',
         'card.questionReply': '(respondiendo a la pregunta anterior)',
+        'card.imageAlt': 'Imagen adjunta',
         'card.latestBadge': 'Último',
         'card.latestTitle': 'El nodo más reciente de este árbol',
         'card.status.thinking': 'Pensando',
@@ -637,6 +641,7 @@ window.__ModuleLoader__.load({
         'view.empty.report': 'Si vous avez déjà posé une question et que c’est toujours vide, dites-moi : {events} événements · session {state}.',
         'card.noQuestion': '(aucune question)',
         'card.questionReply': '(réponse à la question précédente)',
+        'card.imageAlt': 'Image jointe',
         'card.latestBadge': 'Dernier',
         'card.latestTitle': 'Le nœud le plus récent de cet arbre',
         'card.status.thinking': 'Réflexion',
@@ -742,6 +747,7 @@ window.__ModuleLoader__.load({
         'view.empty.report': 'すでに質問したのに空のままなら、次を伝えてください：イベント {events} · セッション {state}。',
         'card.noQuestion': '（質問なし）',
         'card.questionReply': '（前の質問への回答）',
+        'card.imageAlt': '添付画像',
         'card.latestBadge': '最新',
         'card.latestTitle': 'このツリーで最新のノード',
         'card.status.thinking': '思考中',
@@ -847,6 +853,7 @@ window.__ModuleLoader__.load({
         'view.empty.report': 'Se você já perguntou e isto continua vazio, me diga: {events} eventos · sessão {state}.',
         'card.noQuestion': '(sem pergunta)',
         'card.questionReply': '(respondendo à pergunta anterior)',
+        'card.imageAlt': 'Imagem anexada',
         'card.latestBadge': 'Recente',
         'card.latestTitle': 'O nó mais recente desta árvore',
         'card.status.thinking': 'Pensando',
@@ -952,6 +959,7 @@ window.__ModuleLoader__.load({
         'view.empty.report': 'Если вы уже спрашивали, а здесь по-прежнему пусто, сообщите: события {events} · сеанс {state}.',
         'card.noQuestion': '(без вопроса)',
         'card.questionReply': '(ответ на предыдущий вопрос)',
+        'card.imageAlt': 'Прикреплённое изображение',
         'card.latestBadge': 'Последний',
         'card.latestTitle': 'Самый новый узел в этом дереве',
         'card.status.thinking': 'Думает',
@@ -1068,6 +1076,40 @@ window.__ModuleLoader__.load({
         if (block && block.type === 'text' && typeof block.text === 'string') out += block.text;
       }
       return out;
+    }
+
+    /**
+     * The image blocks of one prompt, in content order.
+     *
+     * A prompt's content is an array of blocks, and text is only one kind: an
+     * attachment is a sibling block. Its `attachment` is already the ref the
+     * host's image reader takes, so it is kept as-is.
+     */
+    function imagesOf(content) {
+      if (!Array.isArray(content)) return [];
+      const images = [];
+      for (const block of content) {
+        if (!block || block.type !== 'image') continue;
+        const ref = block.attachment;
+        if (!ref || !ref.attachmentId || !ref.mediaType) continue;
+        images.push(ref);
+      }
+      return images;
+    }
+
+    /**
+     * Whether two image lists are the same attachments in the same order.
+     *
+     * Projection runs on every live chunk, and a fresh array per run would
+     * otherwise count as a change and re-persist the whole tree.
+     */
+    function sameImages(a, b) {
+      if (a === b) return true;
+      if (!a || !b || a.length !== b.length) return false;
+      for (let index = 0; index < a.length; index += 1) {
+        if (a[index].attachmentId !== b[index].attachmentId) return false;
+      }
+      return true;
     }
 
     function seqOf(entry) {
@@ -1509,7 +1551,7 @@ window.__ModuleLoader__.load({
         if (entry.type !== 'event') continue;
         if (event.type === 'turn/start') {
           current = {
-            question: '', answer: '', answerSeq: 0, qSeq: 0, status: 'running',
+            question: '', images: [], answer: '', answerSeq: 0, qSeq: 0, status: 'running',
             real: false, kind: '', costFrom: index, streamText: '',
             step: 0, tool: '', startedAt: typeof event.time === 'number' ? event.time : 0,
             awaiting: '', pendingQuestions: new Set(), pendingApprovals: new Set(),
@@ -1551,11 +1593,15 @@ window.__ModuleLoader__.load({
           const target = current || turns[turns.length - 1];
           if (target) {
             const text = textOf(data.content);
-            if (text.trim() && isRealPrompt(data)) {
+            const images = imagesOf(data.content);
+            // A prompt that is only an image is still a prompt: the card would
+            // otherwise stay empty while the answer arrives under it.
+            if ((text.trim() || images.length) && isRealPrompt(data)) {
               const kind = sourceKindOf(data) || '';
               target.question = kind === 'user-question-reply'
                 ? (questionReplyTextOf(data) || T('card.questionReply'))
                 : text;
+              target.images = images;
               target.real = true;
               target.kind = kind;
               target.qSeq = typeof event.seq === 'number' ? event.seq : 0;
@@ -1612,7 +1658,7 @@ window.__ModuleLoader__.load({
         delete turn.pendingQuestions;
         delete turn.pendingApprovals;
       }
-      return turns.filter((turn) => turn.real && (turn.question.trim() || turn.answer.trim()));
+      return turns.filter((turn) => turn.real && (turn.question.trim() || turn.answer.trim() || turn.images.length));
     }
 
     /** Read one branch session's own events (everything after `baseline`). */
@@ -2132,6 +2178,10 @@ window.__ModuleLoader__.load({
               parentId: node.parentId,
               sessionId: node.sessionId,
               question: node.question,
+              // Small refs, not the bytes: unlike reasoning this is not the
+              // quota risk, and a restored card keeps its thumbnails before
+              // the log page that holds them has loaded.
+              images: node.images || [],
               answer: node.answer,
               status: node.status,
               answerSeq: node.answerSeq,
@@ -2218,6 +2268,7 @@ window.__ModuleLoader__.load({
               parentId,
               sessionId: rootId,
               question: turn.question,
+              images: turn.images || [],
               answer: turn.answer,
               reasoning: turn.reasoning || '',
               reasoningDropped: turn.reasoningDropped || 0,
@@ -2237,6 +2288,7 @@ window.__ModuleLoader__.load({
             } else if (
               existing.parentId !== next.parentId ||
               existing.question !== next.question ||
+              !sameImages(existing.images, next.images) ||
               existing.answer !== next.answer ||
               (existing.reasoning || '') !== next.reasoning ||
               (existing.reasoningDropped || 0) !== next.reasoningDropped ||
@@ -2455,6 +2507,45 @@ window.__ModuleLoader__.load({
           return ctx && ctx.workspaces ? ctx.workspaces : null;
         } catch (error) {
           return null;
+        }
+      }
+
+      /**
+       * The conversation service's image reader, or null.
+       *
+       * Read through `get` and kept out of the plugin's `inject` list on
+       * purpose: a host without it must still load the view, only without
+       * thumbnails, so an absent service may never be a load-time failure.
+       */
+      function imageService() {
+        try {
+          return (ctx && typeof ctx.get === 'function' && ctx.get('uiConversation')) || null;
+        } catch (error) {
+          return null;
+        }
+      }
+
+      /** A URL the host already resolved, or undefined when none is cached. */
+      function peekImage(sessionId, ref) {
+        const service = imageService();
+        if (!service || typeof service.peekImageUrl !== 'function') return undefined;
+        try {
+          return service.peekImageUrl(sessionId, ref) || undefined;
+        } catch (error) {
+          return undefined;
+        }
+      }
+
+      /** Resolve one attachment to a URL; rejects when the host cannot. */
+      function loadImage(sessionId, ref) {
+        const service = imageService();
+        if (!service || typeof service.imageUrl !== 'function') {
+          return Promise.reject(new Error('uiConversation is not available'));
+        }
+        try {
+          return Promise.resolve(service.imageUrl(sessionId, ref));
+        } catch (error) {
+          return Promise.reject(error);
         }
       }
 
@@ -2992,7 +3083,7 @@ window.__ModuleLoader__.load({
 
       return {
         rootOf, storeFor, ensureProjection, ensureOpen, branch, loadOlder,
-        deleteSubtree, restoreHidden, setBranchListing,
+        deleteSubtree, restoreHidden, setBranchListing, peekImage, loadImage,
       };
     }
 
@@ -3784,10 +3875,12 @@ window.__ModuleLoader__.load({
     }
 
     /** One body of the enlarged card: the answer, or the chain behind it. */
-    function ReaderPane({ node, reading, pane }) {
+    function ReaderPane({ node, reading, pane, api }) {
       useLocale();
       if (pane !== 'reasoning') {
-        return node.answer ? renderMarkdown(node.answer) : T('reader.noAnswer');
+        return h('div', null,
+          h(PromptImages, { api, sessionId: node.sessionId, images: node.images, full: true }),
+          node.answer ? renderMarkdown(node.answer) : T('reader.noAnswer'));
       }
       return h('div', null,
         h('div', {
@@ -3807,6 +3900,91 @@ window.__ModuleLoader__.load({
           renderMarkdown(node.reasoning || '')));
     }
 
+    /**
+     * One image a prompt carried.
+     *
+     * The frame is sized from the attachment's own dimensions, so the card
+     * reserves the space before the bytes arrive and does not jump when they
+     * do. A blob the host has since revoked leaves the frame empty.
+     */
+    function PromptImage({ api, sessionId, attachment, height, full }) {
+      useLocale();
+      const [url, setUrl] = useState(() => api.peekImage(sessionId, attachment));
+      // The ref object is rebuilt by every projection; key the effect on its id
+      // so a per-token identity change does not re-issue the read.
+      useEffect(() => {
+        if (url) return undefined;
+        let live = true;
+        try {
+          api.loadImage(sessionId, attachment).then((next) => {
+            if (live && next) setUrl(next);
+          }, () => undefined);
+        } catch (error) {
+          /* an attachment the host refuses stays a frame */
+        }
+        return () => { live = false; };
+      }, [api, sessionId, attachment.attachmentId, url]);
+      const label = attachment.name || T('card.imageAlt');
+      // The reader is the close-up. The image keeps its own aspect ratio at the
+      // body's width instead of becoming another thumbnail, which is the only
+      // way a screenshot stays readable.
+      if (full) {
+        return url
+          ? h('img', {
+            src: url,
+            alt: label,
+            title: label,
+            loading: 'lazy',
+            width: attachment.width || undefined,
+            height: attachment.height || undefined,
+            style: {
+              display: 'block', maxWidth: '100%', maxHeight: '60vh',
+              width: 'auto', height: 'auto', borderRadius: 6,
+              border: '1px solid ' + C.cardEdge, background: C.canvas,
+            },
+          })
+          : h('span', {
+            'aria-hidden': true,
+            style: {
+              display: 'block', width: 160, height: 90, borderRadius: 6,
+              border: '1px solid ' + C.cardEdge, background: C.canvas,
+            },
+          });
+      }
+      const ratio = attachment.width > 0 && attachment.height > 0
+        ? attachment.width + ' / ' + attachment.height
+        : '1 / 1';
+      return h('span', {
+        style: {
+          display: 'block', flex: '0 0 auto', height, aspectRatio: ratio,
+          boxSizing: 'border-box', borderRadius: 6, overflow: 'hidden',
+          border: '1px solid ' + C.cardEdge, background: C.canvas,
+        },
+      }, url
+        ? h('img', {
+          src: url,
+          alt: label,
+          title: label,
+          loading: 'lazy',
+          style: { display: 'block', width: '100%', height: '100%', objectFit: 'cover' },
+        })
+        : null);
+    }
+
+    /** A prompt's images in content order, wrapping when the card is narrow. */
+    function PromptImages({ api, sessionId, images, height, full }) {
+      if (!images || images.length === 0) return null;
+      return h('div', {
+        style: {
+          display: 'flex', flexWrap: 'wrap', gap: full ? 8 : 4,
+          margin: full ? '0 0 14px' : '6px 0 4px',
+        },
+      }, images.map((attachment, index) => h(PromptImage, {
+        key: attachment.attachmentId || String(index),
+        api, sessionId, attachment, height, full,
+      })));
+    }
+
     function NodeCard({ node, selected, dimmed, index, store, api, rootId, match, collapsed, childCount, descendants, isLatest, entering, width, preview }) {
       useLocale();
       const snapshot = store.getSnapshot();
@@ -3815,6 +3993,11 @@ window.__ModuleLoader__.load({
       const cardRef = useRef(null);
       const cardWidth = width || NODE_W;
       const cardPreview = preview || CARD_SIZES.standard;
+      const images = Array.isArray(node.images) ? node.images : [];
+      // An image-only prompt has no text to print, and the placeholder next to
+      // its thumbnails would read as "the prompt was lost".
+      const question = node.question || '';
+      const questionLabel = question.trim() ? question : images.length ? '' : T('card.noQuestion');
       // Freeze this mount's entry decision; streamed tokens do not restart it.
       const animateEntry = useRef(entering);
       const isRunning = isInProgressNode(node);
@@ -4005,12 +4188,13 @@ window.__ModuleLoader__.load({
                   style: { border: 'none', background: 'transparent', width: '100%', justifyContent: 'flex-start' },
                 }, T('card.delete'))))
             : null),
+        h(PromptImages, { api, sessionId: node.sessionId, images, height: 48 }),
         h('div', {
           className: 'dsh-tree-clamp-3',
           style: {
             fontSize: 12.5, fontWeight: 600, lineHeight: 1.45, color: C.ink,
           },
-        }, commandTextNodes(node.question || T('card.noQuestion'), 'q')),
+        }, questionLabel ? commandTextNodes(questionLabel, 'q') : null),
         // Everything that grows with the stream lives inside one band. That is
         // the fix for the card that used to grow and shrink under the reader:
         // a content-sized answer box plus a one-or-two-line strip moved the
@@ -4916,7 +5100,7 @@ window.__ModuleLoader__.load({
      * and no focus restoration; it only mirrors the element's `close` event back
      * into React state.
      */
-    function Reader({ node, open, onClose, pane, onPane }) {
+    function Reader({ node, open, onClose, pane, onPane, api }) {
       useLocale();
       const dialogRef = useRef(null);
       const close = useRef(onClose);
@@ -4989,6 +5173,9 @@ window.__ModuleLoader__.load({
 
       if (!node) return null;
       const reading = readingOf(node);
+      const images = Array.isArray(node.images) ? node.images : [];
+      const question = node.question || '';
+      const questionLabel = question.trim() ? question : images.length ? '' : T('card.noQuestion');
       const activePane = pane === 'reasoning' && reading.hasReasoning ? 'reasoning' : 'result';
       const titleId = 'dsh-tree-reader-title-' + (node.id || 'node');
       return h('dialog', {
@@ -5025,7 +5212,7 @@ window.__ModuleLoader__.load({
               h('div', {
                 id: titleId,
                 style: { fontSize: 15, fontWeight: 600, lineHeight: 1.5, color: C.ink },
-              }, commandTextNodes(node.question || T('card.noQuestion'), 'rq'))),
+              }, questionLabel ? commandTextNodes(questionLabel, 'rq') : null)),
             h('button', {
               onClick: onClose,
               title: T('reader.close'),
@@ -5109,7 +5296,7 @@ window.__ModuleLoader__.load({
               padding: '18px 22px 22px', overflow: 'auto', flex: 1,
               ...MD.body, fontSize: 13.4, lineHeight: 1.85,
             },
-          }, h(ReaderPane, { node, reading, pane: activePane })),
+          }, h(ReaderPane, { node, reading, pane: activePane, api })),
 
           h('div', {
             style: {
@@ -5180,6 +5367,7 @@ window.__ModuleLoader__.load({
         h(Reader, {
           key: rootId,
           node: reading || readerNode.current,
+          api,
           open: Boolean(reading),
           pane: (readingState && readingState.pane) || 'result',
           onPane: (pane) => store.setReaderPane(pane),
@@ -5443,6 +5631,8 @@ window.__ModuleLoader__.load({
             deleteSubtree: runtime.deleteSubtree,
             restoreHidden: runtime.restoreHidden,
             setBranchListing: runtime.setBranchListing,
+            peekImage: runtime.peekImage,
+            loadImage: runtime.loadImage,
           } }),
         }, TreeView));
       },
